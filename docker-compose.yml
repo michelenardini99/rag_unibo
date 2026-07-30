@@ -1,0 +1,48 @@
+# Richiede NVIDIA Container Toolkit sull'host del server GPU
+# (nvidia-ctk runtime configure --runtime=docker && systemctl restart docker)
+# perché "deploy.resources.reservations.devices" possa assegnare una GPU fisica per servizio.
+#
+# Setup: cp .env.example .env, adattare i valori, poi `docker compose up -d`.
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    ports:
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+  # GPU A (§6 dell'architettura) — LLM generativo vision-capable, API OpenAI-compatible.
+  # GPU B è riservata a BGE-M3 + BGE-Reranker-v2-m3, eseguiti in un venv locale (vedi requirements.txt),
+  # non containerizzati per ora.
+  vllm:
+    image: vllm/vllm-openai:latest
+    restart: unless-stopped
+    ipc: host
+    shm_size: "2gb"
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "${VLLM_PORT:-8000}:8000"
+    command: >
+      --model ${VLLM_MODEL_ID:-Qwen/Qwen2.5-VL-7B-Instruct-AWQ}
+      --served-model-name generation-llm
+      --quantization awq
+      --max-model-len ${VLLM_MAX_MODEL_LEN:-8192}
+      --gpu-memory-utilization ${VLLM_GPU_MEMORY_UTILIZATION:-0.90}
+      --port 8000
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${VLLM_DEVICE_ID:-0}"]
+              capabilities: ["gpu"]
+
+volumes:
+  qdrant_storage:
+  hf_cache:
