@@ -207,6 +207,62 @@ Di seguito viene illustrato il flusso completo dell'infrastruttura RAG locale d'
 +-------------------------------------------------------------------------------------+
 ```
 
+### **8.1 Diagramma Mermaid della Comunicazione tra Componenti**
+
+```mermaid
+flowchart TD
+    subgraph ING["1-2. INGESTION & CHUNKING (offline, batch — GPU B)"]
+        A1["Documenti Ateneo\n(Regolamenti PDF/DOCX, Slide PPTX, Articoli PDF)"]
+        A2["Docling\n(DocLayNet + TableFormer)"]
+        A3["Granite-Docling VLM\n(didascalia immagini/diagrammi)"]
+        A4["LlamaIndex HybridChunker\n(+ metadati: facoltà, corso, validità temporale)"]
+        A1 --> A2
+        A2 -->|testo + tabelle letterali| A4
+        A2 -->|immagini/diagrammi estratti| A3
+        A3 -->|didascalie testuali| A4
+    end
+
+    subgraph STORE["3. VETTORIALIZZAZIONE (GPU B)"]
+        B1["BGE-M3\n(denso + sparso + ColBERT)"]
+        B2[("Qdrant\n(payload filtering, validità temporale)")]
+        A4 --> B1 --> B2
+    end
+
+    subgraph QUERY["4-5. QUERY & GENERAZIONE (online — GPU B + GPU A)"]
+        Q0["Studente: domanda in linguaggio naturale"]
+        Q1["Ricerca ibrida Qdrant\n(Top-20 doc vigenti)"]
+        Q2["BGE-Reranker-v2-m3\n(Top-5)"]
+        Q3["Recupero immagini collegate ai chunk"]
+        Q4["LLM Vision-capable via vLLM\n(Qwen2.5-VL-7B / Gemma3-12B, 4-bit)"]
+        Q0 --> Q1
+        B2 --> Q1
+        Q1 --> Q2 --> Q3
+        Q2 --> Q4
+        Q3 --> Q4
+    end
+
+    subgraph GUARD["6. GROUNDING GUARD (verifica fattuale)"]
+        G1["Estrazione date/importi/numeri\ndalla bozza di risposta"]
+        G2{"Match letterale\ncon i chunk recuperati?"}
+        G3["Risposta finale\n+ citazione fonte (doc/articolo)"]
+        G4["Flag / Sopprimi / Rigenera"]
+        Q4 --> G1 --> G2
+        G2 -->|sì| G3
+        G2 -->|no| G4
+        G4 -.->|vincola e richiede rigenerazione| Q4
+    end
+
+    subgraph EVAL["7-9. VALUTAZIONE CONTINUA"]
+        E1["RAGAS / TruLens\n(fedeltà, pertinenza)"]
+        E2["Set dedicato fatti numerici\n(date, importi, tasse)"]
+        G3 --> E1
+        G4 --> E1
+        E1 --- E2
+    end
+
+    G3 --> OUT["Risposta consegnata allo studente"]
+```
+
 ## **9\. Valutazione e Osservabilità Continua**
 
 Oltre alle metriche standard di RAGAS/TruLens (fedeltà al contesto, pertinenza, assenza di allucinazioni generiche), si raccomanda la costruzione di un **set di valutazione dedicato ai fatti numerici** (date di scadenza, importi, conversioni di voto), costruito a partire dai regolamenti reali d'Ateneo. Questo set permette di misurare specificamente il tasso di errore del Grounding Guard (§7) e di dimostrare, con numeri, l'effetto della sua introduzione rispetto a un RAG senza verifica — un confronto quantitativo che si presta bene a un capitolo di valutazione sperimentale nella tesi.

@@ -13,10 +13,15 @@ services:
       - "${QDRANT_GRPC_PORT:-6334}:6334"
     volumes:
       - qdrant_storage:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   # GPU A (§6 dell'architettura) — LLM generativo vision-capable, API OpenAI-compatible.
-  # GPU B è riservata a BGE-M3 + BGE-Reranker-v2-m3, eseguiti in un venv locale (vedi requirements.txt),
-  # non containerizzati per ora.
+  # GPU B è riservata a BGE-M3 + BGE-Reranker-v2-m3 + Granite-Docling, eseguiti in un venv locale
+  # (vedi requirements.txt), non containerizzati per ora.
   vllm:
     image: vllm/vllm-openai:latest
     restart: unless-stopped
