@@ -1,8 +1,11 @@
 # Torch con supporto CUDA per GPU B (BGE-M3, reranker, Granite-Docling).
 # Adattare l'indice alla versione CUDA del driver host (verificare con `nvidia-smi`);
 # senza questa riga `pip` installa spesso una build CPU-only o incompatibile.
---extra-index-url https://download.pytorch.org/whl/cu121
-torch>=2.4.0,<2.6.0
+# cu124 richiesto per Python 3.13: cu121 non pubblica wheel cp313 di torchvision,
+# quindi pip esegue il backtrack fino a torchvision 0.2.0 (2018) se non pinnato.
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch>=2.6.0,<2.7.0
+torchvision>=0.21.0,<0.22.0
 
 # Parsing documentale (§1) — Docling + VLM per la comprensione visiva (§3)
 docling>=2.15.0

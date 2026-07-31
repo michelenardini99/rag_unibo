@@ -1,8 +1,8 @@
 [project]
-name = "rag-unibo"
+name = "rag_unibo"
 version = "0.1.0"
 description = "Assistente RAG locale per l'assistenza universitaria"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 readme = "README.md"
 
 [project.optional-dependencies]
