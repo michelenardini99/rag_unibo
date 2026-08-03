@@ -1,4 +1,7 @@
+import json
+import multiprocessing as mp
 from pathlib import Path
+from queue import Empty
 
 from docling.datamodel.accelerator_options import AcceleratorOptions
 from docling.datamodel.base_models import InputFormat
@@ -45,12 +48,17 @@ def convert_corpus(input_dir: Path, output_dir: Path, device: int) -> dict[str, 
     input_dir = input_dir.resolve()
     output_dir = output_dir.resolve()
     converter = build_converter(device)
-    paths = sorted(p for p in input_dir.rglob("*") if p.suffix.lower() in {".pdf", ".docx", ".pptx", ".html"})
+    if input_dir.is_file():
+        paths = [input_dir]
+        base_dir = input_dir.parent
+    else:
+        paths = sorted(p for p in input_dir.rglob("*") if p.suffix.lower() in {".pdf", ".docx", ".pptx", ".html"})
+        base_dir = input_dir
     failures: list[str] = []
 
     for result in converter.convert_all(paths, raises_on_error=False):
         stem = result.input.file.stem
-        dest = output_dir / result.input.file.relative_to(input_dir).parent
+        dest = output_dir / result.input.file.relative_to(base_dir).parent
         dest.mkdir(parents=True, exist_ok=True)
 
         if result.status == ConversionStatus.SUCCESS:
@@ -63,4 +71,4 @@ def convert_corpus(input_dir: Path, output_dir: Path, device: int) -> dict[str, 
 
     return {"failures": failures}
 
-convert_corpus(Path("datasets/raw"), Path("datasets/converted"), device=2)
+convert_corpus(Path("datasets/raw/PsicologiaScolasticaComunita/corsi/TecnicheDiConsulenzaNellaScuola/the-change-laboratory.pdf"), Path("datasets/converted/PsicologiaScolasticaComunita/corsi/TecnicheDiConsulenzaNellaScuola/"), device=2)
