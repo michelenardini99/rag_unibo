@@ -18,6 +18,10 @@ llama-index-node-parser-docling>=0.4.0
 
 # Embedding + Reranking, eseguiti in locale su GPU B (§2, §6)
 FlagEmbedding>=1.3.0
+# FlagEmbedding 1.4.0 chiama tokenizer.prepare_for_model(), rimosso in
+# transformers 5.x — pin necessario finché FlagEmbedding non lo aggiorna
+# (il loro requires_dist dichiara supporto a v5 ma non è vero in pratica).
+transformers>=4.44.2,<5.0.0
 
 # Client Qdrant (§4)
 qdrant-client>=1.12.0
