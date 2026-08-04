@@ -26,7 +26,7 @@ def retrieve(query: str, client: QdrantClient, collection_name: str, embed_model
             "text": c.payload["text"],
             "headings": c.payload.get("headings"),
             "source_file": c.payload.get("source_file"),
-            "image_paths": c.payload.get("image_paths", []),
+            "image_paths": c.payload.get("image_paths") or [],
         }
         for c in reranked_candidates
     ]

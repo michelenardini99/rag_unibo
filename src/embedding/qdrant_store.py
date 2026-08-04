@@ -65,6 +65,7 @@ def nodes_to_points(nodes: list, embeddings: dict) -> list[models.PointStruct]:
                     "text": node.text,
                     "headings": node.metadata.get("headings"),
                     **{k: node.metadata.get(k) for k in FILTER_ONLY_KEYS},
+                    "image_paths": node.metadata.get("image_paths") or [],
                 }
             )
         )
