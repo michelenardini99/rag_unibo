@@ -14,6 +14,7 @@ docling>=2.15.0
 llama-index>=0.12.0
 llama-index-vector-stores-qdrant>=0.4.0
 llama-index-llms-openai-like>=0.3.0
+llama-index-node-parser-docling>=0.4.0
 
 # Embedding + Reranking, eseguiti in locale su GPU B (§2, §6)
 FlagEmbedding>=1.3.0

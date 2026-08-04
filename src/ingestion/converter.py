@@ -71,4 +71,4 @@ def convert_corpus(input_dir: Path, output_dir: Path, device: int) -> dict[str, 
 
     return {"failures": failures}
 
-convert_corpus(Path("datasets/raw/PsicologiaScolasticaComunita/corsi/TecnicheDiConsulenzaNellaScuola/the-change-laboratory.pdf"), Path("datasets/converted/PsicologiaScolasticaComunita/corsi/TecnicheDiConsulenzaNellaScuola/"), device=2)
+convert_corpus(Path("datasets/raw/"), Path("datasets/converted/"), device=2)
