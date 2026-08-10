@@ -3,14 +3,41 @@ from pathlib import Path
 from llama_index.core.base.llms.types import ChatMessage, MessageRole, TextBlock, ImageBlock
 
 SYSTEM_PROMPT = (
-    "Sei un assistente virtuale dell'Università di Bologna. Rispondi in italiano "
-    "usando esclusivamente le informazioni presenti nel CONTESTO fornito. "
-    "Se il contesto non contiene la risposta, dillo esplicitamente invece di inventare. "
-    "Riporta date, importi e numeri esattamente come appaiono nel contesto, senza "
-    "arrotondare o parafrasare. Per ogni affermazione, cita la fonte tra parentesi "
-    "quadre, es. [Fonte: nome_file]. Se il contesto contiene più fonti, cita tutte le fonti rilevanti."
-    " Un esempio di risposta corretta sarebbe: 'La scadenza per la prima rata è il 30 settembre [Fonte: tasse]'."
+    "Sei un assistente virtuale dell'Università di Bologna, specializzato in domande "
+    "su regolamenti, tasse, iscrizioni, corsi e procedure amministrative. Rispondi "
+    "sempre in italiano.\n\n"
+    "Se la domanda non riguarda argomenti universitari (saluti, conversazione generica, "
+    "richieste non pertinenti), dillo esplicitamente e spiega che puoi aiutare solo con "
+    "questioni relative all'Università di Bologna — non tentare comunque di rispondere "
+    "nel merito.\n\n"
+    "Per le domande pertinenti, usa esclusivamente le informazioni presenti nel CONTESTO "
+    "fornito. Se il contesto non contiene la risposta, dillo esplicitamente invece di "
+    "inventare o rispondere con conoscenza generale. Riporta date, importi e numeri "
+    "esattamente come appaiono nel contesto, senza arrotondare o parafrasare.\n\n"
+    "Ogni blocco di CONTESTO inizia con '[Fonte: <nome>]': per ogni affermazione, cita "
+    "tra parentesi quadre il <nome> del blocco da cui l'hai presa, sostituendolo con "
+    "quello reale — non copiare esempi. Se il contesto contiene più fonti, cita tutte "
+    "le fonti rilevanti."
 )
+
+
+def clean_source_name(source_file: str) -> str:
+    """Turns a raw stage-1 filename (e.g. "Tasse ed esenzioni_ importi e
+    scadenze — Università di Bologna.json") into a readable title for
+    citation display ("Tasse ed esenzioni: importi e scadenze").
+
+    Scraped Unibo page titles follow "<titolo> — <sito/corso...>.json";
+    dropping everything from the em-dash on removes the site/course suffix,
+    and "_ " gets restored to ": " since scraped filenames sanitize colons
+    to underscores. Plain filenames without an em-dash (e.g. CamelCase PDF
+    names) pass through unchanged — no general fix for those without a
+    lookup table.
+    """
+    name = Path(source_file).stem
+    name = name.split(" — ")[0]
+    name = re.sub(r"_\s", ": ", name)
+    return re.sub(r"\s+", " ", name).strip()
+
 
 def build_context_block(chunks: list[dict]) -> str:
     """
@@ -23,10 +50,28 @@ def build_context_block(chunks: list[dict]) -> str:
     parts = []
     for c in chunks:
         headings = " > ".join(c.get("headings") or [])
-        parts.append(f"[Fonte: {c["source_file"]} - {headings}\n{c["text"]}]")
+        source_name = clean_source_name(c["source_file"])
+        parts.append(f"[Fonte: {source_name} - {headings}\n{c["text"]}]")
     return "\n\n---\n\n".join(parts)
 
-def build_prompt(query: str, chunks: list[dict]) -> list[ChatMessage]:
+
+def build_sources_footer(chunks: list[dict]) -> str:
+    """Deterministic 'Fonti consultate' list built directly from the chunks
+    actually retrieved — not left to the model to reproduce. Since we
+    already know with certainty which sources were used, generating this in
+    code guarantees a correct, complete citation list regardless of how
+    reliably the model followed the inline-citation instruction above.
+    """
+    if not chunks:
+        return ""
+    seen: list[str] = []
+    for c in chunks:
+        name = clean_source_name(c["source_file"])
+        if name not in seen:
+            seen.append(name)
+    return "Fonti consultate: " + "; ".join(seen)
+
+def build_prompt(query: str, chunks: list[dict], history: list[tuple[str, str]]) -> list[ChatMessage]:
     """
     Constructs a prompt for the LLM based on the query and context chunks.
 
@@ -45,7 +90,9 @@ def build_prompt(query: str, chunks: list[dict]) -> list[ChatMessage]:
             if img_path not in seen:
                 blocks.append(ImageBlock(path=Path(img_path)))
                 seen.add(img_path)
-    return [
-        ChatMessage(role=MessageRole.SYSTEM, blocks=[TextBlock(text=SYSTEM_PROMPT)]),
-        ChatMessage(role=MessageRole.USER, blocks=blocks)
-    ]
+    messages = [ChatMessage(role=MessageRole.SYSTEM, blocks=[TextBlock(text=SYSTEM_PROMPT)])]
+    for past_query, past_answer in history or []:
+        messages.append(ChatMessage(role=MessageRole.USER, blocks=[TextBlock(text=past_query)]))
+        messages.append(ChatMessage(role=MessageRole.ASSISTANT, blocks=[TextBlock(text=past_answer)]))
+    messages.append(ChatMessage(role=MessageRole.USER, blocks=blocks))
+    return messages

@@ -1,5 +1,5 @@
 from llama_index.llms.openai_like import OpenAILike
-from generation.prompt import build_prompt
+from generation.prompt import build_prompt, build_sources_footer
 
 def build_llm(base_url: str, model: str = "generation-llm", context_window: int = 8192) -> OpenAILike:
     """
@@ -21,7 +21,14 @@ def build_llm(base_url: str, model: str = "generation-llm", context_window: int 
         context_window=context_window
     )
 
-def generate_response(llm: OpenAILike, query: str, chunks: list[dict]) -> str:
+NO_CONTEXT_MESSAGE = (
+    "Non ho trovato informazioni pertinenti nei documenti disponibili per rispondere "
+    "a questa domanda. Se riguarda l'Università di Bologna, prova a riformularla; "
+    "altrimenti non rientra tra gli argomenti che posso trattare."
+)
+
+
+def generate_response(llm: OpenAILike, query: str, chunks: list[dict], history: list[tuple[str, str]] | None = None) -> str:
     """
     Generates a response from the LLM based on the provided query and context chunks.
 
@@ -33,5 +40,9 @@ def generate_response(llm: OpenAILike, query: str, chunks: list[dict]) -> str:
     Returns:
         str: The generated response from the LLM.
     """
-    response = llm.chat(build_prompt(query, chunks))
-    return response.message.content
+    if not chunks:
+        return NO_CONTEXT_MESSAGE
+
+    response = llm.chat(build_prompt(query, chunks, history))
+    answer = response.message.content
+    return f"{answer}\n\n{build_sources_footer(chunks)}"

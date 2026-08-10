@@ -1,23 +1,35 @@
+from generation.condense import condense_question
+from llama_index.core.base.llms.types import ChatMessage, MessageRole, TextBlock, ImageBlock
 from generation.generator import build_llm, generate_response
-from llama_index.core.storage.docstore import SimpleDocumentStore
-from embedding.embedder import build_embedding_model, embed_nodes
+from embedding.embedder import build_embedding_model
 from qdrant_client import QdrantClient
-from embedding.qdrant_store import ensure_collection, upsert_nodes
 from retrieval.reranker import build_reranker
 from retrieval.retriever import retrieve
 
-if __name__ == "__main__":
-    model = build_embedding_model(device_id=2)
+EXIT_COMMANDS = {"exit", "quit"}
+MAX_HISTORY_TURNS = 5
+
+def main() -> None:
+    print("Caricamento modelli...")
+    embed_model = build_embedding_model(device_id=2)
     reranker = build_reranker(device_id=2)
-    client = QdrantClient(url="http://localhost:6333", grpc_port=6334, prefer_grpc=True)  # QDRANT_URL da .env — non ancora in config.py
-
-    query = "Entro quando devo pagare la prima rata universitaria?"
-
-    res = retrieve(query, client, "ateneo_docs", model, reranker)
-
     llm = build_llm(base_url="http://localhost:8000/v1")
-    response = generate_response(llm, query, res)
+    client = QdrantClient(url="http://localhost:6333", grpc_port=6334, prefer_grpc=True)
+    history: list[tuple[str, str]] = []
+    print("Assistente pronto. Scrivi 'exit' o 'quit' per uscire.\n")
+    while True:
+        query = input("Tu: ").strip()
+        if query.lower() in EXIT_COMMANDS:
+            break
+        if not query:
+            continue
+        search_query = condense_question(llm, history, query)    
+        chunks = retrieve(search_query, client, "ateneo_docs", embed_model, reranker)
+        response = generate_response(llm, query, chunks, history)
+        print(f"\nAssistente: {response}\n")
 
-    print(response)
-        
+        history.append((query, response))
+        history = history[-MAX_HISTORY_TURNS:]
 
+if __name__ == "__main__":
+    main()

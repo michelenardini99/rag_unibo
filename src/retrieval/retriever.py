@@ -20,6 +20,7 @@ def retrieve(query: str, client: QdrantClient, collection_name: str, embed_model
     query_embedding = embed_query(query, embed_model)
     candidates = search_candidates(client, collection_name, query_embedding)
     reranked_candidates = rerank(query, candidates, reranker)
+    final_candidates = [c for c, s in reranked_candidates if s > 0.6]
 
     return [
         {
@@ -28,5 +29,5 @@ def retrieve(query: str, client: QdrantClient, collection_name: str, embed_model
             "source_file": c.payload.get("source_file"),
             "image_paths": c.payload.get("image_paths") or [],
         }
-        for c in reranked_candidates
+        for c in final_candidates
     ]
