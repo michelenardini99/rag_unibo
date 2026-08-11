@@ -11,7 +11,6 @@ CONDENSE_SYSTEM_PROMPT = (
 def build_condense_prompt(history: list[tuple[str, str]], query: str) -> list[ChatMessage]:
     turns = "\n".join(f"Studente: {q}\nAssistente: {a}" for q, a in history)
     text = f"CRONOLOGIA:\n{turns}\n\nULTIMA DOMANDA: {query}\n\nDomanda riformulata:"
-    print(text)
     return [
         ChatMessage(role=MessageRole.SYSTEM, blocks=[TextBlock(text=CONDENSE_SYSTEM_PROMPT)]),
         ChatMessage(role=MessageRole.USER, blocks=[TextBlock(text=text)]),

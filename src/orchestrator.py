@@ -1,3 +1,6 @@
+import json
+
+from eval.evaluate import evaluate
 from generation.condense import condense_question
 from llama_index.core.base.llms.types import ChatMessage, MessageRole, TextBlock, ImageBlock
 from generation.generator import build_llm, generate_response
@@ -15,6 +18,9 @@ def main() -> None:
     reranker = build_reranker(device_id=2)
     llm = build_llm(base_url="http://localhost:8000/v1")
     client = QdrantClient(url="http://localhost:6333", grpc_port=6334, prefer_grpc=True)
+    with open('datasets/eval/qa_test_set.json', "r", encoding="utf-8") as file:
+        eval_dataset = json.load(file)
+    evaluate(eval_dataset, llm, embed_model, client, reranker)
     history: list[tuple[str, str]] = []
     print("Assistente pronto. Scrivi 'exit' o 'quit' per uscire.\n")
     while True:
