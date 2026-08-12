@@ -44,3 +44,5 @@ langchain-community<0.4
 python-dotenv>=1.0.1
 httpx>=0.27.0
 pydantic>=2.9.0
+
+pip install chainlit
