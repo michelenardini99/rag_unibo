@@ -1,6 +1,7 @@
+from collections import defaultdict
 from pathlib import Path
 from llama_index.core import Document
-from llama_index.core.schema import BaseNode
+from llama_index.core.schema import BaseNode, NodeRelationship, TextNode
 from llama_index.core.storage.docstore import SimpleDocumentStore
 from llama_index.node_parser.docling import DoclingNodeParser
 from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
@@ -62,16 +63,63 @@ def _resolve_image_paths(nodes: list, converted_root: Path) -> None:
             node.metadata["image_paths"] = image_paths
 
 
-def chunk_documents(converted_root: Path) -> list[BaseNode]:
+def build_parent_nodes(leaf_nodes: list[BaseNode]) -> list[TextNode]:
+    """Groups leaf chunks that share the same document section (same
+    source_path + headings breadcrumb) under a synthetic parent node, linked
+    via NodeRelationship.PARENT/CHILD. Lets AutoMergingRetriever (§5
+    architettura, retrieval gerarchico) merge scattered sibling chunks back
+    into their full section when enough of them match a query — needed for
+    synthesis-style questions where no single ~512-token chunk covers the
+    whole topic. Sections with a single chunk are left as-is (nothing to merge).
+    """
+    groups: dict[tuple, list[BaseNode]] = defaultdict(list)
+    for node in leaf_nodes:
+        key = (node.metadata.get("source_path"), tuple(node.metadata.get("headings") or []))
+        groups[key].append(node)
+
+    parents = []
+    for (source_path, headings), children in groups.items():
+        if len(children) < 2:
+            continue
+
+        first = children[0]
+        image_paths = [p for c in children for p in (c.metadata.get("image_paths") or [])]
+
+        parent = TextNode(
+            text="\n\n".join(c.text for c in children),
+            metadata={
+                "anno_accademico": first.metadata.get("anno_accademico"),
+                "corso": first.metadata.get("corso"),
+                "categoria": first.metadata.get("categoria"),
+                "materia": first.metadata.get("materia"),
+                "stato": first.metadata.get("stato"),
+                "source_file": first.metadata.get("source_file"),
+                "source_path": source_path,
+                "headings": list(headings),
+                "image_paths": image_paths,
+            },
+        )
+
+        for child in children:
+            child.relationships[NodeRelationship.PARENT] = parent.as_related_node_info()
+        parent.relationships[NodeRelationship.CHILD] = [c.as_related_node_info() for c in children]
+
+        parents.append(parent)
+
+    return parents
+
+
+def chunk_documents(converted_root: Path) -> tuple[list[BaseNode], list[TextNode]]:
     parser = build_node_parser()
     documents = [
         load_as_li_document(p, converted_root)
         for p in sorted(converted_root.rglob("**/*.json"))
         if p.name != "_failures.json"
     ]
-    nodes = parser.get_nodes_from_documents(documents, show_progress=True)
-    _resolve_image_paths(nodes, converted_root)
-    return nodes
+    leaf_nodes = parser.get_nodes_from_documents(documents, show_progress=True)
+    _resolve_image_paths(leaf_nodes, converted_root)
+    parent_nodes = build_parent_nodes(leaf_nodes)
+    return leaf_nodes, parent_nodes
 
 
 def persist_nodes(nodes: list[BaseNode], persist_dir: Path) -> None:
@@ -86,7 +134,7 @@ def persist_nodes(nodes: list[BaseNode], persist_dir: Path) -> None:
 
 if __name__ == "__main__":
     converted_root = Path("datasets/converted/")
-    nodes = chunk_documents(converted_root)
-    print(f"Chunked {len(nodes)} nodes from {converted_root}.")
-    persist_nodes(nodes, Path("datasets/chunked/"))
+    leaf_nodes, parent_nodes = chunk_documents(converted_root)
+    print(f"Chunked {len(leaf_nodes)} leaf chunk(s) + {len(parent_nodes)} parent section(s) from {converted_root}.")
+    persist_nodes(leaf_nodes + parent_nodes, Path("datasets/chunked/"))
     print("Persisted to datasets/chunked/docstore.json")

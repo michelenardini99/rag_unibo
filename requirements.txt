@@ -1,48 +1,33 @@
-# Torch con supporto CUDA per GPU B (BGE-M3, reranker, Granite-Docling).
-# Adattare l'indice alla versione CUDA del driver host (verificare con `nvidia-smi`);
-# senza questa riga `pip` installa spesso una build CPU-only o incompatibile.
-# cu124 richiesto per Python 3.13: cu121 non pubblica wheel cp313 di torchvision,
-# quindi pip esegue il backtrack fino a torchvision 0.2.0 (2018) se non pinnato.
 --extra-index-url https://download.pytorch.org/whl/cu124
 torch>=2.6.0,<2.7.0
 torchvision>=0.21.0,<0.22.0
 
-# Parsing documentale (§1) — Docling + VLM per la comprensione visiva (§3)
 docling>=2.15.0
 
-# Orchestrazione RAG (§5)
 llama-index>=0.12.0
 llama-index-vector-stores-qdrant>=0.4.0
 llama-index-llms-openai-like>=0.3.0
 llama-index-node-parser-docling>=0.4.0
 
-# Embedding + Reranking, eseguiti in locale su GPU B (§2, §6)
 FlagEmbedding>=1.3.0
-# FlagEmbedding 1.4.0 chiama tokenizer.prepare_for_model(), rimosso in
-# transformers 5.x — pin necessario finché FlagEmbedding non lo aggiorna
-# (il loro requires_dist dichiara supporto a v5 ma non è vero in pratica).
+
 transformers>=4.44.2,<5.0.0
 
-# Client Qdrant (§4)
 qdrant-client>=1.12.0
 
-# Grounding Guard — verifica fattuale di date/importi (§7)
 dateparser>=1.2.0
 regex>=2024.9.11
 
-# Valutazione continua (§7, §9) — nessuna dipendenza rigida da transformers
-# nell'installazione base, verificato leggendo il wheel prima di pinnare.
 ragas>=0.4.0
-# ragas 0.4.3 importa staticamente ChatVertexAI da un path rimosso nelle
-# versioni recenti di langchain-community (sunset in corso) — vedi
-# github.com/vibrantlabsai/ragas issue #2741/#2745, nessuna release corretta
-# ancora pubblicata. Pin verificato: 0.3.31 è l'ultima versione che ha
-# ancora langchain_community/chat_models/vertexai.py.
 langchain-community<0.4
 
 # Config e utilità
 python-dotenv>=1.0.1
 httpx>=0.27.0
 pydantic>=2.9.0
+pydantic-settings>=2.6.0
 
-pip install chainlit
+chainlit
+
+matplotlib
+numpy
