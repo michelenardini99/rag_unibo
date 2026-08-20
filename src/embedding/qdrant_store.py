@@ -2,39 +2,44 @@ from qdrant_client import QdrantClient, models
 from embedding.embedder import FILTER_ONLY_KEYS
 
 
-def ensure_collection(client: QdrantClient, collection_name: str) -> None:
+def ensure_collection(client: QdrantClient, collection_name: str, recreate: bool = False) -> None:
     """
     Ensure that a collection exists in Qdrant. If it doesn't exist, create it.
 
     Args:
         client (QdrantClient): The Qdrant client instance.
         collection_name (str): The name of the collection to ensure.
+        recreate (bool): If True and the collection already exists, delete and
+            recreate it instead of leaving it as-is. Used by a full reindex to
+            avoid orphaned points whose id is no longer present in the docstore.
     """
     if client.collection_exists(collection_name):
-        print(f"Collection '{collection_name}' already exists.")
-        return
-    else:
-        client.create_collection(
-            collection_name=collection_name,
-            vectors_config={
-                "dense": models.VectorParams(size=1024, distance=models.Distance.COSINE),
-                "colbert": models.VectorParams(
-                    size=1024, 
-                    distance=models.Distance.COSINE,
-                    multivector_config=models.MultiVectorConfig(
-                        comparator=models.MultiVectorComparator.MAX_SIM
-                    ),
-                )
-            },
-            sparse_vectors_config={
-                "sparse": models.SparseVectorParams()
-            }
-        )
-        client.create_payload_index(
-            collection_name,
-            field_name="stato",
-            field_schema=models.PayloadSchemaType.KEYWORD
-        )
+        if not recreate:
+            print(f"Collection '{collection_name}' already exists.")
+            return
+        client.delete_collection(collection_name)
+
+    client.create_collection(
+        collection_name=collection_name,
+        vectors_config={
+            "dense": models.VectorParams(size=1024, distance=models.Distance.COSINE),
+            "colbert": models.VectorParams(
+                size=1024,
+                distance=models.Distance.COSINE,
+                multivector_config=models.MultiVectorConfig(
+                    comparator=models.MultiVectorComparator.MAX_SIM
+                ),
+            )
+        },
+        sparse_vectors_config={
+            "sparse": models.SparseVectorParams()
+        }
+    )
+    client.create_payload_index(
+        collection_name,
+        field_name="stato",
+        field_schema=models.PayloadSchemaType.KEYWORD
+    )
 
 def nodes_to_points(nodes: list, embeddings: dict) -> list[models.PointStruct]:
     """

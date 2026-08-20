@@ -58,12 +58,14 @@ class BGEM3RagasEmbeddings(BaseRagasEmbeddings):
 
 
 def build_eval_dataset(dataset: list[dict], llm: OpenAILike, embed: BGEM3FlagModel, client: QdrantClient,
-                        reranker: FlagReranker, docstore: SimpleDocumentStore) -> list[dict]:
+                        reranker: FlagReranker, docstore: SimpleDocumentStore, collection_name: str,
+                        retrieval_kwargs: dict | None = None) -> list[dict]:
+    retrieval_kwargs = retrieval_kwargs or {}
     rows = []
     for case in dataset:
         query = case["question"]
         search_query = condense_question(llm, [], query)
-        chunks = retrieve(search_query, client, "ateneo_docs", embed, reranker, docstore)
+        chunks = retrieve(search_query, client, collection_name, embed, reranker, docstore, **retrieval_kwargs)
         response = generate_response(llm, query, chunks, None)
 
         rows.append({
@@ -83,6 +85,7 @@ def results_to_json(dataset: list[dict], df) -> dict:
             "per_case": [
                 {
                     "id": case["id"],
+                    **({"diagnostic_tag": case["diagnostic_tag"]} if "diagnostic_tag" in case else {}),
                     **{name: round(float(df.iloc[i][name]), 4) for name in names},
                 }
                 for i, case in enumerate(dataset)
@@ -103,12 +106,15 @@ def evaluate(
     client: QdrantClient,
     reranker: FlagReranker,
     docstore: SimpleDocumentStore,
+    collection_name: str = "ateneo_docs",
+    retrieval_kwargs: dict | None = None,
     output_path: Path = Path("datasets/eval/results.json"),
 ):
-    rows = build_eval_dataset(dataset, llm, embed, client, reranker, docstore)
+    rows = build_eval_dataset(dataset, llm, embed, client, reranker, docstore, collection_name, retrieval_kwargs)
 
     openai_client = openai.OpenAI(base_url=llm.api_base, api_key="EMPTY")
-    ragas_llm = llm_factory(llm.model, provider="openai", client=openai_client, max_tokens = 4096)
+
+    ragas_llm = llm_factory(llm.model, provider="openai", client=openai_client, max_tokens=1024)
     ragas_emb = BGEM3RagasEmbeddings(embed)
 
     final_dataset = Dataset.from_list(rows)

@@ -22,7 +22,7 @@ async def on_chat_start():
         context_window=settings.vllm_max_model_len,
     )
     client = QdrantClient(url=settings.qdrant_url, grpc_port=settings.qdrant_grpc_port, prefer_grpc=True)
-    docstore = await asyncio.to_thread(SimpleDocumentStore.from_persist_path, "datasets/chunked/docstore.json")
+    docstore = await asyncio.to_thread(SimpleDocumentStore.from_persist_path, settings.data_chunked_dir)
     history: list[tuple[str, str]] = []
     user_session.set("embed", embed_model)
     user_session.set("reranker", reranker)
@@ -30,6 +30,8 @@ async def on_chat_start():
     user_session.set("vector_store", client)
     user_session.set("docstore", docstore)
     user_session.set("history", history)
+
+
     await Message(content="Ciao! Sono il tuo assistente per l'università di Bologna. Come posso aiutarti oggi?").send()
 
 

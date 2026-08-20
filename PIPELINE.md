@@ -50,10 +50,15 @@ flowchart TD
 
     E1 --> OUT["Risposta + fonti citate"]
 
-    subgraph EVAL["VALUTAZIONE"]
+    subgraph EVAL["VALUTAZIONE / ABLATION"]
         F1["evaluate.py\nRAGAS: retrieving / generative / end-to-end"]
+        F2["select_diagnostic_subset.py\nsottoinsieme di test per tag diagnostico"]
+        F3["run_ablations.py\nconfronta N configurazioni,\nun results file per config"]
+        F2 --> F3
+        F3 --> F1
     end
     OUT -.-> F1
+    F3 -.->|se la config cambia chunk size| B1
 ```
 
 ## 3. Stack tecnologico
@@ -68,6 +73,8 @@ flowchart TD
 | Retrieval | ricerca ibrida + reranker + `AutoMergingRetriever` (LlamaIndex) | `src/retrieval/` |
 | Generazione | Qwen2.5-VL-7B-Instruct-AWQ via vLLM (OpenAI-compatible) | `src/generation/` |
 | Valutazione | RAGAS | `src/eval/evaluate.py` |
+| Ablation / confronto configurazioni | itera chunking/retrieval/LLM diversi, riusando l'indice quando possibile | `src/eval/run_ablations.py` |
+| Sottoinsieme diagnostico di test | classifica le domande per tipo di fatto richiesto, per un dev set più economico | `src/eval/select_diagnostic_subset.py` |
 | UI | Chainlit | `src/app.py` |
 | Config | pydantic-settings, letto da `.env` | `src/config.py` |
 
@@ -81,9 +88,15 @@ Legge i documenti grezzi (`datasets/raw/`) e li converte con **Docling**: OCR, r
 
 **Difficoltà incontrata e soluzione — quirk di parsing.** Docling, su documenti reali (regolamenti scannerizzati, slide con layout irregolare), a volte produce output imperfetto: intestazioni di articolo classificate come testo normale, titoli di sezione e articolo uniti in una sola riga, intestazioni/piè di pagina ripetuti che finiscono nel corpo del testo invece di essere filtrati, paragrafi spezzati su più blocchi, tabelle che attraversano un cambio pagina e vengono spezzate in due tabelle separate. `src/ingestion/normalize.py` corregge tutti questi casi con euristiche mirate (es. un testo che compare identico ≥3 volte è trattato come boilerplate ripetuto e rimosso; due tabelle adiacenti con lo stesso numero di colonne vengono ricucite in una sola). Le tabelle di tasse/scadenze sono il caso critico: se una tabella viene spezzata, solo la prima metà resta recuperabile — per questo la fusione delle tabelle paginate è esplicitamente collegata al futuro "Grounding Guard" (§7, vedi sezione Limiti).
 
+Si esegue come script standalone, `python -m ingestion.converter`, sotto `if __name__ == "__main__"`: legge `data_raw_dir`/`data_converted_dir`/`embeddings_device_id` da `settings` invece di percorsi hardcoded (vedi anche §5.7 — in precedenza la conversione partiva a livello di modulo, non solo quando lanciato come script).
+
+Output doppio per documento: `.json` (rappresentazione strutturata, l'unico letto a valle dal chunking, §4.2) e `.md` (non consumato da nessun codice, tenuto solo per ispezione umana rapida — costa nulla in più perché deriva dallo stesso `DoclingDocument` già in memoria).
+
 ### 4.2 Chunking — `src/chunking/chunker.py`
 
 Ogni documento convertito viene passato a `DoclingNodeParser` + `HybridChunker` (tokenizer BGE-M3, target ~512 token, `merge_peers=True` per accorpare frammenti adiacenti troppo piccoli). Ogni chunk ("nodo foglia") porta con sé metadati: `anno_accademico`, `corso`, `categoria`, `stato` (vigente/superato — vedi Limiti), `source_file`, `source_path`, e un breadcrumb `headings` (il percorso titolo→sotto-titolo nel documento originale).
+
+`build_node_parser()`/`chunk_documents()` espongono `chunk_max_tokens` e `tokenizer_model` come parametri (default `settings.chunk_max_tokens`/`settings.embedding_model_id`, prima erano `512`/`"BAAI/bge-m3"` hardcoded nel tokenizer). Non cambiano il comportamento di default, ma permettono di rigenerare l'indice con una dimensione di chunk diversa senza toccare il codice — è quello che usa l'ablation runner (§4.11) per confrontare chunk più piccoli/più grandi.
 
 `_resolve_image_paths()` risolve un problema specifico: `DoclingNodeParser` scarta i dati binari delle immagini quando serializza i metadati del nodo, lasciando solo un riferimento (`#/pictures/3`). Per passare l'immagine **originale** al modello generativo (non solo la sua didascalia testuale, spesso troppo generica), la funzione ricarica il `DoclingDocument` originale e risolve il riferimento nel percorso file reale.
 
@@ -97,6 +110,8 @@ Modello **BGE-M3**, che produce in un solo passaggio tre rappresentazioni per og
 
 Qdrant ospita una singola collezione (`ateneo_docs`) con tre "vector space" nominati (`dense`, `colbert`, `sparse`) sullo stesso punto, più un indice sul campo payload `stato` per il filtraggio. Solo le foglie vengono inserite (`upsert_nodes`); i nodi genitore restano esclusivamente nel docstore su file (`datasets/chunked/docstore.json`), non in Qdrant.
 
+`ensure_collection()` accetta un flag `recreate`: se `False` (default) non fa nulla quando la collezione esiste già; se `True` — usato da `reindex.py` (§4.9) — la cancella e ricrea anche se già presente, per non lasciare punti orfani con id non più prodotti dal chunking quando la struttura dei chunk cambia (es. dopo un'ablation su `chunk_max_tokens`).
+
 ### 4.5 Retrieval — `src/retrieval/`
 
 Tre file cooperano:
@@ -104,6 +119,8 @@ Tre file cooperano:
 - **`hybrid_search.py`**: esegue la ricerca ibrida vera e propria in Qdrant. Prima un *prefetch* di 50 candidati sia dal vettore denso sia da quello sparso (entrambi filtrati su `stato = vigente`), poi un secondo passaggio che riordina l'unione di questi candidati usando la similarità **ColBERT** (max-sim), restituendo i 20 migliori.
 - **`reranker.py`**: passa questi 20 candidati a un **cross-encoder** dedicato (`BGE-Reranker-v2-m3`), che valuta query e testo del chunk insieme (più preciso ma più lento della similarità vettoriale, per questo si applica solo al pool già ridotto) e restituisce i punteggi.
 - **`retriever.py`**: orchestra tutto, e implementa il **retrieval gerarchico** (vedi §5, "difficoltà" più sotto per il perché). `HybridQdrantRetriever` incapsula la ricerca ibrida + reranking come un `BaseRetriever` di LlamaIndex, così può alimentare l'`AutoMergingRetriever` **nativo** di LlamaIndex: se abbastanza chunk fratelli (stessa sezione) compaiono tra i candidati, vengono fusi nel loro nodo genitore invece di restare frammenti isolati.
+
+  `retrieve()` espone come parametri keyword-only (dopo i 6 argomenti posizionali esistenti, per non rompere le chiamate da `app.py`/`evaluate.py`) tutto ciò che prima era costante di modulo: `use_reranker`, `use_automerging`, `prefetch_limit`, `candidate_pool`, `top_k`, `score_threshold`, `merged_fallback_threshold`. Con `use_reranker=False` il punteggio finale resta quello ColBERT della ricerca ibrida (nessun secondo passaggio cross-encoder); con `use_automerging=False` il retriever ritorna i nodi foglia grezzi, senza fusione di sezione. Servono a isolare il contributo di ciascun componente via ablation (§4.11) senza duplicare la funzione.
 
 ### 4.6 Generazione — `src/generation/`
 
@@ -113,7 +130,7 @@ Tre file cooperano:
 
 ### 4.7 Configurazione — `src/config.py`
 
-Un oggetto `Settings` (pydantic-settings) legge `.env` alla radice del repository e centralizza: URL/porte Qdrant, URL del modello generativo, device GPU per i modelli locali, soglie di retrieval, dimensione target dei chunk, numero di turni di storico conversazione. Oggi è usato in `app.py`; gli altri script (chunking, reindex) mescolano ancora percorsi hardcoded e `settings` — non tutto il codebase è stato ancora migrato.
+Un oggetto `Settings` (pydantic-settings) legge `.env` alla radice del repository e centralizza: URL/porte Qdrant, URL del modello generativo, device GPU per i modelli locali, soglie di retrieval, dimensione target dei chunk, numero di turni di storico conversazione. Usato in `app.py`, `ingestion/converter.py`, `chunking/chunker.py` e `reindex.py` (§4.1/4.2/4.9); `embedder.py` è ancora parzialmente allineato — `build_embedding_model` continua a usare `'BAAI/bge-m3'` hardcoded invece di `settings.embedding_model_id`, quindi cambiare quel campo in `.env` oggi non ha alcun effetto sul modello di embedding realmente caricato.
 
 ### 4.8 Interfaccia — `src/app.py` (Chainlit)
 
@@ -121,7 +138,9 @@ All'avvio di una chat (`on_chat_start`) carica una volta sola: modello di embedd
 
 ### 4.9 Reindex — `src/reindex.py`
 
-Script standalone che ricostruisce da zero chunk (foglie + genitori) ed embedding, e re-indicizza Qdrant. Non ri-esegue il parsing Docling (costoso, non necessario se i documenti sorgente non sono cambiati) — riparte da `datasets/converted/`. Cancella e ricrea la collezione Qdrant per evitare punti orfani con ID non più presenti nel docstore.
+Script standalone che ricostruisce da zero chunk (foglie + genitori) ed embedding, e re-indicizza Qdrant. Non ri-esegue il parsing Docling (costoso, non necessario se i documenti sorgente non sono cambiati) — riparte da `datasets/converted/`. Cancella e ricrea la collezione Qdrant (`ensure_collection(..., recreate=True)`, §4.4) per evitare punti orfani con ID non più presenti nel docstore.
+
+Accetta anche `chunk_max_tokens`/`tokenizer_model`, inoltrati a `chunk_documents()` (§4.2): passando una `chunked_dir`/`collection_name` distinte per variante si può tenere più di un indice costruito con parametri di chunking diversi senza che si sovrascrivano a vicenda — è la convenzione che usa `run_ablations.py` (§4.11).
 
 ### 4.10 Valutazione — `src/eval/evaluate.py`
 
@@ -133,6 +152,34 @@ Usa **RAGAS** su un set di 81 domande curate a mano (`datasets/eval/qa_test_set.
 
 Il risultato (medie + punteggio per singolo caso) viene salvato in `datasets/eval/results.json`.
 
+`evaluate()`/`build_eval_dataset()` accettano `collection_name` (prima era hardcoded `"ateneo_docs"` dentro `build_eval_dataset`, indipendentemente da quale collezione veniva passata — bug latente, corretto) e `retrieval_kwargs`, un dizionario inoltrato direttamente a `retrieve()` (§4.5): permette di valutare con reranker/automerging disattivati o soglie diverse senza duplicare la funzione. Se un caso del dataset porta un campo `diagnostic_tag` (§4.12), `results_to_json` lo riporta in ogni riga di `per_case`, per poter aggregare le metriche per tipo di domanda a posteriori invece di dover incrociare i risultati a mano con il dataset originale.
+
+### 4.11 Ablation runner — `src/eval/run_ablations.py`
+
+Valuta più configurazioni sullo stesso dataset di test, un `results_<nome>.json` per ciascuna, così sono confrontabili — pensato per il lavoro di tesi di confronto tra componenti (LLM diversi, retriever/chunker diversi), non solo per un numero finale unico.
+
+Ogni configurazione è un `AblationConfig` (dataclass): `name`, `chunk_max_tokens`/`tokenizer_model` (§4.2), `llm_model`/`llm_base_url` (§4.6), e `retrieval_kwargs` — un dizionario libero inoltrato a `retrieve()` (§4.5), non un campo per ciascun parametro: così resta sincronizzato automaticamente se `retrieve()` guadagna nuovi parametri, senza dover toccare `AblationConfig`.
+
+**Riuso dell'indice.** Una `index_key` derivata da `(chunk_max_tokens, tokenizer_model)` identifica quali configurazioni condividono lo stesso indice. Solo le varianti che cambiano la dimensione dei chunk richiedono un reindex (`chunk_documents` + embedding BGE-M3 + upsert Qdrant, lo step costoso); quelle che cambiano solo i flag di retrieval o l'LLM riusano l'indice già costruito, in una collezione Qdrant/`chunked_dir` dedicata per `index_key` (es. `ateneo_docs__tok512-BAAI-bge-m3`) così le varianti non si sovrascrivono. Se l'indice per una `index_key` esiste già su disco (`chunked_dir/docstore.json`) viene riusato senza ricostruirlo; `--force-reindex` lo ricostruisce comunque.
+
+Configurazioni incluse di default in `CONFIGS`: `baseline`, `no_reranker`, `no_automerging`, `chunk_256`, `chunk_768` — le prime tre isolano il contributo di reranker e retrieval gerarchico (le scelte architetturali più specifiche del progetto), le ultime due la sensibilità alla dimensione del chunk. Non ancora coperto: dense-only vs sparse-only vs ibrido (richiederebbe un flag in `hybrid_search.search_candidates()`, non ancora implementato — vedi Limiti, §6).
+
+Uso: `python -m eval.run_ablations [--dataset PATH] [--results-dir PATH] [--force-reindex]`.
+
+### 4.12 Sottoinsieme diagnostico — `src/eval/select_diagnostic_subset.py`
+
+Le 81 domande di `qa_test_set.json` sono costose da rivalutare a ogni configurazione (RAGAS chiama un LLM come giudice per quasi tutte le metriche, oltre a condense+retrieval+generazione della pipeline). Questo script produce un sottoinsieme più piccolo pensato per **massimizzare la capacità di distinguere le configurazioni tra loro**, non per essere rappresentativo in senso statistico — il set completo resta riservato alla valutazione finale.
+
+Classifica ogni domanda in base al campo `verification`, già presente nel dataset (nessuna annotazione aggiuntiva), tramite `classify()`:
+
+- **`multi_fact`** (14/81): la verifica richiede più fatti insieme (es. "entrambe le cifre", "almeno 3 delle 4 procedure"). Le domande più sensibili a `use_automerging` — se le informazioni sono sparse su più chunk della stessa sezione, solo la fusione parent-child le riporta in un unico contesto.
+- **`qualitative_negation`** (8/81): risposta non riducibile a un singolo valore ("giudizio qualitativo", risposte che devono negare un obbligo). Più sensibili a LLM/prompt che al retrieval puro — buon gruppo di controllo per confrontare modelli generativi.
+- **`single_fact`** (59/81 nel dataset completo): un singolo valore esatto (cifra, data, range, percentuale) — la maggioranza. Qui contano dimensione del chunk e reranker: un chunk troppo grande o un candidato quasi-giusto rompono il match esatto richiesto dalla verifica.
+
+`select_diagnostic_subset()` tiene `multi_fact`/`qualitative_negation` **per intero** (sono rare e sono il segnale più diagnostico: scartarle appiattirebbe proprio le differenze che l'ablation vuole misurare), e campiona `single_fact` a una frazione configurabile per categoria tematica (prefisso dell'id, es. `tasse-`, `laurea-` — 23 categorie nel dataset attuale), così ogni argomento resta rappresentato senza portarsi dietro tutti i quasi-duplicati fattuali dello stesso tema. Con il tasso di default (35%): **52/81 domande**, tutte le 23 categorie coperte, salvate in `datasets/eval/qa_test_set_diagnostic.json` con un campo `diagnostic_tag` aggiunto a ciascun caso (letto da `evaluate.results_to_json`, §4.10).
+
+Uso: `python -m eval.select_diagnostic_subset [--single-fact-rate 0.35]`.
+
 ## 5. Difficoltà affrontate e soluzioni
 
 Questa sezione documenta i problemi reali incontrati lavorando sul sistema già funzionante, non ipotetici.
@@ -141,9 +188,13 @@ Questa sezione documenta i problemi reali incontrati lavorando sul sistema già 
 
 `ROOT_DIR` era calcolato con `Path(__file__).resolve().parents[2]`, che da `src/config.py` punta **fuori dal repository** (`/home/utente` invece della cartella del progetto). Il file `.env` non veniva mai trovato, quindi ogni istanziazione di `Settings()` falliva su un campo obbligatorio mancante. **Soluzione**: `parents[1]`, e allineamento dei percorsi di default alla cartella reale `datasets/` (il default preesistente puntava a una cartella `data/` mai esistita). Contestualmente, `requirements.txt` conteneva la riga letterale `pip install chainlit` (non un requirement valido, avrebbe fatto fallire `pip install -r requirements.txt`) e mancava `pydantic-settings` pur essendo già usato: entrambi corretti.
 
-### 5.2 Troncamento nelle chiamate di grading di RAGAS
+### 5.2 Troncamento nelle chiamate di grading di RAGAS (e il "worst case" che non ha retto)
 
-Durante l'evaluate, ~8% delle chiamate LLM interne di RAGAS (usate per calcolare le metriche) fallivano con `IncompleteOutputException`, con fallback automatico a 1 sola generazione invece di 3 (riducendo l'affidabilità statistica delle metriche self-consistency). **Causa**: `llm_factory(...)` di RAGAS usa di default `max_tokens=1024` per il completamento — insufficiente per un output strutturato (verdetti multipli per chunk/frase). **Soluzione**: `max_tokens=4096`, dimensionato calcolando che il prompt di grading worst-case (contesto recuperato + domanda + risposta + template RAGAS) resta sotto i ~3.500 token, lasciando margine sufficiente entro la finestra di contesto di 8192 del modello servito da vLLM. Il parametro non è documentato nella signature esplicita di `llm_factory` (passa via `**kwargs`) ma è confermato nel sorgente della libreria.
+Durante l'evaluate, ~8% delle chiamate LLM interne di RAGAS (usate per calcolare le metriche) fallivano con `IncompleteOutputException`, con fallback automatico a 1 sola generazione invece di 3 (riducendo l'affidabilità statistica delle metriche self-consistency). **Causa**: `llm_factory(...)` di RAGAS usa di default `max_tokens=1024` per il completamento — insufficiente per un output strutturato (verdetti multipli per chunk/frase). Il parametro non è documentato nella signature esplicita di `llm_factory` (passa via `**kwargs`) ma è confermato nel sorgente della libreria.
+
+**Prima soluzione (rivelatasi incompleta): `max_tokens=4096`**, dimensionato stimando che il prompt di grading worst-case (contesto recuperato + domanda + risposta + template RAGAS) restasse sotto i ~3.500 token, lasciando margine entro la finestra di contesto di 8192 del modello servito da vLLM. La stima teneva per i casi osservati inizialmente, ma non è un limite reale imposto dal codice: un contesto recuperato più ampio del previsto (una sezione fusa da `AutoMergingRetriever`, §4.5, o un run con chunk più grandi come la variante `chunk_768` dell'ablation runner, §4.11) può facilmente superarla. Quando è successo, il fallimento non è più stato un troncamento silenzioso ma un errore hard `400` di vLLM (`This model's maximum context length is 8192 tokens... input_tokens=4097`) — input e `max_tokens` insieme superano la finestra del modello, e la chiamata va in eccezione invece di degradare.
+
+**Soluzione applicata (parziale, non definitiva)**: `max_tokens` abbassato a `1024` — riduce il rischio di sforare la finestra totale con contesti recuperati grandi, perché lascia più margine all'input qualunque sia la dimensione del contesto. **Ma `1024` è esattamente il valore di default della libreria che aveva causato il problema originale di questa sezione** (`IncompleteOutputException` sulle risposte più lunghe): il fix scambia un rischio (crash hard `400` su input lunghi) con l'altro (troncamento silenzioso su verdetti/statement insolitamente lunghi), non li elimina entrambi — un budget fisso, da nessuna delle due parti, non può garantire contemporaneamente "spazio sufficiente per l'output di RAGAS" e "spazio sufficiente per l'input" dentro una finestra di 8192 token condivisa e di dimensione fissa. **Non ancora fatto, soluzione più robusta**: calcolare `max_tokens` dinamicamente come `context_window - token_effettivi_del_prompt - margine` invece di una costante fissa, oppure limitare a monte il numero/la lunghezza dei chunk passati a RAGAS. **Lezione**: un budget di token dimensionato su un caso peggiore stimato a mano si rompe silenziosamente non appena qualcosa a monte (qui: le stesse configurazioni pensate per essere confrontate, chunk size e top-k inclusi) fa crescere l'input oltre la stima — e stringere la costante sul lato opposto sposta il problema, non lo risolve.
 
 ### 5.3 Un caso di valutazione basato su un fatto inventato
 
@@ -163,6 +214,10 @@ La domanda "quali sono le diverse metodologie di pagamento delle tasse?" restitu
 
 Durante lo sviluppo, il campo `"stato": "vigente"` era stato rimosso da `metadata.py` (era comunque hardcoded, mai realmente popolato da una logica di validità temporale). Il filtro Qdrant su `stato = vigente` in `hybrid_search.py`, però, dipende da quel campo: senza, un nuovo re-indexing avrebbe fatto sì che **nessun punto** corrispondesse più al filtro, azzerando il retrieval. Ripristinato come parte del lavoro sul retrieval gerarchico, che richiedeva comunque un re-indexing completo.
 
+### 5.7 `converter.py` rilanciava la conversione a ogni import
+
+`convert_corpus(...)` era chiamata a livello di modulo, in fondo al file, invece che sotto `if __name__ == "__main__"` (pattern già usato correttamente in `chunker.py`). L'effetto: qualunque cosa importasse `ingestion.converter` — anche indirettamente, es. un futuro test o un altro script che importasse solo `build_converter` — avrebbe rilanciato l'intera conversione Docling (OCR, tabelle, VLM) su tutto `datasets/raw/`, con percorsi e device hardcoded (`Path("datasets/raw/")`, `device=2`) indipendenti da `settings`. **Soluzione**: spostata sotto `if __name__ == "__main__"`, con percorsi/device letti da `settings` come nel resto della pipeline (§4.1).
+
 ## 6. Limiti noti e lavoro futuro
 
 - **Grounding Guard non implementato** (§7 del documento di progettazione): non esiste ancora uno stadio che estragga automaticamente date/importi dalla risposta generata e li verifichi letteralmente contro i chunk recuperati prima di mostrarla allo studente. È il gap più rilevante rispetto al rischio dichiarato del progetto (una data sbagliata è peggio di "non lo so") — il caso §5.4 sopra è un esempio concreto di cosa intercetterebbe.
@@ -170,6 +225,8 @@ Durante lo sviluppo, il campo `"stato": "vigente"` era stato rimosso da `metadat
 - **Sintesi cross-documento non coperta**: l'`AutoMergingRetriever` unisce chunk della *stessa* sezione/documento. Una domanda che richiede di aggregare informazioni sparse su documenti diversi (es. "riassumi tutto il percorso dall'iscrizione alla laurea") non è ancora gestita — servirebbe query decomposition/sub-question querying.
 - **`README.md` è vuoto**: nessuna istruzione di setup, pur avendo già `.env.example` e `docker-compose.yml` pronti.
 - **Nessun VLM dedicato Granite-Docling**: la descrizione automatica delle immagini usa `smolvlm_picture_description` (SmolVLM), non Granite-Docling come indicato nel documento di progettazione — scelta equivalente ma non identica a quanto originariamente pianificato.
+- **Ablation dense-only/sparse-only non ancora possibile**: `run_ablations.py` (§4.11) confronta dimensione dei chunk, reranker on/off, automerging on/off e LLM diversi, ma non ancora "solo denso" vs "solo sparso" vs ibrido — richiederebbe un flag `retrieval_mode` in `hybrid_search.search_candidates()`/`HybridQdrantRetriever` (§4.5), non ancora implementato.
+- **Il budget di token per il giudice RAGAS è una costante fissa, non un calcolo dinamico** (§5.2): `max_tokens=1024` riduce ma non elimina il rischio di sforare la finestra di contesto di vLLM con contesti recuperati grandi (chunk size alto, `top_k` alto, sezioni fuse da `AutoMergingRetriever`), e può a sua volta troncare verdetti insolitamente lunghi. La soluzione robusta (calcolare `max_tokens` in base ai token effettivi del prompt) non è ancora implementata.
 
 ## 7. Come eseguire il progetto (riferimento rapido)
 
@@ -178,3 +235,4 @@ Durante lo sviluppo, il campo `"stato": "vigente"` era stato rimosso da `metadat
 3. Popolare `datasets/raw/` con i documenti, poi `python -m ingestion.converter` (parsing) e `python -m reindex` (chunking + embedding + indicizzazione — vedi §4.9).
 4. `chainlit run src/app.py` — avvia l'interfaccia conversazionale.
 5. Per la valutazione: `python -m eval.evaluate` (richiede un piccolo script che carichi modelli/dataset e chiami `evaluate()`, vedi `src/eval/evaluate.py`).
+6. Per confrontare configurazioni diverse (chunk size, reranker/automerging on/off, LLM — §4.11): prima `python -m eval.select_diagnostic_subset` (una tantum, genera `datasets/eval/qa_test_set_diagnostic.json`, §4.12), poi `python -m eval.run_ablations --dataset ../datasets/eval/qa_test_set_diagnostic.json` — un file di risultati per configurazione in `datasets/eval/ablations/`. Sul set completo (senza `--dataset`) per il risultato finale da riportare in tesi.

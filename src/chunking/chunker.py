@@ -9,10 +9,16 @@ from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTok
 from docling_core.types.doc import DoclingDocument
 
 from chunking.metadata import extract_metadata
+from config import settings
 
 
-def build_node_parser() -> DoclingNodeParser:
-    tokenizer = HuggingFaceTokenizer.from_pretrained("BAAI/bge-m3", max_tokens=512)
+DEFAULT_TOKENIZER_MODEL = settings.embedding_model_id
+DEFAULT_CHUNK_MAX_TOKENS = settings.chunk_max_tokens
+
+
+def build_node_parser(chunk_max_tokens: int = DEFAULT_CHUNK_MAX_TOKENS,
+                       tokenizer_model: str = DEFAULT_TOKENIZER_MODEL) -> DoclingNodeParser:
+    tokenizer = HuggingFaceTokenizer.from_pretrained(tokenizer_model, max_tokens=chunk_max_tokens)
     chunker = HybridChunker(tokenizer=tokenizer, merge_peers=True)
     return DoclingNodeParser(
         chunker=chunker
@@ -25,6 +31,17 @@ def load_as_li_document(json_path: Path, converted_root: Path) -> Document:
         text=json_path.read_text(encoding="utf-8"),
         metadata=metadata,
     )
+
+def find_unchunked_files(root: Path, docstore: SimpleDocumentStore | None) -> list[Path]:
+    already_chunked = {
+        node.metadata.get("source_path")
+        for node in (docstore.docs.values() if docstore else [])
+    }
+
+    return [
+        p for p in sorted(root.rglob("*.json"))
+        if p.name != "_failures.json" and str(p.relative_to(root)) not in already_chunked
+    ]
 
 def _resolve_image_paths(nodes: list, converted_root: Path) -> None:
     """DoclingNodeParser drops the heavy `image`/`data` fields when it
@@ -109,15 +126,16 @@ def build_parent_nodes(leaf_nodes: list[BaseNode]) -> list[TextNode]:
     return parents
 
 
-def chunk_documents(converted_root: Path) -> tuple[list[BaseNode], list[TextNode]]:
-    parser = build_node_parser()
+def chunk_documents(files: list[Path], root: Path,  chunk_max_tokens: int = DEFAULT_CHUNK_MAX_TOKENS,
+                     tokenizer_model: str = DEFAULT_TOKENIZER_MODEL) -> tuple[list[BaseNode], list[TextNode]]:
+    parser = build_node_parser(chunk_max_tokens=chunk_max_tokens, tokenizer_model=tokenizer_model)
     documents = [
-        load_as_li_document(p, converted_root)
-        for p in sorted(converted_root.rglob("**/*.json"))
+        load_as_li_document(p, root)
+        for p in files
         if p.name != "_failures.json"
     ]
     leaf_nodes = parser.get_nodes_from_documents(documents, show_progress=True)
-    _resolve_image_paths(leaf_nodes, converted_root)
+    _resolve_image_paths(leaf_nodes, root)
     parent_nodes = build_parent_nodes(leaf_nodes)
     return leaf_nodes, parent_nodes
 
@@ -126,15 +144,11 @@ def persist_nodes(nodes: list[BaseNode], persist_dir: Path) -> None:
     """Writes chunked nodes to disk so later stages (embedding/Qdrant, §8
     pipeline box 3) can load them without re-running chunking from scratch.
     """
-    persist_dir.mkdir(parents=True, exist_ok=True)
-    docstore = SimpleDocumentStore()
+    docstore_path = persist_dir / "docstore.json"
+    if docstore_path.exists():
+        docstore = SimpleDocumentStore.from_persist_path(docstore_path)
+    else:        
+        persist_dir.mkdir(parents=True, exist_ok=True)
+        docstore = SimpleDocumentStore()
     docstore.add_documents(nodes)
     docstore.persist(str(persist_dir / "docstore.json"))
-
-
-if __name__ == "__main__":
-    converted_root = Path("datasets/converted/")
-    leaf_nodes, parent_nodes = chunk_documents(converted_root)
-    print(f"Chunked {len(leaf_nodes)} leaf chunk(s) + {len(parent_nodes)} parent section(s) from {converted_root}.")
-    persist_nodes(leaf_nodes + parent_nodes, Path("datasets/chunked/"))
-    print("Persisted to datasets/chunked/docstore.json")

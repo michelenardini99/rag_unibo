@@ -8,16 +8,12 @@ from qdrant_client import QdrantClient
 from retrieval.hybrid_search import embed_query, search_candidates
 from retrieval.reranker import rerank
 
-RERANK_CANDIDATE_POOL = 20
-TOP_K = 6
-SCORE_THRESHOLD = 0.3
-# Soglia di fallback, usata SOLO per le sezioni fuse e SOLO quando la soglia
-# standard non fa passare nulla (vedi retrieve()) — per domande di sintesi
-# dove nessun singolo chunk/sezione è mai giudicato molto pertinente dal
-# reranker, ma è comunque meglio di "nessuna informazione pertinente". Le
-# foglie restano sempre a SCORE_THRESHOLD: non si abbassa mai la precisione
-# sulle domande fattuali/numeriche, che sono la priorità del progetto.
-MERGED_FALLBACK_THRESHOLD = 0.12
+DEFAULT_PREFETCH_LIMIT = 50
+DEFAULT_CANDIDATE_POOL = 20
+DEFAULT_TOP_K = 6
+DEFAULT_SCORE_THRESHOLD = 0.3
+
+DEFAULT_MERGED_FALLBACK_THRESHOLD = 0.12
 
 
 class HybridQdrantRetriever(BaseRetriever):
@@ -26,8 +22,8 @@ class HybridQdrantRetriever(BaseRetriever):
     AutoMergingRetriever (§5 architettura, retrieval gerarchico Parent-Child)
     while keeping the existing hybrid retrieval logic untouched.
 
-    Returns a wide-ish candidate pool (RERANK_CANDIDATE_POOL, not just the
-    final top-k) *without* the score cutoff: AutoMergingRetriever needs to see
+    Returns a wide-ish candidate pool (candidate_pool, not just the final
+    top-k) *without* the score cutoff: AutoMergingRetriever needs to see
     multiple siblings of the same section to decide whether to merge them —
     filtering too early would remove exactly the borderline chunks the merge
     is meant to rescue. The score threshold is applied after merging instead
@@ -35,22 +31,32 @@ class HybridQdrantRetriever(BaseRetriever):
     """
 
     def __init__(self, client: QdrantClient, collection_name: str, embed_model, reranker_model,
-                 docstore: SimpleDocumentStore, candidate_pool: int = RERANK_CANDIDATE_POOL):
+                 docstore: SimpleDocumentStore, candidate_pool: int = DEFAULT_CANDIDATE_POOL,
+                 prefetch_limit: int = DEFAULT_PREFETCH_LIMIT, use_reranker: bool = True):
         self._client = client
         self._collection_name = collection_name
         self._embed_model = embed_model
         self._reranker_model = reranker_model
         self._docstore = docstore
         self._candidate_pool = candidate_pool
+        self._prefetch_limit = prefetch_limit
+        self._use_reranker = use_reranker
         super().__init__()
 
     def _retrieve(self, query_bundle: QueryBundle) -> list[NodeWithScore]:
         query_embedding = embed_query(query_bundle.query_str, self._embed_model)
-        candidates = search_candidates(self._client, self._collection_name, query_embedding)
-        reranked = rerank(query_bundle.query_str, candidates, self._reranker_model, limit=self._candidate_pool)
+        candidates = search_candidates(
+            self._client, self._collection_name, query_embedding,
+            limit=self._candidate_pool, prefetch_limit=self._prefetch_limit,
+        )
+
+        if self._use_reranker:
+            scored = rerank(query_bundle.query_str, candidates, self._reranker_model, limit=self._candidate_pool)
+        else:
+            scored = [(c, c.score) for c in candidates]
 
         results = []
-        for candidate, score in reranked:
+        for candidate, score in scored:
             node = self._docstore.get_document(str(candidate.id))
             if node is None:
                 continue
@@ -58,8 +64,22 @@ class HybridQdrantRetriever(BaseRetriever):
         return results
 
 
-def retrieve(query: str, client: QdrantClient, collection_name: str, embed_model, reranker,
-              docstore: SimpleDocumentStore) -> list:
+def retrieve(
+    query: str,
+    client: QdrantClient,
+    collection_name: str,
+    embed_model,
+    reranker,
+    docstore: SimpleDocumentStore,
+    *,
+    use_reranker: bool = True,
+    use_automerging: bool = True,
+    prefetch_limit: int = DEFAULT_PREFETCH_LIMIT,
+    candidate_pool: int = DEFAULT_CANDIDATE_POOL,
+    top_k: int = DEFAULT_TOP_K,
+    score_threshold: float = DEFAULT_SCORE_THRESHOLD,
+    merged_fallback_threshold: float = DEFAULT_MERGED_FALLBACK_THRESHOLD,
+) -> list:
     """
     Retrieves relevant nodes (merging sibling chunks into their parent
     section when enough of them match, via AutoMergingRetriever) for the
@@ -74,25 +94,45 @@ def retrieve(query: str, client: QdrantClient, collection_name: str, embed_model
         docstore (SimpleDocumentStore): docstore holding both leaf and parent
             nodes (datasets/chunked/docstore.json), needed by
             AutoMergingRetriever to resolve parents by id.
+        use_reranker: se False, salta lo step di cross-encoder reranking e usa
+            direttamente lo score della ricerca ibrida (ablation).
+        use_automerging: se False, salta AutoMergingRetriever e ritorna i nodi
+            foglia così come recuperati, senza fondere le sezioni (ablation).
+        prefetch_limit: quanti candidati prelevare per ciascun ramo (denso/sparso)
+            prima del passaggio ColBERT in `search_candidates`.
+        candidate_pool: quanti candidati passare al reranker/tenere prima del
+            filtro per punteggio finale.
+        top_k: numero massimo di nodi restituiti.
+        score_threshold: soglia minima di punteggio per i nodi foglia (e per i
+            nodi fusi, al primo tentativo).
+        merged_fallback_threshold: soglia di fallback per i soli nodi fusi,
+            usata quando `score_threshold` non fa passare nulla.
 
     Returns:
         list: A list of relevant nodes retrieved from the collection.
     """
-    base_retriever = HybridQdrantRetriever(client, collection_name, embed_model, reranker, docstore)
-    storage_context = StorageContext.from_defaults(docstore=docstore)
-    auto_merging = AutoMergingRetriever(base_retriever, storage_context, verbose=False)
-    merged_nodes = auto_merging.retrieve(query)
+    base_retriever = HybridQdrantRetriever(
+        client, collection_name, embed_model, reranker, docstore,
+        candidate_pool=candidate_pool, prefetch_limit=prefetch_limit, use_reranker=use_reranker,
+    )
+
+    if use_automerging:
+        storage_context = StorageContext.from_defaults(docstore=docstore)
+        auto_merging = AutoMergingRetriever(base_retriever, storage_context, verbose=False)
+        merged_nodes = auto_merging.retrieve(query)
+    else:
+        merged_nodes = base_retriever.retrieve(query)
 
     def select(merged_threshold: float) -> list[NodeWithScore]:
         def passes(n: NodeWithScore) -> bool:
             is_merged = bool(n.node.child_nodes)
-            threshold = merged_threshold if is_merged else SCORE_THRESHOLD
+            threshold = merged_threshold if is_merged else score_threshold
             return (n.score or 0.0) > threshold
-        return sorted((n for n in merged_nodes if passes(n)), key=lambda n: n.score or 0.0, reverse=True)[:TOP_K]
+        return sorted((n for n in merged_nodes if passes(n)), key=lambda n: n.score or 0.0, reverse=True)[:top_k]
 
-    final_nodes = select(SCORE_THRESHOLD)
+    final_nodes = select(score_threshold)
     if not final_nodes:
-        final_nodes = select(MERGED_FALLBACK_THRESHOLD)
+        final_nodes = select(merged_fallback_threshold)
 
     return [
         {
