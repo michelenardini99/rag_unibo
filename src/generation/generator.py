@@ -1,5 +1,6 @@
 from llama_index.llms.openai_like import OpenAILike
 from generation.prompt import build_prompt, build_sources_footer
+from config import settings
 
 def build_llm(base_url: str, model: str = "generation-llm", context_window: int = 8192) -> OpenAILike:
     """
@@ -23,7 +24,8 @@ def build_llm(base_url: str, model: str = "generation-llm", context_window: int 
 
 NO_CONTEXT_MESSAGE = (
     "Non ho trovato informazioni pertinenti nei documenti disponibili per rispondere "
-    "a questa domanda. Se riguarda l'Università di Bologna, prova a riformularla; "
+    "a questa domanda. "
+    f"Se riguarda {settings.assistant_institution}, prova a riformularla; "
     "altrimenti non rientra tra gli argomenti che posso trattare."
 )
 

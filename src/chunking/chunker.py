@@ -105,10 +105,7 @@ def build_parent_nodes(leaf_nodes: list[BaseNode]) -> list[TextNode]:
         parent = TextNode(
             text="\n\n".join(c.text for c in children),
             metadata={
-                "anno_accademico": first.metadata.get("anno_accademico"),
-                "corso": first.metadata.get("corso"),
-                "categoria": first.metadata.get("categoria"),
-                "materia": first.metadata.get("materia"),
+                **{key: first.metadata.get(key) for key in settings.metadata_schema},
                 "stato": first.metadata.get("stato"),
                 "source_file": first.metadata.get("source_file"),
                 "source_path": source_path,

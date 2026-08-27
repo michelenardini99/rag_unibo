@@ -7,13 +7,8 @@ from qdrant_client import QdrantClient
 
 from retrieval.hybrid_search import embed_query, search_candidates
 from retrieval.reranker import rerank
+from config import settings
 
-DEFAULT_PREFETCH_LIMIT = 50
-DEFAULT_CANDIDATE_POOL = 20
-DEFAULT_TOP_K = 6
-DEFAULT_SCORE_THRESHOLD = 0.3
-
-DEFAULT_MERGED_FALLBACK_THRESHOLD = 0.12
 
 
 class HybridQdrantRetriever(BaseRetriever):
@@ -31,8 +26,8 @@ class HybridQdrantRetriever(BaseRetriever):
     """
 
     def __init__(self, client: QdrantClient, collection_name: str, embed_model, reranker_model,
-                 docstore: SimpleDocumentStore, candidate_pool: int = DEFAULT_CANDIDATE_POOL,
-                 prefetch_limit: int = DEFAULT_PREFETCH_LIMIT, use_reranker: bool = True):
+                 docstore: SimpleDocumentStore, candidate_pool: int = settings.retrieval_candidate_limit,
+                 prefetch_limit: int = settings.retrieval_prefetch_limit, use_reranker: bool = True):
         self._client = client
         self._collection_name = collection_name
         self._embed_model = embed_model
@@ -74,11 +69,11 @@ def retrieve(
     *,
     use_reranker: bool = True,
     use_automerging: bool = True,
-    prefetch_limit: int = DEFAULT_PREFETCH_LIMIT,
-    candidate_pool: int = DEFAULT_CANDIDATE_POOL,
-    top_k: int = DEFAULT_TOP_K,
-    score_threshold: float = DEFAULT_SCORE_THRESHOLD,
-    merged_fallback_threshold: float = DEFAULT_MERGED_FALLBACK_THRESHOLD,
+    prefetch_limit: int = settings.retrieval_prefetch_limit,
+    candidate_pool: int = settings.retrieval_candidate_limit,
+    top_k: int = settings.rerank_top_k,
+    score_threshold: float = settings.rerank_score_threshold,
+    merged_fallback_threshold: float = settings.merged_threshold,
 ) -> list:
     """
     Retrieves relevant nodes (merging sibling chunks into their parent

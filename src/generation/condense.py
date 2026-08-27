@@ -18,6 +18,6 @@ def build_condense_prompt(history: list[tuple[str, str]], query: str) -> list[Ch
 
 def condense_question(llm: OpenAILike, history: list[tuple[str, str]], query: str) -> str:
     if not history:
-        return query  # nothing to condense against, skip the extra LLM call
+        return query
     response = llm.chat(build_condense_prompt(history, query), max_tokens=64, temperature=0.0)
     return response.message.content.strip()

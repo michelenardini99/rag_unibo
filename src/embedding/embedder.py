@@ -1,10 +1,9 @@
 from FlagEmbedding import BGEM3FlagModel
 from llama_index.core.schema import BaseNode
 
-FILTER_ONLY_KEYS = [
-    "anno_accademico", "corso", "categoria", "materia", "stato",
-    "source_file", "source_path", "image_paths",
-]
+from config import settings
+
+FILTER_ONLY_KEYS = [*settings.metadata_schema, "stato", "source_file", "source_path", "image_paths"]
 
 def build_embedding_model(device_id: int) -> BGEM3FlagModel:
     """Builds the embedding model for the pipeline."""

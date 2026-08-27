@@ -29,11 +29,20 @@ class Settings(BaseSettings):
     retrieval_prefetch_limit: int = 50
     retrieval_candidate_limit: int = 20
     rerank_top_k: int = 5
-    rerank_score_threshold: float = 0.6
+    rerank_score_threshold: float = 0.3
+    merged_threshold: float = 0.12
 
     chunk_max_tokens: int = 512
 
-    max_history_turns: int = 5
+    metadata_schema: list[str] = ["anno_accademico", "corso", "categoria", "materia"]
+
+    assistant_institution: str = "Università di Bologna"
+    assistant_scope: str = "regolamenti, tasse, iscrizioni, corsi e procedure amministrative"
+    assistant_language: str = "italiano"
+    assistant_audience: str = "studente"
+    source_title_separator: str = " — "
+
+    max_history_turns: int = 2
     condense_max_tokens: int = 64
     condense_temperature: float = 0.0
 
