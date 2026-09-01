@@ -9,16 +9,18 @@ def build_embedding_model(device_id: int) -> BGEM3FlagModel:
     """Builds the embedding model for the pipeline."""
     return BGEM3FlagModel(
         'BAAI/bge-m3',
-        devices=f"cuda:{device_id}"
+        devices=f"cuda:{device_id}",
+        use_fp16=True
     )
 
 
-def embed_nodes(nodes: list[BaseNode], model: BGEM3FlagModel) -> dict:
+def embed_nodes(nodes: list[BaseNode], model: BGEM3FlagModel, batch_size: int = 8) -> dict:
     for node in nodes:
         node.excluded_embed_metadata_keys.extend(FILTER_ONLY_KEYS)
     texts = [n.get_content(metadata_mode="embed") for n in nodes]
     return model.encode(
         texts,
+        batch_size=batch_size,
         return_dense=True,
         return_sparse=True,
         return_colbert_vecs=True

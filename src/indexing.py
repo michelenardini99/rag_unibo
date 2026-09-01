@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-
+import argparse
 from chunking.chunker import DEFAULT_CHUNK_MAX_TOKENS, DEFAULT_TOKENIZER_MODEL, chunk_documents, persist_nodes, find_unchunked_files
 from config import settings
 from embedding.embedder import build_embedding_model, embed_nodes
@@ -15,10 +15,11 @@ class IndexConfig:
     chunked_dir: Path
     collection_name: str
     device_id: int
+    recreate: bool
     docstore: SimpleDocumentStore | None = None
     chunk_max_tokens: int = DEFAULT_CHUNK_MAX_TOKENS
     tokenizer_model: str = DEFAULT_TOKENIZER_MODEL
-    recreate: bool = False
+    
 
 
 def indexing(config: IndexConfig) -> None:
@@ -44,6 +45,17 @@ def indexing(config: IndexConfig) -> None:
 
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--recreate", help="Ricrea da 0 i vettori della collezione data")
+
+    args = parser.parse_args()
+
+    recreate = False
+
+    if args.recreate:
+        recreate = True
+
     docstore_path = settings.data_chunked_dir / "docstore.json"
     docstore = SimpleDocumentStore.from_persist_path(str(docstore_path)) if docstore_path.exists() else None
 
@@ -53,4 +65,5 @@ if __name__ == "__main__":
         collection_name=settings.qdrant_collection,
         device_id=settings.embeddings_device_id,
         docstore=docstore,
+        recreate=recreate
     ))

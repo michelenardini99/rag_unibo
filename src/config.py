@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     vllm_base_url: str = "http://localhost:8000/v1"
     generation_model: str = "generation-llm"
+    generation_model_vision: bool = False
 
     vllm_max_model_len: int = 8192
 
@@ -42,7 +43,7 @@ class Settings(BaseSettings):
     assistant_audience: str = "studente"
     source_title_separator: str = " — "
 
-    max_history_turns: int = 2
+    max_history_turns: int = 5
     condense_max_tokens: int = 64
     condense_temperature: float = 0.0
 

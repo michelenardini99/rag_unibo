@@ -16,8 +16,8 @@ DEFAULT_TOKENIZER_MODEL = settings.embedding_model_id
 DEFAULT_CHUNK_MAX_TOKENS = settings.chunk_max_tokens
 
 
-def build_node_parser(chunk_max_tokens: int = DEFAULT_CHUNK_MAX_TOKENS,
-                       tokenizer_model: str = DEFAULT_TOKENIZER_MODEL) -> DoclingNodeParser:
+def build_node_parser(chunk_max_tokens: int = settings.chunk_max_tokens,
+                       tokenizer_model: str = settings.embedding_model_id) -> DoclingNodeParser:
     tokenizer = HuggingFaceTokenizer.from_pretrained(tokenizer_model, max_tokens=chunk_max_tokens)
     chunker = HybridChunker(tokenizer=tokenizer, merge_peers=True)
     return DoclingNodeParser(
@@ -123,8 +123,8 @@ def build_parent_nodes(leaf_nodes: list[BaseNode]) -> list[TextNode]:
     return parents
 
 
-def chunk_documents(files: list[Path], root: Path,  chunk_max_tokens: int = DEFAULT_CHUNK_MAX_TOKENS,
-                     tokenizer_model: str = DEFAULT_TOKENIZER_MODEL) -> tuple[list[BaseNode], list[TextNode]]:
+def chunk_documents(files: list[Path], root: Path,  chunk_max_tokens: int = settings.chunk_max_tokens,
+                     tokenizer_model: str = settings.embedding_model_id) -> tuple[list[BaseNode], list[TextNode]]:
     parser = build_node_parser(chunk_max_tokens=chunk_max_tokens, tokenizer_model=tokenizer_model)
     documents = [
         load_as_li_document(p, root)

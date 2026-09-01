@@ -11,24 +11,19 @@ from retrieval.reranker import build_reranker
 from retrieval.retriever import retrieve
 
 
+EMBED_MODEL = build_embedding_model(device_id=settings.embeddings_device_id)
+RERANKER = build_reranker(device_id=settings.embeddings_device_id)
+LLM = build_llm(
+    base_url=settings.vllm_base_url,
+    model=settings.generation_model,
+    context_window=settings.vllm_max_model_len,
+)
+VECTOR_STORE = QdrantClient(url=settings.qdrant_url, grpc_port=settings.qdrant_grpc_port, prefer_grpc=True)
+DOCSTORE = SimpleDocumentStore.from_persist_path(settings.data_chunked_dir / "docstore.json")
 
 @on_chat_start
 async def on_chat_start():
-    embed_model = await asyncio.to_thread(build_embedding_model, device_id=settings.embeddings_device_id)
-    reranker = await asyncio.to_thread(build_reranker, device_id=settings.embeddings_device_id)
-    llm = build_llm(
-        base_url=settings.vllm_base_url,
-        model=settings.generation_model,
-        context_window=settings.vllm_max_model_len,
-    )
-    client = QdrantClient(url=settings.qdrant_url, grpc_port=settings.qdrant_grpc_port, prefer_grpc=True)
-    docstore = await asyncio.to_thread(SimpleDocumentStore.from_persist_path, settings.data_chunked_dir)
     history: list[tuple[str, str]] = []
-    user_session.set("embed", embed_model)
-    user_session.set("reranker", reranker)
-    user_session.set("llm", llm)
-    user_session.set("vector_store", client)
-    user_session.set("docstore", docstore)
     user_session.set("history", history)
 
 
@@ -45,18 +40,13 @@ async def on_message(msg: Message):
         await elem.remove()
     async with Step(name="Analisi e Condensazione query") as step_condense:
         step_condense.input = query
-        llm = user_session.get("llm")
-        search_query = await asyncio.to_thread(condense_question, llm, history, query)
+        search_query = await asyncio.to_thread(condense_question, LLM, history, query)
 
         step_condense.output = f"Query ottimizzata per il Vector DB:\n`{search_query}`"
 
     async with Step(name="Ricerca Documenti") as step_retrieve:
         step_retrieve.input = search_query
-        vector_store = user_session.get("vector_store")
-        embed_model = user_session.get("embed")
-        reranker = user_session.get("reranker")
-        docstore = user_session.get("docstore")
-        chunks = await asyncio.to_thread(retrieve, search_query, vector_store, settings.qdrant_collection, embed_model, reranker, docstore)
+        chunks = await asyncio.to_thread(retrieve, search_query, VECTOR_STORE, settings.qdrant_collection, EMBED_MODEL, RERANKER, DOCSTORE)
 
         step_retrieve.output = f"Recuperati e riordinati **{len(chunks)} chunk** rilevanti da `{settings.qdrant_collection}`."
 
@@ -77,7 +67,7 @@ async def on_message(msg: Message):
 
     final_response = Message(content="", elements=user_session.get("source_elements"))
 
-    response_text = await asyncio.to_thread(generate_response, llm, query, chunks, history)
+    response_text = await asyncio.to_thread(generate_response, LLM, query, chunks, history)
 
     for token in response_text.split(" "):
         await final_response.stream_token(token + " ")

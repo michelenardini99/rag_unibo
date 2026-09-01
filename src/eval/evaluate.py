@@ -64,9 +64,10 @@ def build_eval_dataset(dataset: list[dict], llm: OpenAILike, embed: BGEM3FlagMod
     rows = []
     for case in dataset:
         query = case["question"]
-        search_query = condense_question(llm, [], query)
+        history = [tuple(turn) for turn in case.get("history", [])]
+        search_query = condense_question(llm, history, query)
         chunks = retrieve(search_query, client, collection_name, embed, reranker, docstore, **retrieval_kwargs)
-        response = generate_response(llm, query, chunks, None)
+        response = generate_response(llm, query, chunks, history or None)
 
         rows.append({
             "user_input": query,

@@ -17,8 +17,8 @@ from retrieval.reranker import build_reranker
 @dataclass
 class AblationConfig:
     name: str
-    chunk_max_tokens: int = DEFAULT_CHUNK_MAX_TOKENS
-    tokenizer_model: str = DEFAULT_TOKENIZER_MODEL
+    chunk_max_tokens: int = settings.chunk_max_tokens
+    tokenizer_model: str = settings.embedding_model_id
     llm_model: str = settings.generation_model
     llm_base_url: str = settings.vllm_base_url
     

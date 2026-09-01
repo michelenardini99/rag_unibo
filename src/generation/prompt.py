@@ -8,10 +8,8 @@ SYSTEM_PROMPT = (
     f"Sei un assistente virtuale per {settings.assistant_institution}, specializzato in domande "
     f"su {settings.assistant_scope}. Rispondi "
     f"sempre in {settings.assistant_language}.\n\n"
-    f"Se la domanda non riguarda argomenti pertinenti (saluti, conversazione generica, "
-    f"richieste non pertinenti), dillo esplicitamente e spiega che puoi aiutare solo con "
-    f"questioni relative a {settings.assistant_institution} — non tentare comunque di rispondere "
-    "nel merito.\n\n"
+    f"Se la domanda non riguarda argomenti pertinenti, dillo esplicitamente e spiega che puoi aiutare solo con "
+    f"questioni relative a {settings.assistant_institution}.\n\n"
     "Per le domande pertinenti, usa esclusivamente le informazioni presenti nel CONTESTO "
     "fornito. Se il contesto non contiene la risposta, dillo esplicitamente invece di "
     "inventare o rispondere con conoscenza generale. Riporta date, importi e numeri "
@@ -56,23 +54,6 @@ def build_context_block(chunks: list[dict]) -> str:
         parts.append(f"[Fonte: {source_name} - {headings}\n{c["text"]}]")
     return "\n\n---\n\n".join(parts)
 
-
-def build_sources_footer(chunks: list[dict]) -> str:
-    """Deterministic 'Fonti consultate' list built directly from the chunks
-    actually retrieved — not left to the model to reproduce. Since we
-    already know with certainty which sources were used, generating this in
-    code guarantees a correct, complete citation list regardless of how
-    reliably the model followed the inline-citation instruction above.
-    """
-    if not chunks:
-        return ""
-    seen: list[str] = []
-    for c in chunks:
-        name = clean_source_name(c["source_file"])
-        if name not in seen:
-            seen.append(name)
-    return "Fonti consultate: " + "; ".join(seen)
-
 def build_prompt(query: str, chunks: list[dict], history: list[tuple[str, str]]) -> list[ChatMessage]:
     """
     Constructs a prompt for the LLM based on the query and context chunks.
@@ -86,12 +67,13 @@ def build_prompt(query: str, chunks: list[dict], history: list[tuple[str, str]])
     """
     prompt_text = f"CONTESTO:\n{build_context_block(chunks)}\n\nDOMANDA ({settings.assistant_audience.upper()}):\n{query}"
     blocks = [TextBlock(text=prompt_text)]
-    seen = set()
-    for c in chunks:
-        for img_path in c.get("image_paths") or []:
-            if img_path not in seen:
-                blocks.append(ImageBlock(path=Path(img_path)))
-                seen.add(img_path)
+    if settings.generation_model_vision:
+        seen = set()
+        for c in chunks:
+            for img_path in c.get("image_paths") or []:
+                if img_path not in seen:
+                    blocks.append(ImageBlock(path=Path(img_path)))
+                    seen.add(img_path)
     messages = [ChatMessage(role=MessageRole.SYSTEM, blocks=[TextBlock(text=SYSTEM_PROMPT)])]
     for past_query, past_answer in history or []:
         messages.append(ChatMessage(role=MessageRole.USER, blocks=[TextBlock(text=past_query)]))

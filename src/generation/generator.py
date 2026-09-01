@@ -1,5 +1,5 @@
 from llama_index.llms.openai_like import OpenAILike
-from generation.prompt import build_prompt, build_sources_footer
+from generation.prompt import build_prompt
 from config import settings
 
 def build_llm(base_url: str, model: str = "generation-llm", context_window: int = 8192) -> OpenAILike:
@@ -42,9 +42,9 @@ def generate_response(llm: OpenAILike, query: str, chunks: list[dict], history: 
     Returns:
         str: The generated response from the LLM.
     """
-    if not chunks:
-        return NO_CONTEXT_MESSAGE
+    ##if not chunks:
+      ##  return NO_CONTEXT_MESSAGE
 
     response = llm.chat(build_prompt(query, chunks, history))
     answer = response.message.content
-    return f"{answer}\n\n{build_sources_footer(chunks)}"
+    return f"{answer}\n"

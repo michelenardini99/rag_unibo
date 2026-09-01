@@ -2,18 +2,16 @@ import json
 import multiprocessing as mp
 from pathlib import Path
 from queue import Empty
-
 from docling.datamodel.accelerator_options import AcceleratorOptions
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.document import ConversionStatus
 from docling.datamodel.pipeline_options import (
     PdfPipelineOptions,
-    TableStructureOptions,
-    smolvlm_picture_description,
+    TableStructureOptions
 )
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.types.doc import ImageRefMode
-
+from ingestion.picture_descriptions import picture_descriptions_options
 from ingestion.normalize import normalize_document
 
 
@@ -25,7 +23,8 @@ def pipeline_options(device: int) -> PdfPipelineOptions:
         do_table_structure=True,
         do_picture_description=True,
         generate_picture_images=True,
-        picture_description_options=smolvlm_picture_description,
+        picture_description_options=picture_descriptions_options,
+        enable_remote_services=True
     )
 
 def build_converter(device: int) -> DocumentConverter:
