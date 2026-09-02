@@ -257,16 +257,50 @@ Alcune domande legittime ("quali sono le diverse modalità di pagamento?") resti
 
 La soluzione (la fusione gerarchica descritta al §4.3) ha richiesto due iterazioni per essere calibrata correttamente. Il primo tentativo — una soglia di accettazione più permissiva applicata a tutte le sezioni fuse, su ogni domanda — ha effettivamente risolto il caso di sintesi, ma verificando l'effetto su domande fattuali normali si è osservato che introduceva anche materiale marginalmente pertinente proprio dove la precisione conta di più (§1.2). La soluzione finale applica la soglia permissiva **solo come ripiego**, e solo quando la soglia standard non produce alcun risultato: le domande fattuali continuano quindi a essere risolte interamente dal percorso standard, invariato, mentre il ripiego interviene solo per salvare i casi altrimenti persi.
 
-### 5.7 Difficoltà infrastrutturali minori
+## 6. Valutazione sperimentale: metriche e configurazioni a confronto
 
-Due problemi non legati alla logica del sistema ma alla sua messa in esercizio, entrambi capaci di rendere il sistema silenziosamente inutilizzabile se non diagnosticati:
+Questo capitolo descrive **come** il sistema è stato misurato e **cosa** quelle misure hanno rivelato — non le difficoltà incontrate nel costruirlo (capitolo 5), ma il lavoro di verifica empirica condotto a sistema già funzionante, che ha portato a una modifica concreta della pipeline di recupero.
 
-- Un errore nel calcolo del percorso della cartella di progetto nel modulo di configurazione faceva sì che il file di ambiente non venisse mai trovato — ogni tentativo di avvio falliva silenziosamente su un valore di configurazione "mancante", quando in realtà il file esisteva ma non veniva cercato nel posto giusto.
-- Le chiamate del framework di valutazione al modello linguistico, usate per calcolare le metriche, troncavano sistematicamente l'output strutturato perché il budget di token di completamento di default era troppo basso per il tipo di risposta richiesta — con conseguente perdita di affidabilità statistica su una parte non trascurabile dei casi di test, silenziosamente compensata da un meccanismo di ripiego automatico del framework stesso.
+### 6.1 Due livelli di metrica, per due domande diverse
+
+L'Agente Valutatore (§4.6) misura tre stadi con metriche giudicate da un modello linguistico (framework RAGAS): `context_precision`/`context_recall` sul recupero, `faithfulness`/`answer_relevancy` sulla generazione, `answer_correctness`/`answer_similarity` sul risultato finale. A queste si è affiancata una seconda famiglia di metriche **deterministiche**, Top-1 e Top-5 (`src/eval/evaluate_retrieval.py`): la percentuale di domande per cui il documento sorgente atteso compare, rispettivamente, al primo posto o tra i primi cinque risultati recuperati — nessun giudice LLM di mezzo, nessuna generazione, solo retrieval verificabile a colpo d'occhio. Le due famiglie rispondono a domande diverse: RAGAS misura la qualità percepita end-to-end, Top-k isola la sola qualità del recupero.
+
+### 6.2 Risultati: ablation end-to-end (RAGAS)
+
+Confronto dell'intera pipeline (`src/eval/run_ablations.py`, risultati in `datasets/eval/ablations/`) su cinque configurazioni, dataset diagnostico completo:
+
+| Configurazione | context_precision | context_recall | answer_correctness |
+|---|---|---|---|
+| Base (chunk 512) | 0.860 | 0.923 | **0.812** |
+| Senza reranker | 0.811 | 0.949 | 0.807 |
+| Senza fusione gerarchica | 0.864 | 0.944 | 0.807 |
+| Chunk 256 | 0.851 | 0.932 | 0.789 |
+| Chunk 768 | 0.840 | 0.917 | 0.806 |
+
+### 6.3 Risultati: retrieval puro isolato dalla generazione (Top-1/Top-5)
+
+Stesso dataset, isolando il solo stadio di recupero e scomponendo la ricerca ibrida nei suoi segnali costitutivi:
+
+| Configurazione | Top-1 | Top-5 |
+|---|---|---|
+| `hybrid` / `dense_only` / `sparse_only` | **0.774** | **0.845** |
+| Chunk 768 | 0.774 | 0.833 |
+| `hybrid` senza reranker | 0.750 | 0.845 |
+| `hybrid_colbert` | 0.714 | 0.821 |
+| Chunk 256 | 0.655 | 0.845 |
+| `random` (controllo di validità) | 0.024 | 0.059 |
+
+### 6.4 Discussione
+
+In cima, a pari merito, tre segnali indipendenti — solo denso, solo sparso, e la loro fusione via RRF (ora `hybrid`) — convergono esattamente sullo stesso risultato (0.774/0.845), caso per caso, non solo in media. Chunk 768 pareggia sul Top-1 ma cede leggermente sul Top-5 (0.833): non è la direzione giusta in cui spingere la configurazione, dato che quella a 512 token già in uso la eguaglia senza perdere nulla.
+
+Togliere il reranker da `hybrid` costa 2,4 punti di Top-1 (0.750) — un calo reale ma contenuto, segno che il reranker resta utile anche su un pool di candidati già buono. `hybrid_colbert`, la configurazione originale con lo stage ColBERT aggiunto alla fusione, resta invece sistematicamente sotto di 6 punti rispetto al gruppo di testa (0.714) — peggio della stessa pipeline *senza* reranker (0.750): il problema non è il reranker, è il pool di candidati che ColBERT gli consegna a monte, già impoverito.
+
+In fondo, `chunk_256` è la configurazione peggiore tra quelle "vere" (0.655) — chunk troppo piccoli danneggiano il retrieval indipendentemente da ogni altra scelta. `random` chiude come atteso, vicino a zero, a conferma che la misura è valida.
 
 ---
 
-## 6. Limiti noti e lavoro futuro
+## 7. Limiti noti e lavoro futuro
 
 - **Nessuna verifica automatica di fedeltà numerica prima della consegna della risposta.** Il sistema si affida oggi al modello generativo per riportare correttamente date e importi dal contesto — un'allucinazione "sottile" (un numero vero del contesto attaccato al fatto sbagliato, non un numero inventato) non verrebbe intercettata. È il gap più rilevante rispetto al vincolo di precisione fattuale (§1.2).
 - **Nessuna gestione della validità temporale dei documenti.** Il meccanismo di filtraggio esiste, ma non c'è ancora una logica che distingua un documento in vigore da uno superato quando ne arriva una versione più recente.

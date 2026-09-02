@@ -13,7 +13,7 @@ def embed_query(query: str, model: BGEM3FlagModel) -> dict:
 
 
 def search_candidates(client: QdrantClient, collection_name: str, query_embedding: dict, limit: int = 20,
-                       prefetch_limit: int = 50, mode: str = "hybrid") -> list:
+                       prefetch_limit: int = 50, mode: str = "hybrid_no_colbert") -> list:
     """
     Searches for candidate nodes in a Qdrant collection based on the provided query embedding.
 
@@ -23,14 +23,14 @@ def search_candidates(client: QdrantClient, collection_name: str, query_embeddin
         query_embedding (dict): A dictionary containing the query embedding.
         limit (int): The number of top candidates to retrieve.
         prefetch_limit (int): The number of candidates to prefetch for further processing.
-        mode: strategia di retrieval, per isolare il contributo di ciascun segnale
-            (ablation di retrieval puro, non usato in produzione):
-            - "hybrid" (default): dense+sparse in prefetch, riordinati per score ColBERT
-              (comportamento originale).
+        mode: strategia di retrieval. Default "hybrid_no_colbert" (dense+sparse fusi via
+            RRF nativo di Qdrant) — nello screening Top-1/Top-5 su questo corpus
+            (`datasets/eval/retrieval_full/`) ha dato risultati identici a dense_only e
+            sparse_only, mentre "hybrid" (che aggiunge lo stage ColBERT finale) è
+            risultato peggiore su tutte le metriche. Altre modalità, solo per ablation:
+            - "hybrid": dense+sparse in prefetch, riordinati per score ColBERT.
             - "dense_only": solo il branch denso.
             - "sparse_only": solo il branch sparso (pesi lessicali BGE-M3, non BM25 classico).
-            - "hybrid_no_colbert": fonde dense+sparse via RRF nativo di Qdrant, senza lo
-              stage ColBERT finale.
 
     Returns:
         list: A list of candidate nodes retrieved from the collection.

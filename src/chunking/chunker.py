@@ -12,10 +12,6 @@ from chunking.metadata import extract_metadata
 from config import settings
 
 
-DEFAULT_TOKENIZER_MODEL = settings.embedding_model_id
-DEFAULT_CHUNK_MAX_TOKENS = settings.chunk_max_tokens
-
-
 def build_node_parser(chunk_max_tokens: int = settings.chunk_max_tokens,
                        tokenizer_model: str = settings.embedding_model_id) -> DoclingNodeParser:
     tokenizer = HuggingFaceTokenizer.from_pretrained(tokenizer_model, max_tokens=chunk_max_tokens)

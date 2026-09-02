@@ -31,6 +31,8 @@ class RetrievalConfig:
 
 
 CONFIGS: list[RetrievalConfig] = [
+    # Base originale (con ColBERT) — mantenuta per documentare il confronto che ha
+    # portato a preferire hybrid_no_colbert, non usarla per nuovo tuning.
     RetrievalConfig(name="hybrid"),
     RetrievalConfig(name="hybrid_no_reranker", use_reranker=False),
     RetrievalConfig(name="hybrid_relative_fallback", fallback_mode="relative"),
@@ -40,6 +42,12 @@ CONFIGS: list[RetrievalConfig] = [
     RetrievalConfig(name="chunk_256", chunk_max_tokens=256),
     RetrievalConfig(name="chunk_768", chunk_max_tokens=768),
     RetrievalConfig(name="random", random_baseline=True),
+    # Stessi assi (chunk size / reranker / fallback), isolati sulla base
+    # hybrid_no_colbert ora che sappiamo che è quella migliore.
+    RetrievalConfig(name="chunk_256_no_colbert", chunk_max_tokens=256, mode="hybrid_no_colbert"),
+    RetrievalConfig(name="chunk_768_no_colbert", chunk_max_tokens=768, mode="hybrid_no_colbert"),
+    RetrievalConfig(name="no_colbert_no_reranker", mode="hybrid_no_colbert", use_reranker=False),
+    RetrievalConfig(name="no_colbert_relative_fallback", mode="hybrid_no_colbert", fallback_mode="relative"),
 ]
 
 

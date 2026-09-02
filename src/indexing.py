@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 from pathlib import Path
 import argparse
-from chunking.chunker import DEFAULT_CHUNK_MAX_TOKENS, DEFAULT_TOKENIZER_MODEL, chunk_documents, persist_nodes, find_unchunked_files
+from chunking.chunker import chunk_documents, persist_nodes, find_unchunked_files
 from config import settings
 from embedding.embedder import build_embedding_model, embed_nodes
 from embedding.qdrant_store import ensure_collection, upsert_nodes
 from qdrant_client import QdrantClient
 from llama_index.core.storage.docstore import SimpleDocumentStore
+from config import settings
 
 
 @dataclass
@@ -17,8 +18,8 @@ class IndexConfig:
     device_id: int
     recreate: bool
     docstore: SimpleDocumentStore | None = None
-    chunk_max_tokens: int = DEFAULT_CHUNK_MAX_TOKENS
-    tokenizer_model: str = DEFAULT_TOKENIZER_MODEL
+    chunk_max_tokens: int = settings.chunk_max_tokens
+    tokenizer_model: str = settings.embedding_model_id
     
 
 

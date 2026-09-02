@@ -28,7 +28,7 @@ class HybridQdrantRetriever(BaseRetriever):
     def __init__(self, client: QdrantClient, collection_name: str, embed_model, reranker_model,
                  docstore: SimpleDocumentStore, candidate_pool: int = settings.retrieval_candidate_limit,
                  prefetch_limit: int = settings.retrieval_prefetch_limit, use_reranker: bool = True,
-                 mode: str = "hybrid"):
+                 mode: str = "hybrid_no_colbert"):
         self._client = client
         self._collection_name = collection_name
         self._embed_model = embed_model
@@ -71,7 +71,7 @@ def retrieve(
     *,
     use_reranker: bool = True,
     use_automerging: bool = True,
-    mode: str = "hybrid",
+    mode: str = "hybrid_no_colbert",
     fallback_mode: str = "absolute",
     prefetch_limit: int = settings.retrieval_prefetch_limit,
     candidate_pool: int = settings.retrieval_candidate_limit,
@@ -97,9 +97,12 @@ def retrieve(
             direttamente lo score della ricerca ibrida (ablation).
         use_automerging: se False, salta AutoMergingRetriever e ritorna i nodi
             foglia così come recuperati, senza fondere le sezioni (ablation).
-        mode: strategia di retrieval passata a `search_candidates` per isolare
-            un segnale (ablation di retrieval puro): "hybrid" (default),
-            "dense_only", "sparse_only", "hybrid_no_colbert".
+        mode: strategia di retrieval passata a `search_candidates`. Default
+            "hybrid_no_colbert" (fusione dense+sparse via RRF, senza lo stage
+            ColBERT finale) — misurato più affidabile di "hybrid" (che include
+            ColBERT) nello screening di retrieval puro su questo corpus, vedi
+            `datasets/eval/retrieval_full/`. Altre modalità disponibili solo
+            per ablation: "hybrid" (con ColBERT), "dense_only", "sparse_only".
         fallback_mode: come rilassare la soglia quando nulla la supera al primo
             tentativo — "absolute" (default) riprova con `merged_fallback_threshold`;
             "relative" prende invece i primi `top_k` per punteggio, indipendentemente

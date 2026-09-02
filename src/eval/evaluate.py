@@ -1,4 +1,6 @@
 import json
+import statistics
+import time
 from pathlib import Path
 
 import openai
@@ -59,15 +61,25 @@ class BGEM3RagasEmbeddings(BaseRagasEmbeddings):
 
 def build_eval_dataset(dataset: list[dict], llm: OpenAILike, embed: BGEM3FlagModel, client: QdrantClient,
                         reranker: FlagReranker, docstore: SimpleDocumentStore, collection_name: str,
-                        retrieval_kwargs: dict | None = None) -> list[dict]:
+                        retrieval_kwargs: dict | None = None) -> tuple[list[dict], list[dict]]:
+    """Ritorna (rows, timings). `timings` misura la latenza percepita dallo
+    studente (condensazione + recupero + generazione, con lo stesso modello
+    deployato per condensazione e generazione) — non include il tempo del
+    giudice RAGAS, che è overhead di valutazione, non di produzione.
+    """
     retrieval_kwargs = retrieval_kwargs or {}
     rows = []
+    timings = []
     for case in dataset:
         query = case["question"]
         history = [tuple(turn) for turn in case.get("history", [])]
+
+        
         search_query = condense_question(llm, history, query)
         chunks = retrieve(search_query, client, collection_name, embed, reranker, docstore, **retrieval_kwargs)
+        t0 = time.perf_counter()
         response = generate_response(llm, query, chunks, history or None)
+        t1 = time.perf_counter()
 
         rows.append({
             "user_input": query,
@@ -75,10 +87,32 @@ def build_eval_dataset(dataset: list[dict], llm: OpenAILike, embed: BGEM3FlagMod
             "response": response,
             "reference": case["expected_answer"],
         })
-    return rows
+        timings.append({
+            "id": case["id"],
+            "generate_s": round(t1 - t0, 3),
+        })
+    return rows, timings
 
 
-def results_to_json(dataset: list[dict], df) -> dict:
+def timing_summary(timings: list[dict]) -> dict:
+    def stats(key: str) -> dict:
+        values = [t[key] for t in timings]
+        return {
+            "mean": round(statistics.mean(values), 3),
+            "median": round(statistics.median(values), 3),
+            "p95": round(sorted(values)[int(len(values) * 0.95)] if len(values) > 1 else values[0], 3),
+        }
+
+    return {
+        "condense_s": stats("condense_s"),
+        "retrieve_s": stats("retrieve_s"),
+        "generate_s": stats("generate_s"),
+        "total_s": stats("total_s"),
+        "per_case": timings,
+    }
+
+
+def results_to_json(dataset: list[dict], df, timings: list[dict]) -> dict:
     def category_block(metrics: list) -> dict:
         names = [m.name for m in metrics]
         return {
@@ -97,6 +131,7 @@ def results_to_json(dataset: list[dict], df) -> dict:
         "retrieving": category_block(RETRIEVING_METRICS),
         "generative": category_block(GENERATIVE_METRICS),
         "end_to_end": category_block(END_TO_END_METRICS),
+        "timing": timing_summary(timings),
     }
 
 
@@ -111,7 +146,7 @@ def evaluate(
     retrieval_kwargs: dict | None = None,
     output_path: Path = Path("datasets/eval/results.json"),
 ):
-    rows = build_eval_dataset(dataset, llm, embed, client, reranker, docstore, collection_name, retrieval_kwargs)
+    rows, timings = build_eval_dataset(dataset, llm, embed, client, reranker, docstore, collection_name, retrieval_kwargs)
 
     openai_client = openai.OpenAI(base_url=llm.api_base, api_key="EMPTY")
 
@@ -126,9 +161,13 @@ def evaluate(
     df = res.to_pandas()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(results_to_json(dataset, df), indent=2, ensure_ascii=False), encoding="utf-8")
+    output_path.write_text(json.dumps(results_to_json(dataset, df, timings), indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"Risultati salvati in {output_path}")
 
     for metric in metrics:
         print(f"{metric.name}: {df[metric.name].mean():.2f}")
+
+    t = timing_summary(timings)
+    print(f"tempo totale per domanda (s) — media: {t['total_s']['mean']}, mediana: {t['total_s']['median']}, p95: {t['total_s']['p95']}")
+    print(f"  di cui generazione — media: {t['generate_s']['mean']}, mediana: {t['generate_s']['median']}")
     return res
