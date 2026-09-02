@@ -4,12 +4,18 @@ from config import settings
 
 
 def extract_metadata(json_path: Path, converted_root: Path, schema: list[str] | None = None) -> dict:
-    """Derives metadata from the document's position in the folder tree under
-    `converted_root`, e.g. `<anno_accademico>/<corso>/<categoria>/file.json`.
-    `schema` names each directory level in order (default: `settings.metadata_schema`)
-    so a different institution/domain can adapt the taxonomy via config instead
-    of editing this function. Levels beyond the actual folder depth (e.g. a
-    document without a `materia` subfolder) are left as `None`.
+    """Derives document metadata from its folder position under `converted_root`.
+
+    Args:
+        json_path (Path): Path to the converted document JSON.
+        converted_root (Path): Root of the converted-documents tree, e.g.
+            `<anno>/<corso>/<categoria>/file.json`.
+        schema (list[str] | None): Name for each directory level, in order
+            (default `settings.metadata_schema`). Levels beyond the actual
+            folder depth are left `None`.
+
+    Returns:
+        dict: Schema fields plus "stato", "source_file", "source_path".
     """
     schema = schema if schema is not None else settings.metadata_schema
     rel = json_path.relative_to(converted_root)

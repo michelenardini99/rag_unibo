@@ -14,6 +14,16 @@ from config import settings
 
 def build_node_parser(chunk_max_tokens: int = settings.chunk_max_tokens,
                        tokenizer_model: str = settings.embedding_model_id) -> DoclingNodeParser:
+    """Builds the chunking pipeline that splits DoclingDocuments into LlamaIndex nodes.
+
+    Args:
+        chunk_max_tokens (int): Maximum tokens per chunk.
+        tokenizer_model (str): HuggingFace model id used to count tokens
+            (should match the embedding model for accurate limits).
+
+    Returns:
+        DoclingNodeParser: Parser configured with the hybrid chunker.
+    """
     tokenizer = HuggingFaceTokenizer.from_pretrained(tokenizer_model, max_tokens=chunk_max_tokens)
     chunker = HybridChunker(tokenizer=tokenizer, merge_peers=True)
     return DoclingNodeParser(
@@ -22,6 +32,15 @@ def build_node_parser(chunk_max_tokens: int = settings.chunk_max_tokens,
 
 
 def load_as_li_document(json_path: Path, converted_root: Path) -> Document:
+    """Loads a converted document JSON as a LlamaIndex Document with derived metadata.
+
+    Args:
+        json_path (Path): Path to the converted document JSON.
+        converted_root (Path): Root of the converted-documents tree (for metadata extraction).
+
+    Returns:
+        Document: The document, ready for chunking.
+    """
     metadata = extract_metadata(json_path, converted_root)
     return Document(
         text=json_path.read_text(encoding="utf-8"),
@@ -29,6 +48,17 @@ def load_as_li_document(json_path: Path, converted_root: Path) -> Document:
     )
 
 def find_unchunked_files(root: Path, docstore: SimpleDocumentStore | None) -> list[Path]:
+    """Lists converted documents not yet present in the docstore, so reruns
+    only chunk/embed new or changed files instead of the whole corpus.
+
+    Args:
+        root (Path): Root of the converted-documents tree.
+        docstore (SimpleDocumentStore | None): Existing docstore, or None to
+            treat every file as unchunked.
+
+    Returns:
+        list[Path]: Paths to documents that still need chunking.
+    """
     already_chunked = {
         node.metadata.get("source_path")
         for node in (docstore.docs.values() if docstore else [])
@@ -40,15 +70,13 @@ def find_unchunked_files(root: Path, docstore: SimpleDocumentStore | None) -> li
     ]
 
 def _resolve_image_paths(nodes: list, converted_root: Path) -> None:
-    """DoclingNodeParser drops the heavy `image`/`data` fields when it
-    serializes doc_items into node.metadata (see chunker.py history), so a
-    node referencing a picture only carries its self_ref (e.g. "#/pictures/3")
-    with no way to reach the actual PNG. Resolve it by re-loading the
-    original per-document DoclingDocument JSON (cached per source_path, since
-    many nodes share the same source document) and indexing into
-    `doc.pictures` at the self_ref's integer index. Needed for §3.2 of the
-    architecture doc: the generative LLM gets the original image, not just
-    the (sometimes too-generic) VLM caption. Mutates nodes in place.
+    """Resolves each node's picture self_ref (e.g. "#/pictures/3") to an
+    actual image path, by re-loading the source DoclingDocument.
+
+    Args:
+        nodes (list): Leaf nodes to resolve, mutated in place (adds
+            "image_paths" to metadata where applicable).
+        converted_root (Path): Root of the converted-documents tree.
     """
     doc_cache: dict[str, DoclingDocument] = {}
 
@@ -77,13 +105,16 @@ def _resolve_image_paths(nodes: list, converted_root: Path) -> None:
 
 
 def build_parent_nodes(leaf_nodes: list[BaseNode]) -> list[TextNode]:
-    """Groups leaf chunks that share the same document section (same
-    source_path + headings breadcrumb) under a synthetic parent node, linked
-    via NodeRelationship.PARENT/CHILD. Lets AutoMergingRetriever (§5
-    architettura, retrieval gerarchico) merge scattered sibling chunks back
-    into their full section when enough of them match a query — needed for
-    synthesis-style questions where no single ~512-token chunk covers the
-    whole topic. Sections with a single chunk are left as-is (nothing to merge).
+    """Groups sibling leaf chunks (same source + headings) under a synthetic
+    parent node, so AutoMergingRetriever can return the full section for
+    synthesis-style questions no single chunk covers.
+
+    Args:
+        leaf_nodes (list[BaseNode]): Leaf chunks to group.
+
+    Returns:
+        list[TextNode]: One parent node per section with 2+ chunks; sections
+        with a single chunk have nothing to merge and are skipped.
     """
     groups: dict[tuple, list[BaseNode]] = defaultdict(list)
     for node in leaf_nodes:
@@ -121,6 +152,17 @@ def build_parent_nodes(leaf_nodes: list[BaseNode]) -> list[TextNode]:
 
 def chunk_documents(files: list[Path], root: Path,  chunk_max_tokens: int = settings.chunk_max_tokens,
                      tokenizer_model: str = settings.embedding_model_id) -> tuple[list[BaseNode], list[TextNode]]:
+    """Chunks a set of converted documents into leaf and parent nodes.
+
+    Args:
+        files (list[Path]): Converted document JSON paths to chunk.
+        root (Path): Root of the converted-documents tree.
+        chunk_max_tokens (int): Maximum tokens per leaf chunk.
+        tokenizer_model (str): HuggingFace model id used to count tokens.
+
+    Returns:
+        tuple[list[BaseNode], list[TextNode]]: (leaf_nodes, parent_nodes).
+    """
     parser = build_node_parser(chunk_max_tokens=chunk_max_tokens, tokenizer_model=tokenizer_model)
     documents = [
         load_as_li_document(p, root)
@@ -134,8 +176,12 @@ def chunk_documents(files: list[Path], root: Path,  chunk_max_tokens: int = sett
 
 
 def persist_nodes(nodes: list[BaseNode], persist_dir: Path) -> None:
-    """Writes chunked nodes to disk so later stages (embedding/Qdrant, §8
-    pipeline box 3) can load them without re-running chunking from scratch.
+    """Writes chunked nodes to disk so later stages (embedding/Qdrant) can
+    load them without re-running chunking from scratch.
+
+    Args:
+        nodes (list[BaseNode]): Leaf and/or parent nodes to persist.
+        persist_dir (Path): Directory holding (or to create) the docstore.
     """
     docstore_path = persist_dir / "docstore.json"
     if docstore_path.exists():

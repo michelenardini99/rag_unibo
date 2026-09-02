@@ -24,6 +24,12 @@ class IndexConfig:
 
 
 def indexing(config: IndexConfig) -> None:
+    """Runs the offline pipeline: chunk documents, persist the docstore,
+    embed leaf chunks, and upsert them into Qdrant.
+
+    Args:
+        config (IndexConfig): Paths, device and chunking parameters for the run.
+    """
     if config.recreate:
         files = list(config.root.rglob("*.json"))
     else:
@@ -37,6 +43,8 @@ def indexing(config: IndexConfig) -> None:
     print(f"Persisted docstore to {config.chunked_dir / 'docstore.json'}.")
 
     embed_model = build_embedding_model(device_id=config.device_id)
+    # Only leaf nodes are embedded/indexed — parent sections exist purely for
+    # AutoMergingRetriever to resolve into, never searched directly.
     embeddings = embed_nodes(leaf_nodes, embed_model)
 
     client = QdrantClient(url=settings.qdrant_url, grpc_port=settings.qdrant_grpc_port, prefer_grpc=True)

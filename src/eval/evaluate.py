@@ -30,7 +30,15 @@ END_TO_END_METRICS = [answer_correctness, answer_similarity]
 
 
 class BGEM3RagasEmbeddings(BaseRagasEmbeddings):
+    """Adapts our BGE-M3 model to ragas' embeddings interface, reusing the
+    instance already loaded for retrieval instead of loading a second embedder.
+    """
+
     def __init__(self, model: BGEM3FlagModel):
+        """
+        Args:
+            model (BGEM3FlagModel): Loaded BGE-M3 model to wrap.
+        """
         super().__init__()
         self.embed_model = model
 
@@ -62,10 +70,24 @@ class BGEM3RagasEmbeddings(BaseRagasEmbeddings):
 def build_eval_dataset(dataset: list[dict], llm: OpenAILike, embed: BGEM3FlagModel, client: QdrantClient,
                         reranker: FlagReranker, docstore: SimpleDocumentStore, collection_name: str,
                         retrieval_kwargs: dict | None = None) -> tuple[list[dict], list[dict]]:
-    """Ritorna (rows, timings). `timings` misura la latenza percepita dallo
-    studente (condensazione + recupero + generazione, con lo stesso modello
-    deployato per condensazione e generazione) — non include il tempo del
-    giudice RAGAS, che è overhead di valutazione, non di produzione.
+    """Runs each test case through condense -> retrieve -> generate and
+    collects both the ragas input rows and per-case generation timing.
+
+    Args:
+        dataset (list[dict]): Test cases, each with "question", "expected_answer"
+            and optionally "history".
+        llm (OpenAILike): Model used for both condensation and generation.
+        embed (BGEM3FlagModel): Embedding model for retrieval.
+        client (QdrantClient): Qdrant client.
+        reranker (FlagReranker): Cross-encoder reranker.
+        docstore (SimpleDocumentStore): Docstore backing the retriever.
+        collection_name (str): Qdrant collection to search.
+        retrieval_kwargs (dict | None): Extra kwargs forwarded to `retrieve()`.
+
+    Returns:
+        tuple[list[dict], list[dict]]: (rows for ragas, per-case timings).
+        Timings cover only the generation call — not condensation/retrieval,
+        and not the ragas judge (that's eval overhead, not user-facing latency).
     """
     retrieval_kwargs = retrieval_kwargs or {}
     rows = []
@@ -74,7 +96,6 @@ def build_eval_dataset(dataset: list[dict], llm: OpenAILike, embed: BGEM3FlagMod
         query = case["question"]
         history = [tuple(turn) for turn in case.get("history", [])]
 
-        
         search_query = condense_question(llm, history, query)
         chunks = retrieve(search_query, client, collection_name, embed, reranker, docstore, **retrieval_kwargs)
         t0 = time.perf_counter()
@@ -95,6 +116,14 @@ def build_eval_dataset(dataset: list[dict], llm: OpenAILike, embed: BGEM3FlagMod
 
 
 def timing_summary(timings: list[dict]) -> dict:
+    """Aggregates per-case timings into mean/median/p95.
+
+    Args:
+        timings (list[dict]): Per-case timing dicts from `build_eval_dataset`.
+
+    Returns:
+        dict: "generate_s" stats plus the raw "per_case" list.
+    """
     def stats(key: str) -> dict:
         values = [t[key] for t in timings]
         return {
@@ -104,15 +133,22 @@ def timing_summary(timings: list[dict]) -> dict:
         }
 
     return {
-        "condense_s": stats("condense_s"),
-        "retrieve_s": stats("retrieve_s"),
         "generate_s": stats("generate_s"),
-        "total_s": stats("total_s"),
         "per_case": timings,
     }
 
 
 def results_to_json(dataset: list[dict], df, timings: list[dict]) -> dict:
+    """Assembles the final results JSON from ragas scores and timings.
+
+    Args:
+        dataset (list[dict]): Test cases, in the same order as `df`'s rows.
+        df: Pandas DataFrame returned by `ragas_evaluate(...).to_pandas()`.
+        timings (list[dict]): Per-case timings from `build_eval_dataset`.
+
+    Returns:
+        dict: "retrieving"/"generative"/"end_to_end" metric blocks plus "timing".
+    """
     def category_block(metrics: list) -> dict:
         names = [m.name for m in metrics]
         return {
@@ -146,10 +182,29 @@ def evaluate(
     retrieval_kwargs: dict | None = None,
     output_path: Path = Path("datasets/eval/results.json"),
 ):
+    """Runs the full RAGAS evaluation for a dataset and writes results to disk.
+
+    Args:
+        dataset (list[dict]): Test cases to evaluate.
+        llm (OpenAILike): Model used for condensation, generation, and as the
+            ragas judge.
+        embed (BGEM3FlagModel): Embedding model for retrieval and ragas similarity.
+        client (QdrantClient): Qdrant client.
+        reranker (FlagReranker): Cross-encoder reranker.
+        docstore (SimpleDocumentStore): Docstore backing the retriever.
+        collection_name (str): Qdrant collection to search.
+        retrieval_kwargs (dict | None): Extra kwargs forwarded to `retrieve()`.
+        output_path (Path): Where to write the results JSON.
+
+    Returns:
+        The ragas EvaluationResult object.
+    """
     rows, timings = build_eval_dataset(dataset, llm, embed, client, reranker, docstore, collection_name, retrieval_kwargs)
 
     openai_client = openai.OpenAI(base_url=llm.api_base, api_key="EMPTY")
 
+    # Judge reuses the same deployed generation model — swapping models therefore
+    # changes the judge too, not just what's being judged (REPORT_ARCHITETTURA.md §6).
     ragas_llm = llm_factory(llm.model, provider="openai", client=openai_client, max_tokens=1024)
     ragas_emb = BGEM3RagasEmbeddings(embed)
 

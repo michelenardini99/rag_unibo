@@ -22,16 +22,10 @@ SYSTEM_PROMPT = (
 
 
 def clean_source_name(source_file: str) -> str:
-    """Turns a raw stage-1 filename (e.g. "Tasse ed esenzioni_ importi e
-    scadenze — Università di Bologna.json") into a readable title for
-    citation display ("Tasse ed esenzioni: importi e scadenze").
-
-    Scraped page titles follow "<titolo> <settings.source_title_separator> <sito/corso...>.json";
-    dropping everything from the separator on removes the site/course suffix,
-    and "_ " gets restored to ": " since scraped filenames sanitize colons
-    to underscores. Plain filenames without the separator (e.g. CamelCase PDF
-    names) pass through unchanged — no general fix for those without a
-    lookup table.
+    """Turns a raw filename into a readable citation title, e.g. "Tasse ed
+    esenzioni_ importi — Università di Bologna.json" -> "Tasse ed esenzioni: importi".
+    Drops the site/course suffix after the separator, restores "_ " to ": "
+    (colons get sanitized to underscores in scraped filenames).
     """
     name = Path(source_file).stem
     name = name.split(settings.source_title_separator)[0]
@@ -40,13 +34,14 @@ def clean_source_name(source_file: str) -> str:
 
 
 def build_context_block(chunks: list[dict]) -> str:
-    """
-    Constructs a context block from a list of chunks.
+    """Formats retrieved chunks as labeled "[Fonte: ...]" blocks for the prompt.
 
     Args:
-        chunks (list[dict]): A list of chunks, where each chunk is a dictionary containing 'text', 'headings', 'source_file', and 'image_paths'.
-    """
+        chunks (list[dict]): Chunks with "text", "headings", "source_file" keys.
 
+    Returns:
+        str: Chunks joined into a single context string.
+    """
     parts = []
     for c in chunks:
         headings = " > ".join(c.get("headings") or [])
@@ -55,18 +50,21 @@ def build_context_block(chunks: list[dict]) -> str:
     return "\n\n---\n\n".join(parts)
 
 def build_prompt(query: str, chunks: list[dict], history: list[tuple[str, str]]) -> list[ChatMessage]:
-    """
-    Constructs a prompt for the LLM based on the query and context chunks.
+    """Constructs the full chat prompt: system instructions, prior turns, then
+    the current query with its retrieved context (and images, if supported).
 
     Args:
         query (str): The user's query.
-        chunks (list[dict]): A list of context chunks.
+        chunks (list[dict]): Retrieved context chunks, with "image_paths" if any.
+        history (list[tuple[str, str]]): Prior (question, answer) turns.
 
     Returns:
-        list[ChatMessage]: A list of ChatMessage objects representing the prompt.
+        list[ChatMessage]: Messages ready for `llm.chat()`.
     """
     prompt_text = f"CONTESTO:\n{build_context_block(chunks)}\n\nDOMANDA ({settings.assistant_audience.upper()}):\n{query}"
     blocks = [TextBlock(text=prompt_text)]
+    # Only attach raw images if the deployed model actually supports vision —
+    # a non-multimodal model rejects ImageBlock content with a 400.
     if settings.generation_model_vision:
         seen = set()
         for c in chunks:

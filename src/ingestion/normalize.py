@@ -12,13 +12,12 @@ _BOILERPLATE_MIN_REPEATS = 3
 
 
 def normalize_document(doc: DoclingDocument) -> None:
-    """Corrects recurring Docling layout-detection quirks seen on Ateneo
-    regolamenti: article headers misclassified as another label, headers
-    merged with the enclosing Part title, headers split from their title,
-    repeated page header/footer boilerplate landing in the body instead of
-    being filtered as furniture, and paragraphs/list items shredded across
-    a boilerplate injection or across one text block per line. Mutates in
-    place.
+    """Fixes recurring Docling layout-detection quirks on Ateneo regolamenti
+    (misclassified/split/merged headers, stray boilerplate, fragmented
+    paragraphs, paginated tables).
+
+    Args:
+        doc (DoclingDocument): Document to fix, mutated in place.
     """
     _fix_mislabeled_article_headers(doc)
     _split_merged_part_and_article(doc)
@@ -29,6 +28,12 @@ def normalize_document(doc: DoclingDocument) -> None:
 
 
 def _fix_mislabeled_article_headers(doc: DoclingDocument) -> None:
+    """Re-labels article headers (e.g. "Art. 5") that Docling classified as
+    plain text instead of a section header.
+
+    Args:
+        doc (DoclingDocument): Document to fix, mutated in place.
+    """
     default_level = next((t.level for t in doc.texts if isinstance(t, SectionHeaderItem)), 1)
     for item in list(doc.texts):
         if isinstance(item, SectionHeaderItem):
@@ -39,6 +44,12 @@ def _fix_mislabeled_article_headers(doc: DoclingDocument) -> None:
 
 
 def _split_merged_part_and_article(doc: DoclingDocument) -> None:
+    """Splits a header where a Part title and the following Article title
+    were merged onto a single line into two separate headers.
+
+    Args:
+        doc (DoclingDocument): Document to fix, mutated in place.
+    """
     for item in list(doc.texts):
         if not isinstance(item, SectionHeaderItem):
             continue
@@ -52,6 +63,12 @@ def _split_merged_part_and_article(doc: DoclingDocument) -> None:
 
 
 def _merge_split_article_number_and_title(doc: DoclingDocument) -> None:
+    """Merges an article number header (e.g. "Art. 5") with its title header
+    when Docling split them into two separate headers.
+
+    Args:
+        doc (DoclingDocument): Document to fix, mutated in place.
+    """
     i = 0
     while i < len(doc.texts) - 1:
         cur, nxt = doc.texts[i], doc.texts[i + 1]
@@ -69,12 +86,11 @@ def _merge_split_article_number_and_title(doc: DoclingDocument) -> None:
 
 
 def _strip_repeated_boilerplate(doc: DoclingDocument) -> None:
-    """Removes running page headers/footers (e.g. a university letterhead
-    repeated on every page) that Docling's own furniture detection missed
-    and left in the main body. Any text appearing verbatim on at least
-    `_BOILERPLATE_MIN_REPEATS` occasions is treated as boilerplate, not
-    content — legitimate body text this short and this repetitive within
-    one regolamento is not a realistic false positive.
+    """Removes running headers/footers Docling's furniture detection missed:
+    any text repeated `_BOILERPLATE_MIN_REPEATS`+ times verbatim is boilerplate.
+
+    Args:
+        doc (DoclingDocument): Document to fix, mutated in place.
     """
     counts = Counter(item.text.strip() for item in doc.texts)
     boilerplate = [item for item in list(doc.texts) if counts[item.text.strip()] >= _BOILERPLATE_MIN_REPEATS]
@@ -83,6 +99,12 @@ def _strip_repeated_boilerplate(doc: DoclingDocument) -> None:
 
 
 def _merge_fragmented_paragraphs(doc: DoclingDocument) -> None:
+    """Merges consecutive text/list-item blocks that don't end in sentence
+    punctuation back into a single paragraph.
+
+    Args:
+        doc (DoclingDocument): Document to fix, mutated in place.
+    """
     i = 0
     while i < len(doc.texts) - 1:
         cur, nxt = doc.texts[i], doc.texts[i + 1]
@@ -98,14 +120,12 @@ def _merge_fragmented_paragraphs(doc: DoclingDocument) -> None:
 
 
 def _merge_paginated_tables(doc: DoclingDocument) -> None:
-    """Stitches back together a table that TableFormer split into two
-    separate TableItems because it spans a page break — the continuation
-    page has no repeated header row, but shares the same column count and
-    sits immediately next to the first part with nothing in between.
-    Fee/deadline tables are exactly the content the Grounding Guard (§7)
-    depends on staying literal, so a table silently split in half — with
-    only the first half retrievable under its real heading context — is
-    worth fixing here rather than downstream.
+    """Merges a table TableFormer split across a page break (same column
+    count, adjacent, no repeated header row) — fee/deadline tables must stay
+    whole and literal.
+
+    Args:
+        doc (DoclingDocument): Document to fix, mutated in place.
     """
     changed = True
     while changed:

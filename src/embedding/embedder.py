@@ -6,7 +6,14 @@ from config import settings
 FILTER_ONLY_KEYS = [*settings.metadata_schema, "stato", "source_file", "source_path", "image_paths"]
 
 def build_embedding_model(device_id: int) -> BGEM3FlagModel:
-    """Builds the embedding model for the pipeline."""
+    """Builds the BGE-M3 embedding model used across the pipeline.
+
+    Args:
+        device_id (int): CUDA device index to load the model on.
+
+    Returns:
+        BGEM3FlagModel: Loaded model, producing dense/sparse/colbert vectors.
+    """
     return BGEM3FlagModel(
         'BAAI/bge-m3',
         devices=f"cuda:{device_id}",
@@ -15,6 +22,17 @@ def build_embedding_model(device_id: int) -> BGEM3FlagModel:
 
 
 def embed_nodes(nodes: list[BaseNode], model: BGEM3FlagModel, batch_size: int = 8) -> dict:
+    """Embeds a batch of nodes into dense, sparse and colbert vectors.
+
+    Args:
+        nodes (list[BaseNode]): Nodes to embed; mutated in place to exclude
+            filter-only metadata (see `FILTER_ONLY_KEYS`) from the embedded text.
+        model (BGEM3FlagModel): Loaded embedding model.
+        batch_size (int): Encoding batch size.
+
+    Returns:
+        dict: BGE-M3 output with "dense_vecs", "lexical_weights", "colbert_vecs".
+    """
     for node in nodes:
         node.excluded_embed_metadata_keys.extend(FILTER_ONLY_KEYS)
     texts = [n.get_content(metadata_mode="embed") for n in nodes]

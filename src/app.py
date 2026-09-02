@@ -23,6 +23,7 @@ DOCSTORE = SimpleDocumentStore.from_persist_path(settings.data_chunked_dir / "do
 
 @on_chat_start
 async def on_chat_start():
+    """Initializes a fresh conversation history for a new chat session."""
     history: list[tuple[str, str]] = []
     user_session.set("history", history)
 
@@ -32,6 +33,12 @@ async def on_chat_start():
 
 @on_message
 async def on_message(msg: Message):
+    """Handles one user message end-to-end: condense, retrieve, generate,
+    stream the answer back, and update the session's conversation history.
+
+    Args:
+        msg (Message): Incoming Chainlit message.
+    """
     query = msg.content
     history = user_session.get("history")
 
@@ -40,6 +47,7 @@ async def on_message(msg: Message):
         await elem.remove()
     async with Step(name="Analisi e Condensazione query") as step_condense:
         step_condense.input = query
+        # condense_question is a blocking HTTP call; to_thread keeps it off the event loop.
         search_query = await asyncio.to_thread(condense_question, LLM, history, query)
 
         step_condense.output = f"Query ottimizzata per il Vector DB:\n`{search_query}`"
@@ -69,6 +77,8 @@ async def on_message(msg: Message):
 
     response_text = await asyncio.to_thread(generate_response, LLM, query, chunks, history)
 
+    # generate_response returns the full text at once (no server-side streaming);
+    # this simulates a stream client-side for UX.
     for token in response_text.split(" "):
         await final_response.stream_token(token + " ")
         await asyncio.sleep(0.03)

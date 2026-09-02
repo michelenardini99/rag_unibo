@@ -49,6 +49,15 @@ CONDENSE_SYSTEM_PROMPT = (
 )
 
 def build_condense_prompt(history: list[tuple[str, str]], query: str) -> list[ChatMessage]:
+    """Builds the chat messages for the condensation call.
+
+    Args:
+        history (list[tuple[str, str]]): Prior (question, answer) turns.
+        query (str): The latest, possibly context-dependent, question.
+
+    Returns:
+        list[ChatMessage]: System + user messages for `llm.chat()`.
+    """
     turns = "\n".join(f"Studente: {q}\nAssistente: {a}" for q, a in history)
     text = f"CRONOLOGIA:\n{turns}\n\nNUOVA DOMANDA: {query}\n\nDomanda riformulata:"
     return [
@@ -57,6 +66,18 @@ def build_condense_prompt(history: list[tuple[str, str]], query: str) -> list[Ch
     ]
 
 def condense_question(llm: OpenAILike, history: list[tuple[str, str]], query: str) -> str:
+    """Rewrites a possibly context-dependent follow-up into a standalone
+    question, using the conversation history.
+
+    Args:
+        llm (OpenAILike): Model used to condense the question.
+        history (list[tuple[str, str]]): Prior (question, answer) turns.
+        query (str): The latest question, as typed by the user.
+
+    Returns:
+        str: `query` unchanged if `history` is empty (nothing to condense);
+        otherwise the model's standalone rewrite.
+    """
     if not history:
         return query
     response = llm.chat(build_condense_prompt(history, query), max_tokens=64, temperature=0.0)

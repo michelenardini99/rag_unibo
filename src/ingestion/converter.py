@@ -16,6 +16,15 @@ from ingestion.normalize import normalize_document
 
 
 def pipeline_options(device: int) -> PdfPipelineOptions:
+    """Builds Docling's PDF pipeline options: OCR, table structure and picture
+    description all enabled.
+
+    Args:
+        device (int): CUDA device index for Docling's local models (OCR, layout).
+
+    Returns:
+        PdfPipelineOptions: Options passed to `PdfFormatOption`.
+    """
     return PdfPipelineOptions(
         accelerator_options=AcceleratorOptions(device=f"cuda:{device}"),
         table_structure_options=TableStructureOptions(do_cell_matching=True),
@@ -24,10 +33,18 @@ def pipeline_options(device: int) -> PdfPipelineOptions:
         do_picture_description=True,
         generate_picture_images=True,
         picture_description_options=picture_descriptions_options,
-        enable_remote_services=True
+        enable_remote_services=True  # required: picture captioning calls the vLLM HTTP endpoint
     )
 
 def build_converter(device: int) -> DocumentConverter:
+    """Builds the Docling converter for the supported input formats.
+
+    Args:
+        device (int): CUDA device index for the PDF pipeline's local models.
+
+    Returns:
+        DocumentConverter: Converter for PDF, DOCX, HTML and PPTX.
+    """
     return DocumentConverter(
         allowed_formats=[
             InputFormat.PDF,
@@ -44,6 +61,18 @@ def build_converter(device: int) -> DocumentConverter:
 
 
 def convert_corpus(input_dir: Path, output_dir: Path, device: int) -> dict[str, list[str]]:
+    """Converts every unconverted document under `input_dir` to normalized
+    Markdown + JSON under `output_dir`.
+
+    Args:
+        input_dir (Path): Root of raw documents, or a single file.
+        output_dir (Path): Root to write converted Markdown/JSON to, mirroring
+            `input_dir`'s folder structure.
+        device (int): CUDA device index for Docling's local models.
+
+    Returns:
+        dict[str, list[str]]: {"failures": [...]} paths that failed to convert.
+    """
     input_dir = input_dir.resolve()
     output_dir = output_dir.resolve()
     converter = build_converter(device)
@@ -60,6 +89,8 @@ def convert_corpus(input_dir: Path, output_dir: Path, device: int) -> dict[str, 
         target = (output_dir / rel).with_suffix(".json")
         return target.exists()
 
+    # Reruns only convert new files, not the whole corpus — conversion (OCR,
+    # picture captioning) is the slowest stage in the offline pipeline.
     paths = [f for f in paths if not file_already_converted(f)]
     
     for result in converter.convert_all(paths, raises_on_error=False):

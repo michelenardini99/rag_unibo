@@ -31,8 +31,8 @@ class RetrievalConfig:
 
 
 CONFIGS: list[RetrievalConfig] = [
-    # Base originale (con ColBERT) — mantenuta per documentare il confronto che ha
-    # portato a preferire hybrid_no_colbert, non usarla per nuovo tuning.
+    # ColBERT-based configs: kept only to document the comparison that led to
+    # preferring hybrid_no_colbert (see REPORT_ARCHITETTURA.md §6) — not for new tuning.
     RetrievalConfig(name="hybrid"),
     RetrievalConfig(name="hybrid_no_reranker", use_reranker=False),
     RetrievalConfig(name="hybrid_relative_fallback", fallback_mode="relative"),
@@ -42,8 +42,8 @@ CONFIGS: list[RetrievalConfig] = [
     RetrievalConfig(name="chunk_256", chunk_max_tokens=256),
     RetrievalConfig(name="chunk_768", chunk_max_tokens=768),
     RetrievalConfig(name="random", random_baseline=True),
-    # Stessi assi (chunk size / reranker / fallback), isolati sulla base
-    # hybrid_no_colbert ora che sappiamo che è quella migliore.
+    # Same axes (chunk size / reranker / fallback), re-tested on the
+    # hybrid_no_colbert base now that it's the preferred one.
     RetrievalConfig(name="chunk_256_no_colbert", chunk_max_tokens=256, mode="hybrid_no_colbert"),
     RetrievalConfig(name="chunk_768_no_colbert", chunk_max_tokens=768, mode="hybrid_no_colbert"),
     RetrievalConfig(name="no_colbert_no_reranker", mode="hybrid_no_colbert", use_reranker=False),
@@ -52,7 +52,18 @@ CONFIGS: list[RetrievalConfig] = [
 
 
 def _matches(chunks: list[dict], expected_source: str) -> tuple[bool, bool]:
-    """Ritorna (hit_top1, hit_top5): il documento atteso compare tra i chunk?"""
+    """Checks whether the expected source document shows up among the retrieved chunks.
+
+    Matches at the source-document level, not exact chunk, since the dataset
+    has no hand-labeled chunk-id ground truth.
+
+    Args:
+        chunks (list[dict]): Retrieved chunks, ranked, each with a "source_file".
+        expected_source (str): Expected document title from the test case.
+
+    Returns:
+        tuple[bool, bool]: (hit_top1, hit_top5).
+    """
     names = [clean_source_name(c["source_file"]) for c in chunks if c.get("source_file")]
     hit_top5 = any(n in expected_source or expected_source in n for n in names)
     hit_top1 = bool(names) and (names[0] in expected_source or expected_source in names[0])
@@ -61,6 +72,20 @@ def _matches(chunks: list[dict], expected_source: str) -> tuple[bool, bool]:
 
 def _random_chunks(client: QdrantClient, collection_name: str, docstore: SimpleDocumentStore,
                     pool_ids: list[str], k: int = 5) -> list[dict]:
+    """Samples chunks uniformly from the whole docstore, as a sanity-check baseline.
+
+    Args:
+        client (QdrantClient): Unused here, kept for signature symmetry with `retrieve()`.
+        collection_name (str): Unused here, kept for signature symmetry with `retrieve()`.
+        docstore (SimpleDocumentStore): Docstore to sample node ids from.
+        pool_ids (list[str]): Candidate node ids to sample from (the whole
+            docstore, not a relevance-filtered pool — this must be a true
+            "random" control, not a reshuffle of already-good candidates).
+        k (int): Number of chunks to sample.
+
+    Returns:
+        list[dict]: k randomly sampled chunks in the same shape `retrieve()` returns.
+    """
     ids = random.sample(pool_ids, min(k, len(pool_ids)))
     out = []
     for node_id in ids:
@@ -78,6 +103,23 @@ def _random_chunks(client: QdrantClient, collection_name: str, docstore: SimpleD
 
 def evaluate_retrieval(config: RetrievalConfig, dataset: list[dict], client: QdrantClient, embed_model,
                         reranker, docstore: SimpleDocumentStore, llm, results_dir: Path) -> dict:
+    """Runs Top-1/Top-5 retrieval evaluation for one config over a dataset,
+    writes the result to `results_dir/{config.name}.json`, and prints a summary line.
+
+    Args:
+        config (RetrievalConfig): Retrieval variant to evaluate.
+        dataset (list[dict]): Test cases, each with "question", "expected_source"
+            and optionally "history".
+        client (QdrantClient): Qdrant client.
+        embed_model: Embedding model for retrieval.
+        reranker: Cross-encoder reranker.
+        docstore (SimpleDocumentStore): Docstore matching `config.index_key`.
+        llm: Model used to condense follow-up questions.
+        results_dir (Path): Directory to write the per-config results JSON to.
+
+    Returns:
+        dict: Top-1/Top-5 means (overall and split by original/condensed query) plus per-case detail.
+    """
     collection_name = f"{settings.qdrant_collection}__{config.index_key}"
 
     pool_ids = None
@@ -88,6 +130,8 @@ def evaluate_retrieval(config: RetrievalConfig, dataset: list[dict], client: Qdr
     for case in dataset:
         history = [tuple(turn) for turn in case.get("history", [])]
         query = condense_question(llm, history, case["question"]) if history else case["question"]
+        # Tracked separately because condensed queries are the ones that broke
+        # retrieval in practice (see condensazione-04, REPORT_ARCHITETTURA.md §6).
         query_kind = "condensed" if history else "original"
 
         if config.random_baseline:
@@ -130,6 +174,15 @@ def evaluate_retrieval(config: RetrievalConfig, dataset: list[dict], client: Qdr
 
 
 def run(configs: list[RetrievalConfig], dataset_path: Path, results_dir: Path, device_id: int) -> None:
+    """Loads shared models/dataset once and evaluates each config in turn,
+    reusing docstores across configs that share the same `index_key`.
+
+    Args:
+        configs (list[RetrievalConfig]): Retrieval variants to evaluate.
+        dataset_path (Path): Path to the test-case dataset JSON.
+        results_dir (Path): Directory to write per-config results JSON to.
+        device_id (int): CUDA device for the embedding and reranker models.
+    """
     dataset = json.loads(dataset_path.read_text(encoding="utf-8"))
 
     embed_model = build_embedding_model(device_id=device_id)

@@ -3,7 +3,15 @@ from qdrant_client import QdrantClient, models
 
 
 def embed_query(query: str, model: BGEM3FlagModel) -> dict:
-    """Embeds a query string using the provided embedding model."""
+    """Embeds a query into dense, sparse and colbert vectors.
+
+    Args:
+        query (str): Query string to embed.
+        model (BGEM3FlagModel): Loaded embedding model.
+
+    Returns:
+        dict: BGE-M3 output with "dense_vecs", "lexical_weights", "colbert_vecs".
+    """
     return model.encode(
         [query],
         return_dense=True,
@@ -14,26 +22,21 @@ def embed_query(query: str, model: BGEM3FlagModel) -> dict:
 
 def search_candidates(client: QdrantClient, collection_name: str, query_embedding: dict, limit: int = 20,
                        prefetch_limit: int = 50, mode: str = "hybrid_no_colbert") -> list:
-    """
-    Searches for candidate nodes in a Qdrant collection based on the provided query embedding.
+    """Searches candidate nodes in Qdrant.
 
     Args:
         client (QdrantClient): The Qdrant client instance.
-        collection_name (str): The name of the collection to search in.
-        query_embedding (dict): A dictionary containing the query embedding.
-        limit (int): The number of top candidates to retrieve.
-        prefetch_limit (int): The number of candidates to prefetch for further processing.
-        mode: strategia di retrieval. Default "hybrid_no_colbert" (dense+sparse fusi via
-            RRF nativo di Qdrant) — nello screening Top-1/Top-5 su questo corpus
-            (`datasets/eval/retrieval_full/`) ha dato risultati identici a dense_only e
-            sparse_only, mentre "hybrid" (che aggiunge lo stage ColBERT finale) è
-            risultato peggiore su tutte le metriche. Altre modalità, solo per ablation:
-            - "hybrid": dense+sparse in prefetch, riordinati per score ColBERT.
-            - "dense_only": solo il branch denso.
-            - "sparse_only": solo il branch sparso (pesi lessicali BGE-M3, non BM25 classico).
+        collection_name (str): The collection to search.
+        query_embedding (dict): Output of `embed_query()`.
+        limit (int): Number of candidates to return.
+        prefetch_limit (int): Candidates fetched per branch (dense/sparse)
+            before fusion/reranking, for modes that prefetch.
+        mode (str): Retrieval strategy — default "hybrid_no_colbert" (RRF
+            fusion) measured best on this corpus; "hybrid" (adds a ColBERT
+            stage), "dense_only", "sparse_only" kept for ablation.
 
     Returns:
-        list: A list of candidate nodes retrieved from the collection.
+        list: Candidate points from Qdrant, ranked by the chosen strategy.
     """
     dense_vec = query_embedding["dense_vecs"][0].tolist()
     weights = query_embedding["lexical_weights"][0]

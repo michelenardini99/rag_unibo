@@ -12,17 +12,10 @@ from config import settings
 
 
 class HybridQdrantRetriever(BaseRetriever):
-    """Wraps the custom BGE-M3 hybrid search (dense+sparse+colbert) + BGE
-    cross-encoder reranking as a LlamaIndex BaseRetriever, so it can plug into
-    AutoMergingRetriever (§5 architettura, retrieval gerarchico Parent-Child)
-    while keeping the existing hybrid retrieval logic untouched.
-
-    Returns a wide-ish candidate pool (candidate_pool, not just the final
-    top-k) *without* the score cutoff: AutoMergingRetriever needs to see
-    multiple siblings of the same section to decide whether to merge them —
-    filtering too early would remove exactly the borderline chunks the merge
-    is meant to rescue. The score threshold is applied after merging instead
-    (see `retrieve()` below).
+    """Wraps hybrid search + reranking as a LlamaIndex BaseRetriever so it
+    plugs into AutoMergingRetriever. Returns an uncut candidate pool —
+    AutoMergingRetriever needs to see whole sibling groups to decide what to
+    merge; the score threshold is applied after merging, in `retrieve()`.
     """
 
     def __init__(self, client: QdrantClient, collection_name: str, embed_model, reranker_model,
@@ -41,6 +34,14 @@ class HybridQdrantRetriever(BaseRetriever):
         super().__init__()
 
     def _retrieve(self, query_bundle: QueryBundle) -> list[NodeWithScore]:
+        """Runs hybrid search then optional reranking for one query.
+
+        Args:
+            query_bundle (QueryBundle): LlamaIndex query wrapper.
+
+        Returns:
+            list[NodeWithScore]: Candidate nodes with their score, unfiltered.
+        """
         query_embedding = embed_query(query_bundle.query_str, self._embed_model)
         candidates = search_candidates(
             self._client, self._collection_name, query_embedding,
@@ -79,47 +80,37 @@ def retrieve(
     score_threshold: float = settings.rerank_score_threshold,
     merged_fallback_threshold: float = settings.merged_threshold,
 ) -> list:
-    """
-    Retrieves relevant nodes (merging sibling chunks into their parent
-    section when enough of them match, via AutoMergingRetriever) for the
-    given query.
+    """Retrieves relevant nodes, merging sibling chunks into their parent
+    section via AutoMergingRetriever when enough of them match.
 
     Args:
-        query (str): The query string.
+        query (str): Search query (already condensed, if it was a follow-up).
         client (QdrantClient): The Qdrant client instance.
-        collection_name (str): The name of the collection to search in.
-        embed_model: The embedding model used to embed the query.
-        reranker: The reranker model used to rerank the candidates.
-        docstore (SimpleDocumentStore): docstore holding both leaf and parent
-            nodes (datasets/chunked/docstore.json), needed by
-            AutoMergingRetriever to resolve parents by id.
-        use_reranker: se False, salta lo step di cross-encoder reranking e usa
-            direttamente lo score della ricerca ibrida (ablation).
-        use_automerging: se False, salta AutoMergingRetriever e ritorna i nodi
-            foglia così come recuperati, senza fondere le sezioni (ablation).
-        mode: strategia di retrieval passata a `search_candidates`. Default
-            "hybrid_no_colbert" (fusione dense+sparse via RRF, senza lo stage
-            ColBERT finale) — misurato più affidabile di "hybrid" (che include
-            ColBERT) nello screening di retrieval puro su questo corpus, vedi
-            `datasets/eval/retrieval_full/`. Altre modalità disponibili solo
-            per ablation: "hybrid" (con ColBERT), "dense_only", "sparse_only".
-        fallback_mode: come rilassare la soglia quando nulla la supera al primo
-            tentativo — "absolute" (default) riprova con `merged_fallback_threshold`;
-            "relative" prende invece i primi `top_k` per punteggio, indipendentemente
-            dal valore assoluto (ablation).
-        prefetch_limit: quanti candidati prelevare per ciascun ramo (denso/sparso)
-            prima del passaggio ColBERT in `search_candidates`.
-        candidate_pool: quanti candidati passare al reranker/tenere prima del
-            filtro per punteggio finale.
-        top_k: numero massimo di nodi restituiti.
-        score_threshold: soglia minima di punteggio, usata al primo tentativo
-            per tutti i nodi (foglia e fusi).
-        merged_fallback_threshold: soglia di fallback, più permissiva, usata
-            per tutti i nodi quando `score_threshold` non fa passare nulla
-            (solo con `fallback_mode="absolute"`).
+        collection_name (str): The collection to search.
+        embed_model: Embedding model for the query.
+        reranker: Cross-encoder reranker.
+        docstore (SimpleDocumentStore): Docstore holding leaf and parent nodes.
+        use_reranker (bool): If False, skip reranking and use the raw search
+            score instead (ablation).
+        use_automerging (bool): If False, skip AutoMergingRetriever and return
+            leaf nodes as retrieved, without merging sections (ablation).
+        mode (str): Retrieval strategy for `search_candidates` — default
+            "hybrid_no_colbert" (RRF fusion, no ColBERT) measured best on this
+            corpus (REPORT_ARCHITETTURA.md §6); "hybrid" (with ColBERT),
+            "dense_only", "sparse_only" kept for ablation.
+        fallback_mode (str): "absolute" (default) retries with
+            `merged_fallback_threshold` when nothing passes `score_threshold`;
+            "relative" takes the top `top_k` by score regardless of the
+            absolute value.
+        prefetch_limit (int): Candidates fetched per branch before fusion/rerank.
+        candidate_pool (int): Candidates kept before the score-threshold filter.
+        top_k (int): Maximum number of nodes returned.
+        score_threshold (float): Minimum score for a node to pass on the first try.
+        merged_fallback_threshold (float): Fallback threshold used when
+            `fallback_mode="absolute"` and nothing passes `score_threshold`.
 
     Returns:
-        list: A list of relevant nodes retrieved from the collection.
+        list: Selected nodes as dicts with "text", "headings", "source_file", "image_paths".
     """
     base_retriever = HybridQdrantRetriever(
         client, collection_name, embed_model, reranker, docstore,

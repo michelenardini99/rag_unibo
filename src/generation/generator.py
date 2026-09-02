@@ -23,18 +23,21 @@ def build_llm(base_url: str, model: str = "generation-llm", context_window: int 
     )
 
 def generate_response(llm: OpenAILike, query: str, chunks: list[dict], history: list[tuple[str, str]] | None = None) -> str:
-    """
-    Generates a response from the LLM based on the provided query and context chunks.
+    """Generates a grounded response from the LLM given the query and retrieved context.
 
     Args:
         llm (OpenAILike): The LLM instance to use for generation.
-        query (str): The user's query.
-        chunks (list[dict]): A list of context chunks.
+        query (str): The user's original query (not the condensed search query).
+        chunks (list[dict]): Retrieved context chunks.
+        history (list[tuple[str, str]] | None): Prior (question, answer) turns,
+            included in the prompt for conversational continuity.
 
     Returns:
-        str: The generated response from the LLM.
+        str: The generated response.
     """
 
+    # Deterministic on purpose: factual QA over retrieved context doesn't need
+    # creativity, and a fixed temperature keeps answers (and eval scores) reproducible.
     response = llm.chat(build_prompt(query, chunks, history), temperature=0.0)
     answer = response.message.content
     return f"{answer}\n"
