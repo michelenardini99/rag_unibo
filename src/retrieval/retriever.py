@@ -27,7 +27,8 @@ class HybridQdrantRetriever(BaseRetriever):
 
     def __init__(self, client: QdrantClient, collection_name: str, embed_model, reranker_model,
                  docstore: SimpleDocumentStore, candidate_pool: int = settings.retrieval_candidate_limit,
-                 prefetch_limit: int = settings.retrieval_prefetch_limit, use_reranker: bool = True):
+                 prefetch_limit: int = settings.retrieval_prefetch_limit, use_reranker: bool = True,
+                 mode: str = "hybrid"):
         self._client = client
         self._collection_name = collection_name
         self._embed_model = embed_model
@@ -36,13 +37,14 @@ class HybridQdrantRetriever(BaseRetriever):
         self._candidate_pool = candidate_pool
         self._prefetch_limit = prefetch_limit
         self._use_reranker = use_reranker
+        self._mode = mode
         super().__init__()
 
     def _retrieve(self, query_bundle: QueryBundle) -> list[NodeWithScore]:
         query_embedding = embed_query(query_bundle.query_str, self._embed_model)
         candidates = search_candidates(
             self._client, self._collection_name, query_embedding,
-            limit=self._candidate_pool, prefetch_limit=self._prefetch_limit,
+            limit=self._candidate_pool, prefetch_limit=self._prefetch_limit, mode=self._mode,
         )
 
         if self._use_reranker:
@@ -69,6 +71,8 @@ def retrieve(
     *,
     use_reranker: bool = True,
     use_automerging: bool = True,
+    mode: str = "hybrid",
+    fallback_mode: str = "absolute",
     prefetch_limit: int = settings.retrieval_prefetch_limit,
     candidate_pool: int = settings.retrieval_candidate_limit,
     top_k: int = settings.rerank_top_k,
@@ -93,22 +97,30 @@ def retrieve(
             direttamente lo score della ricerca ibrida (ablation).
         use_automerging: se False, salta AutoMergingRetriever e ritorna i nodi
             foglia così come recuperati, senza fondere le sezioni (ablation).
+        mode: strategia di retrieval passata a `search_candidates` per isolare
+            un segnale (ablation di retrieval puro): "hybrid" (default),
+            "dense_only", "sparse_only", "hybrid_no_colbert".
+        fallback_mode: come rilassare la soglia quando nulla la supera al primo
+            tentativo — "absolute" (default) riprova con `merged_fallback_threshold`;
+            "relative" prende invece i primi `top_k` per punteggio, indipendentemente
+            dal valore assoluto (ablation).
         prefetch_limit: quanti candidati prelevare per ciascun ramo (denso/sparso)
             prima del passaggio ColBERT in `search_candidates`.
         candidate_pool: quanti candidati passare al reranker/tenere prima del
             filtro per punteggio finale.
         top_k: numero massimo di nodi restituiti.
-        score_threshold: soglia minima di punteggio per i nodi foglia (e per i
-            nodi fusi, al primo tentativo).
-        merged_fallback_threshold: soglia di fallback per i soli nodi fusi,
-            usata quando `score_threshold` non fa passare nulla.
+        score_threshold: soglia minima di punteggio, usata al primo tentativo
+            per tutti i nodi (foglia e fusi).
+        merged_fallback_threshold: soglia di fallback, più permissiva, usata
+            per tutti i nodi quando `score_threshold` non fa passare nulla
+            (solo con `fallback_mode="absolute"`).
 
     Returns:
         list: A list of relevant nodes retrieved from the collection.
     """
     base_retriever = HybridQdrantRetriever(
         client, collection_name, embed_model, reranker, docstore,
-        candidate_pool=candidate_pool, prefetch_limit=prefetch_limit, use_reranker=use_reranker,
+        candidate_pool=candidate_pool, prefetch_limit=prefetch_limit, use_reranker=use_reranker, mode=mode,
     )
 
     if use_automerging:
@@ -118,16 +130,17 @@ def retrieve(
     else:
         merged_nodes = base_retriever.retrieve(query)
 
-    def select(merged_threshold: float) -> list[NodeWithScore]:
+    def select(threshold: float) -> list[NodeWithScore]:
         def passes(n: NodeWithScore) -> bool:
-            is_merged = bool(n.node.child_nodes)
-            threshold = merged_threshold if is_merged else score_threshold
             return (n.score or 0.0) > threshold
         return sorted((n for n in merged_nodes if passes(n)), key=lambda n: n.score or 0.0, reverse=True)[:top_k]
 
     final_nodes = select(score_threshold)
     if not final_nodes:
-        final_nodes = select(merged_fallback_threshold)
+        if fallback_mode == "relative":
+            final_nodes = sorted(merged_nodes, key=lambda n: n.score or 0.0, reverse=True)[:top_k]
+        else:
+            final_nodes = select(merged_fallback_threshold)
 
     return [
         {

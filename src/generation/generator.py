@@ -22,14 +22,6 @@ def build_llm(base_url: str, model: str = "generation-llm", context_window: int 
         context_window=context_window
     )
 
-NO_CONTEXT_MESSAGE = (
-    "Non ho trovato informazioni pertinenti nei documenti disponibili per rispondere "
-    "a questa domanda. "
-    f"Se riguarda {settings.assistant_institution}, prova a riformularla; "
-    "altrimenti non rientra tra gli argomenti che posso trattare."
-)
-
-
 def generate_response(llm: OpenAILike, query: str, chunks: list[dict], history: list[tuple[str, str]] | None = None) -> str:
     """
     Generates a response from the LLM based on the provided query and context chunks.
@@ -42,9 +34,7 @@ def generate_response(llm: OpenAILike, query: str, chunks: list[dict], history: 
     Returns:
         str: The generated response from the LLM.
     """
-    ##if not chunks:
-      ##  return NO_CONTEXT_MESSAGE
 
-    response = llm.chat(build_prompt(query, chunks, history))
+    response = llm.chat(build_prompt(query, chunks, history), temperature=0.0)
     answer = response.message.content
     return f"{answer}\n"
