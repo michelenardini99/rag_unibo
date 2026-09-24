@@ -126,7 +126,7 @@ Riceve i documenti grezzi (`datasets/raw/`) e produce, per ciascuno, una coppia 
 2. **Normalizzazione** (`normalize.py`): corregge sistematicamente una serie di difetti di parsing specifici osservati sui documenti reali — dettagliato al §5.1, perché è nato interamente da problemi incontrati in corso d'opera, non da un requisito previsto in anticipo.
 3. **Didascalia delle immagini** (`picture_descriptions.py`): ogni immagine viene passata a un modello di visione, che produce una descrizione testuale trattata poi come un frammento di conoscenza a sé stante — dettagliato al §5.2.
 
-**Contratto in uscita**: un documento strutturato dove testo, tabelle (letterali, mai riassunte — vincolo §1.2) e immagini (con relativa didascalia) sono tutti rappresentati in modo uniforme, pronti per l'Agente Indicizzatore.
+**Contratto in uscita**: un documento strutturato dove testo, tabelle (letterali, mai riassunte — vincolo §1.2) e immagini (con relativa didascalia) sono tutti rappresentati in modo uniforme, pronti per l'Indicizzatore.
 
 ### 4.2 Componente Indicizzatore
 
@@ -164,7 +164,7 @@ Riceve la domanda corrente e lo storico della conversazione. Se lo storico è vu
 
 **File**: `src/generation/generator.py`, `src/generation/prompt.py`
 
-Riceve la domanda originale (non quella condensata — quella serve solo per la ricerca) e le unità di conoscenza recuperate. Costruisce un prompt che: include il testo di ogni unità recuperata etichettato con la sua fonte; include le immagini associate (non solo le loro didascalie — il modello generativo, essendo vision-capable, può ragionare direttamente sull'immagine originale); vincola esplicitamente il modello a rispondere solo da quel contenuto, riportando numeri e date esattamente come appaiono; istruisce il modello a citare la fonte per ogni affermazione. Se non è stata recuperata nessuna unità di conoscenza, non interpella nemmeno il modello — restituisce direttamente un messaggio di assenza di informazione, per non rischiare che il modello risponda comunque a vuoto.
+Riceve la domanda originale (non quella condensata — quella serve solo per la ricerca) e le unità di conoscenza recuperate. Costruisce un prompt che: include il testo di ogni unità recuperata etichettato con la sua fonte; include le immagini associate (non solo le loro didascalie — il modello generativo, se vision-capable, può ragionare direttamente sull'immagine originale); vincola esplicitamente il modello a rispondere solo da quel contenuto, riportando numeri e date esattamente come appaiono; istruisce il modello a citare la fonte per ogni affermazione. Se non è stata recuperata nessuna unità di conoscenza, non interpella nemmeno il modello — restituisce direttamente un messaggio di assenza di informazione, per non rischiare che il modello risponda comunque a vuoto.
 
 **Contratto in uscita**: una risposta in linguaggio naturale, con citazione delle fonti realmente usate.
 
@@ -265,19 +265,17 @@ Questo capitolo descrive **come** il sistema è stato misurato e **cosa** quelle
 
 L'Agente Valutatore (§4.6) misura tre stadi con metriche giudicate da un modello linguistico (framework RAGAS): `context_precision`/`context_recall` sul recupero, `faithfulness`/`answer_relevancy` sulla generazione, `answer_correctness`/`answer_similarity` sul risultato finale. A queste si è affiancata una seconda famiglia di metriche **deterministiche**, Top-1 e Top-5 (`src/eval/evaluate_retrieval.py`): la percentuale di domande per cui il documento sorgente atteso compare, rispettivamente, al primo posto o tra i primi cinque risultati recuperati — nessun giudice LLM di mezzo, nessuna generazione, solo retrieval verificabile a colpo d'occhio. Le due famiglie rispondono a domande diverse: RAGAS misura la qualità percepita end-to-end, Top-k isola la sola qualità del recupero.
 
-### 6.2 Risultati: ablation end-to-end (RAGAS)
+Nel dettaglio, ogni metrica risponde a una domanda diversa:
 
-Confronto dell'intera pipeline (`src/eval/run_ablations.py`, risultati in `datasets/eval/ablations/`) su cinque configurazioni, dataset diagnostico completo:
+- **`context_precision`** — tra i chunk recuperati, quanti sono effettivamente pertinenti alla domanda? Penalizza il rumore nel contesto passato al generatore.
+- **`context_recall`** — il contesto recuperato copre tutte le informazioni necessarie a costruire la risposta di riferimento? Penalizza le informazioni mancanti, non quelle in eccesso.
+- **`faithfulness`** — le affermazioni della risposta generata sono deducibili dal contesto recuperato, o sono inventate ("allucinate")? Confronta risposta e contesto, non risposta e verità di riferimento: una risposta fedele può comunque essere sbagliata, se il contesto stesso era insufficiente.
+- **`answer_relevancy`** — la risposta è pertinente rispetto alla domanda posta, senza divagare o rispondere a un'altra domanda? Confronta risposta e domanda, ignorando il contesto.
+- **`answer_correctness`** — la risposta è correttamente allineata alla risposta di riferimento, combinando similarità semantica e sovrapposizione fattuale? È la metrica più vicina a "risposta giusta o sbagliata", ed è quella con cui si separano maggiormente i modelli generativi confrontati (§6.4).
+- **`answer_similarity`** — quanto la risposta è semanticamente simile alla risposta di riferimento, indipendentemente dalla forma? Più debole di `answer_correctness`: due risposte possono essere simili nel significato generale pur differendo su un dettaglio fattuale (una data, un importo).
+- **`Top-1` / `Top-5`** — il documento sorgente atteso compare, rispettivamente, al primo posto o tra i primi cinque risultati del retrieval? Verifica deterministica sull'identità del documento, non sul contenuto della risposta: isola la bontà del recupero da ogni rumore introdotto dal giudice LLM o dalla generazione.
 
-| Configurazione | context_precision | context_recall | answer_correctness |
-|---|---|---|---|
-| Base (chunk 512) | 0.860 | 0.923 | **0.812** |
-| Senza reranker | 0.811 | 0.949 | 0.807 |
-| Senza fusione gerarchica | 0.864 | 0.944 | 0.807 |
-| Chunk 256 | 0.851 | 0.932 | 0.789 |
-| Chunk 768 | 0.840 | 0.917 | 0.806 |
-
-### 6.3 Risultati: retrieval puro isolato dalla generazione (Top-1/Top-5)
+### 6.2 Risultati: retrieval puro isolato dalla generazione (Top-1/Top-5)
 
 Stesso dataset, isolando il solo stadio di recupero e scomponendo la ricerca ibrida nei suoi segnali costitutivi:
 
@@ -290,13 +288,29 @@ Stesso dataset, isolando il solo stadio di recupero e scomponendo la ricerca ibr
 | Chunk 256 | 0.655 | 0.845 |
 | `random` (controllo di validità) | 0.024 | 0.059 |
 
-### 6.4 Discussione
+### 6.3 Discussione
 
 In cima, a pari merito, tre segnali indipendenti — solo denso, solo sparso, e la loro fusione via RRF (ora `hybrid`) — convergono esattamente sullo stesso risultato (0.774/0.845), caso per caso, non solo in media. Chunk 768 pareggia sul Top-1 ma cede leggermente sul Top-5 (0.833): non è la direzione giusta in cui spingere la configurazione, dato che quella a 512 token già in uso la eguaglia senza perdere nulla.
 
 Togliere il reranker da `hybrid` costa 2,4 punti di Top-1 (0.750) — un calo reale ma contenuto, segno che il reranker resta utile anche su un pool di candidati già buono. `hybrid_colbert`, la configurazione originale con lo stage ColBERT aggiunto alla fusione, resta invece sistematicamente sotto di 6 punti rispetto al gruppo di testa (0.714) — peggio della stessa pipeline *senza* reranker (0.750): il problema non è il reranker, è il pool di candidati che ColBERT gli consegna a monte, già impoverito.
 
 In fondo, `chunk_256` è la configurazione peggiore tra quelle "vere" (0.655) — chunk troppo piccoli danneggiano il retrieval indipendentemente da ogni altra scelta. `random` chiude come atteso, vicino a zero, a conferma che la misura è valida.
+
+### 6.4 Risultati: confronto tra modelli generativi
+
+Le ablation di §6.2 fissano il modello generativo e variano la pipeline di recupero. Un secondo esperimento fa l'opposto: fissa retrieval, reranking e chunking sulla configurazione `hybrid` di riferimento (§6.2) e sostituisce solo il modello che genera la risposta, per verificare quanto la scelta dell'LLM pesi sul risultato finale rispetto alle scelte di indicizzazione. Tre modelli quantizzati eseguibili sull'hardware disponibile (§3.2) sono stati confrontati sull'intero dataset diagnostico (84 casi, `src/eval/evaluate_model_comparison.py`, risultati in `datasets/eval/model_comparison/`):
+
+| Modello | context_precision | context_recall | faithfulness | answer_relevancy | answer_correctness | answer_similarity | tempo generazione (media) |
+|---|---|---|---|---|---|---|---|
+| Qwen2.5-14B-Instruct-AWQ | 0.860 | 0.894 | **0.889** | **0.743** | **0.823** | **0.890** | 6,28 s |
+| Mistral-Nemo-Instruct-12B | 0.817 | 0.884 | 0.747 | 0.737 | 0.782 | 0.866 | 4,58 s |
+| Meta-Llama-3.1-8B-Instruct | 0.866 | 0.887 | 0.762 | 0.638 | 0.688 | 0.856 | **3,09 s** |
+
+Le metriche di recupero (`context_precision`/`context_recall`) sono, come atteso, sostanzialmente equivalenti tra i tre: dipendono dall'embedder e dal reranker, non dal modello generativo, e le differenze osservate rientrano nel rumore statistico. È sulle metriche di generazione che i modelli si separano nettamente: Qwen2.5-14B domina su tutte e quattro (`faithfulness`, `answer_relevancy`, `answer_correctness`, `answer_similarity`), con un margine più ampio proprio su `answer_correctness` (+0,14 su Llama, +0,04 su Mistral) — la metrica più vicina al requisito di precisione fattuale del sistema (§1.2). Il costo è un tempo di generazione doppio rispetto a Llama-3.1-8B.
+
+La scomposizione per `diagnostic_tag` mostra dove il divario si allarga. Su `qualitative_negation` (domande che richiedono di riconoscere un'eccezione o l'assenza di un requisito) Llama-3.1-8B cede di più (`answer_correctness` 0,59 contro 0,77 di Qwen); su `conversational_condensation` (domande dipendenti dal turno precedente, §5.4) crolla ulteriormente (`answer_relevancy` 0,23, il valore più basso dell'intera matrice). Su `image_grounded` (domande la cui risposta dipende dalle didascalie generate in §4.1/§5.2) Qwen ottiene il punteggio massimo su tutte e tre le metriche di stadio (1.0/1.0/1.0), mentre gli altri due restano indietro soprattutto sul recupero (0,80-0,97 di `context_precision`), segno indiretto che la qualità delle didascalie interagisce con il modello usato a valle nella formulazione della query condensata. Su `out_of_scope`/`no_information` (6 casi in cui il sistema dovrebbe astenersi) nessuno dei tre modelli si comporta in modo pienamente soddisfacente — `faithfulness` vicina a zero per tutti — a conferma che l'assenza di un meccanismo esplicito di rifiuto (§7) non è compensata dalla sola scelta del modello.
+
+Il risultato conferma retroattivamente la configurazione in produzione (`docker-compose.yml`, `generation_model` in `config.py`): Qwen2.5-14B-Instruct-AWQ è il modello effettivamente servito da vLLM, e questo esperimento mostra che il margine di qualità che giustifica la latenza più alta è reale e non marginale, concentrato proprio sui casi diagnostici più difficili piuttosto che distribuito uniformemente sull'intero dataset.
 
 ---
 

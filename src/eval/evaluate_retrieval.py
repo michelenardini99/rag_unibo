@@ -201,7 +201,7 @@ def run(configs: list[RetrievalConfig], dataset_path: Path, results_dir: Path, d
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dataset", type=Path, default=settings.data_eval_dir / "qa_test_set_diagnostic_screening.json")
+    parser.add_argument("--dataset", type=Path, default=settings.data_eval_dir / "qa_test_set_diagnostic.json")
     parser.add_argument("--results-dir", type=Path, default=settings.data_eval_dir / "retrieval_screening")
     parser.add_argument("--device-id", type=int, default=settings.embeddings_device_id)
     args = parser.parse_args()

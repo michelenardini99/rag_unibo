@@ -1,5 +1,7 @@
+import concurrent.futures
 import json
 import statistics
+import threading
 import time
 from pathlib import Path
 
@@ -22,6 +24,7 @@ from ragas.metrics import (
     answer_correctness,
     answer_similarity,
 )
+from ragas.run_config import RunConfig
 from retrieval.retriever import retrieve
 
 RETRIEVING_METRICS = [context_precision, context_recall]
@@ -67,9 +70,50 @@ class BGEM3RagasEmbeddings(BaseRagasEmbeddings):
         return self.embed_query(text)
 
 
+def _run_case(case: dict, llm: OpenAILike, embed: BGEM3FlagModel, client: QdrantClient,
+              reranker: FlagReranker, docstore: SimpleDocumentStore, collection_name: str,
+              retrieval_kwargs: dict, retrieval_lock: threading.Lock) -> tuple[dict, dict]:
+    """Runs one test case through condense -> retrieve -> generate.
+
+    Returns:
+        tuple[dict, dict]: (ragas input row, timing dict for this case).
+    """
+    query = case["question"]
+    history = [tuple(turn) for turn in case.get("history", [])]
+
+    search_query = condense_question(llm, history, query)
+    with retrieval_lock:
+        # embed/reranker share HuggingFace fast tokenizers, which mutate
+        # internal truncation/padding state and aren't safe to call
+        # concurrently from multiple threads (raises "Already borrowed", or
+        # segfaults outright depending on timing). Only condense/generate
+        # (HTTP round trips to the batching vLLM server) actually benefit
+        # from running in parallel, so retrieval stays serialized here.
+        chunks = retrieve(search_query, client, collection_name, embed, reranker, docstore, **retrieval_kwargs)
+    t0 = time.perf_counter()
+    # search_query (condensed), not the raw query: it's already a
+    # self-contained question consistent with what was actually
+    # retrieved, so the model isn't left resolving "e per il 2026/27?"
+    # against history on its own during generation.
+    response = generate_response(llm, search_query, chunks, history or None)
+    t1 = time.perf_counter()
+
+    row = {
+        "user_input": query,
+        "retrieved_contexts": [c["text"] for c in chunks] or [""],
+        "response": response,
+        "reference": case["expected_answer"],
+    }
+    timing = {
+        "id": case["id"],
+        "generate_s": round(t1 - t0, 3),
+    }
+    return row, timing
+
+
 def build_eval_dataset(dataset: list[dict], llm: OpenAILike, embed: BGEM3FlagModel, client: QdrantClient,
                         reranker: FlagReranker, docstore: SimpleDocumentStore, collection_name: str,
-                        retrieval_kwargs: dict | None = None) -> tuple[list[dict], list[dict]]:
+                        retrieval_kwargs: dict | None = None, max_workers: int = 8) -> tuple[list[dict], list[dict]]:
     """Runs each test case through condense -> retrieve -> generate and
     collects both the ragas input rows and per-case generation timing.
 
@@ -83,35 +127,30 @@ def build_eval_dataset(dataset: list[dict], llm: OpenAILike, embed: BGEM3FlagMod
         docstore (SimpleDocumentStore): Docstore backing the retriever.
         collection_name (str): Qdrant collection to search.
         retrieval_kwargs (dict | None): Extra kwargs forwarded to `retrieve()`.
+        max_workers (int): Test cases run concurrently, each doing its own
+            condense/retrieve/generate round trip. The condense and generate
+            calls hit the shared vLLM server, which continuous-batches
+            concurrent requests, so running cases in parallel overlaps
+            network/generation latency; the retrieval step (embed + rerank)
+            stays serialized regardless (see `_run_case`), since those models'
+            tokenizers aren't safe to call concurrently.
 
     Returns:
-        tuple[list[dict], list[dict]]: (rows for ragas, per-case timings).
+        tuple[list[dict], list[dict]]: (rows for ragas, per-case timings), in
+        the same order as `dataset`.
         Timings cover only the generation call — not condensation/retrieval,
         and not the ragas judge (that's eval overhead, not user-facing latency).
     """
     retrieval_kwargs = retrieval_kwargs or {}
-    rows = []
-    timings = []
-    for case in dataset:
-        query = case["question"]
-        history = [tuple(turn) for turn in case.get("history", [])]
-
-        search_query = condense_question(llm, history, query)
-        chunks = retrieve(search_query, client, collection_name, embed, reranker, docstore, **retrieval_kwargs)
-        t0 = time.perf_counter()
-        response = generate_response(llm, query, chunks, history or None)
-        t1 = time.perf_counter()
-
-        rows.append({
-            "user_input": query,
-            "retrieved_contexts": [c["text"] for c in chunks] or [""],
-            "response": response,
-            "reference": case["expected_answer"],
-        })
-        timings.append({
-            "id": case["id"],
-            "generate_s": round(t1 - t0, 3),
-        })
+    retrieval_lock = threading.Lock()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        results = list(executor.map(
+            lambda case: _run_case(
+                case, llm, embed, client, reranker, docstore, collection_name, retrieval_kwargs, retrieval_lock,
+            ),
+            dataset,
+        ))
+    rows, timings = (list(x) for x in zip(*results)) if results else ([], [])
     return rows, timings
 
 
@@ -181,6 +220,8 @@ def evaluate(
     collection_name: str = "ateneo_docs",
     retrieval_kwargs: dict | None = None,
     output_path: Path = Path("datasets/eval/results.json"),
+    max_workers: int = 8,
+    ragas_max_workers: int = 32,
 ):
     """Runs the full RAGAS evaluation for a dataset and writes results to disk.
 
@@ -195,24 +236,37 @@ def evaluate(
         collection_name (str): Qdrant collection to search.
         retrieval_kwargs (dict | None): Extra kwargs forwarded to `retrieve()`.
         output_path (Path): Where to write the results JSON.
+        max_workers (int): Test cases run concurrently in the condense/
+            retrieve/generate pipeline, see `build_eval_dataset`.
+        ragas_max_workers (int): Concurrency for the ragas judge itself
+            (`RunConfig.max_workers`, default 16 in ragas) — these are pure
+            LLM/embedding calls against the same vLLM server, so they can
+            usually afford more concurrency than `max_workers`.
 
     Returns:
         The ragas EvaluationResult object.
     """
-    rows, timings = build_eval_dataset(dataset, llm, embed, client, reranker, docstore, collection_name, retrieval_kwargs)
+    rows, timings = build_eval_dataset(
+        dataset, llm, embed, client, reranker, docstore, collection_name, retrieval_kwargs, max_workers=max_workers,
+    )
 
     openai_client = openai.OpenAI(base_url=llm.api_base, api_key="EMPTY")
 
-    # Judge reuses the same deployed generation model — swapping models therefore
-    # changes the judge too, not just what's being judged (REPORT_ARCHITETTURA.md §6).
-    ragas_llm = llm_factory(llm.model, provider="openai", client=openai_client, max_tokens=1024)
+    ragas_llm = llm_factory(llm.model, provider="openai", client=openai_client, max_tokens=4096, temperature=0-0)
     ragas_emb = BGEM3RagasEmbeddings(embed)
 
     final_dataset = Dataset.from_list(rows)
 
     metrics = RETRIEVING_METRICS + GENERATIVE_METRICS + END_TO_END_METRICS
 
-    res = ragas_evaluate(dataset=final_dataset, metrics=metrics, llm=ragas_llm, embeddings=ragas_emb, show_progress=True)
+    res = ragas_evaluate(
+        dataset=final_dataset,
+        metrics=metrics,
+        llm=ragas_llm,
+        embeddings=ragas_emb,
+        show_progress=True,
+        run_config=RunConfig(max_workers=ragas_max_workers),
+    )
     df = res.to_pandas()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -223,6 +277,5 @@ def evaluate(
         print(f"{metric.name}: {df[metric.name].mean():.2f}")
 
     t = timing_summary(timings)
-    print(f"tempo totale per domanda (s) — media: {t['total_s']['mean']}, mediana: {t['total_s']['median']}, p95: {t['total_s']['p95']}")
     print(f"  di cui generazione — media: {t['generate_s']['mean']}, mediana: {t['generate_s']['median']}")
     return res

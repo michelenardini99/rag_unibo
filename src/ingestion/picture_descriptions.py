@@ -11,11 +11,6 @@ CAPTION_PROMPT = (
     "(es. un logo), dillo brevemente."
 )
 
-# Didascalia immagini via il server vLLM già attivo per la generazione
-# (Qwen2.5-VL-7B, vision-capable) invece del piccolo SmolVLM-256M locale,
-# che su diagrammi accademici produceva loop di ripetizione degeneri
-# (§7 architettura, vedi PIPELINE.md §5.5 per i dettagli). Nessun modello
-# aggiuntivo da caricare: riusa l'endpoint OpenAI-compatibile su GPU A.
 picture_descriptions_options = PictureDescriptionApiOptions(
     url=f"{settings.vllm_base_url}/chat/completions",
     params={
@@ -26,4 +21,10 @@ picture_descriptions_options = PictureDescriptionApiOptions(
     },
     prompt=CAPTION_PROMPT,
     concurrency=2,
+    # Default (0.05) assumes dense text pages where a meaningful figure takes
+    # up a large fraction of the page; this corpus is mostly 720x540 slides,
+    # where legitimate diagrams/screenshots are often only ~1-2% of the page
+    # area (see REPORT_ARCHITETTURA.md image_grounded investigation) and would
+    # otherwise be silently skipped.
+    picture_area_threshold=0.005,
 )

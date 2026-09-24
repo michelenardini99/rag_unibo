@@ -1,18 +1,24 @@
+import argparse
+import io
 import json
 import multiprocessing as mp
+import time
 from pathlib import Path
 from queue import Empty
+from bs4 import BeautifulSoup
 from docling.datamodel.accelerator_options import AcceleratorOptions
-from docling.datamodel.base_models import InputFormat
+from docling.datamodel.base_models import DocumentStream, InputFormat
 from docling.datamodel.document import ConversionStatus
 from docling.datamodel.pipeline_options import (
     PdfPipelineOptions,
     TableStructureOptions
 )
 from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.utils.utils import create_file_hash
 from docling_core.types.doc import ImageRefMode
 from ingestion.picture_descriptions import picture_descriptions_options
 from ingestion.normalize import normalize_document
+from config import settings
 
 
 def pipeline_options(device: int) -> PdfPipelineOptions:
@@ -30,10 +36,13 @@ def pipeline_options(device: int) -> PdfPipelineOptions:
         table_structure_options=TableStructureOptions(do_cell_matching=True),
         do_ocr=True,
         do_table_structure=True,
-        do_picture_description=True,
+        # Captioning calls settings.generation_model over the API; skip it
+        # when that deployment isn't vision-capable (see generation_model_vision
+        # in prompt.py) — it would just 400 on every image otherwise.
+        do_picture_description=settings.generation_model_vision,
         generate_picture_images=True,
         picture_description_options=picture_descriptions_options,
-        enable_remote_services=True  # required: picture captioning calls the vLLM HTTP endpoint
+        enable_remote_services=True
     )
 
 def build_converter(device: int) -> DocumentConverter:
@@ -60,6 +69,44 @@ def build_converter(device: int) -> DocumentConverter:
     )
 
 
+def _raw_file_hash(path: Path) -> int:
+    """Hashes a raw source file the same way Docling hashes it internally
+    (`DocumentOrigin.parse_hex_string`), so it can be compared directly
+    against the `origin.binary_hash` a prior conversion already stored.
+
+    Args:
+        path (Path): Raw source file.
+
+    Returns:
+        int: Low 64 bits of the file's sha256, as an unsigned integer.
+    """
+    return int(create_file_hash(path), 16) & 0xFFFFFFFFFFFFFFFF
+
+
+def file_already_converted(file: Path, input_dir: Path, output_dir: Path) -> bool:
+    """Checks whether `file` has already been converted with its current
+    content, so unchanged files are skipped and modified ones are redone.
+
+    Args:
+        file (Path): Raw source file.
+        input_dir (Path): Root of raw documents `file` is relative to.
+        output_dir (Path): Root of converted-documents output.
+
+    Returns:
+        bool: True if a converted JSON exists and its recorded source hash
+            still matches `file`'s current content.
+    """
+    rel = file.relative_to(input_dir)
+    target = (output_dir / rel).with_suffix(".json")
+    if not target.exists():
+        return False
+    try:
+        recorded_hash = json.loads(target.read_text(encoding="utf-8"))["origin"]["binary_hash"]
+    except (OSError, json.JSONDecodeError, KeyError, TypeError):
+        return False
+    return recorded_hash == _raw_file_hash(file)
+
+
 def convert_corpus(input_dir: Path, output_dir: Path, device: int) -> dict[str, list[str]]:
     """Converts every unconverted document under `input_dir` to normalized
     Markdown + JSON under `output_dir`.
@@ -84,16 +131,15 @@ def convert_corpus(input_dir: Path, output_dir: Path, device: int) -> dict[str, 
         base_dir = input_dir
     failures: list[str] = []
 
-    def file_already_converted(file: Path) -> bool:
-        rel = file.relative_to(input_dir)
-        target = (output_dir / rel).with_suffix(".json")
-        return target.exists()
+    paths = [f for f in paths if not file_already_converted(f, input_dir, output_dir)]
 
-    # Reruns only convert new files, not the whole corpus — conversion (OCR,
-    # picture captioning) is the slowest stage in the offline pipeline.
-    paths = [f for f in paths if not file_already_converted(f)]
-    
+    times: list[float] = []
+    t_prev = time.perf_counter()
     for result in converter.convert_all(paths, raises_on_error=False):
+        now = time.perf_counter()
+        times.append(now - t_prev)
+        t_prev = now
+
         stem = result.input.file.stem
         dest = output_dir / result.input.file.relative_to(base_dir).parent
         dest.mkdir(parents=True, exist_ok=True)
@@ -106,15 +152,22 @@ def convert_corpus(input_dir: Path, output_dir: Path, device: int) -> dict[str, 
         else:
             failures.append(str(result.input.file))
 
+    if times:
+        print(f"Converted {len(times)} document(s) in {sum(times):.2f}s "
+              f"({sum(times) / len(times):.2f}s/document on average)")
+
     return {"failures": failures}
 
 
 if __name__ == "__main__":
-    from config import settings
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source", type = Path, default=settings.data_raw_dir, help="Cartella sorgente dei documenti da convertire (PDF, DOCX, PPTX, HTML). Se non specificata, usa la cartella predefinita in config.py")
+    parser.add_argument("--destination", type = Path, default=settings.data_converted_dir, help="Cartella di destinazione dei documenti convertiti (Markdown + JSON). Se non specificata, usa la cartella predefinita in config.py")
+    args = parser.parse_args()
 
     result = convert_corpus(
-        settings.data_raw_dir,
-        settings.data_converted_dir,
+        args.source,
+        args.destination,
         device=settings.embeddings_device_id,
     )
     if result["failures"]:

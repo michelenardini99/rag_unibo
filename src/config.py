@@ -13,13 +13,18 @@ class Settings(BaseSettings):
     data_chunked_dir: Path = ROOT_DIR / "datasets" / "chunked"
     data_eval_dir: Path = ROOT_DIR / "datasets" / "eval"
 
+    crawl_delay_seconds: float = 1.0
+    crawl_user_agent: str = "RagUniboBot/1.0 (+progetto tesi RAG Unibo)"
+    crawl_max_pages: int | None = 500
+    crawl_strip_query_strings: bool = True
+
     qdrant_url: str = "http://localhost:6333"
     qdrant_grpc_port: int = 6334
     qdrant_collection: str = "ateneo_docs"
 
     vllm_base_url: str = "http://localhost:8000/v1"
     generation_model: str = "generation-llm"
-    generation_model_vision: bool = False
+    generation_model_vision: bool = True
 
     vllm_max_model_len: int = 8192
 
@@ -35,7 +40,8 @@ class Settings(BaseSettings):
 
     chunk_max_tokens: int = 512
 
-    metadata_schema: list[str] = ["anno_accademico", "corso", "categoria", "materia"]
+    metadata_schema: list[str] = ["tipo_laurea", "corso", "sezione", "materia"]
+    academic_year_start_month: int = 9
 
     assistant_institution: str = "Università di Bologna"
     assistant_scope: str = "regolamenti, tasse, iscrizioni, corsi e procedure amministrative"

@@ -1,3 +1,4 @@
+import uuid
 from collections import defaultdict
 from pathlib import Path
 from llama_index.core import Document
@@ -8,7 +9,7 @@ from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
 from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
 from docling_core.types.doc import DoclingDocument
 
-from chunking.metadata import extract_metadata
+from chunking.metadata import ID_NAMESPACE, extract_metadata, read_checksum
 from config import settings
 
 
@@ -47,27 +48,59 @@ def load_as_li_document(json_path: Path, converted_root: Path) -> Document:
         metadata=metadata,
     )
 
-def find_unchunked_files(root: Path, docstore: SimpleDocumentStore | None) -> list[Path]:
-    """Lists converted documents not yet present in the docstore, so reruns
-    only chunk/embed new or changed files instead of the whole corpus.
+def find_unchunked_files(root: Path, docstore: SimpleDocumentStore | None) -> tuple[list[Path], list[Path]]:
+    """Lists converted documents that need (re)chunking: ones not yet present
+    in the docstore, and ones whose source has changed since they were last
+    chunked (detected via the "checksum" metadata field — Docling's own hash
+    of the raw source file, see `chunking.metadata.read_checksum`).
 
     Args:
         root (Path): Root of the converted-documents tree.
         docstore (SimpleDocumentStore | None): Existing docstore, or None to
-            treat every file as unchunked.
+            treat every file as new.
 
     Returns:
-        list[Path]: Paths to documents that still need chunking.
+        tuple[list[Path], list[Path]]: (new_files, changed_files). Callers
+        that need to purge stale chunks/vectors before reprocessing only need
+        to do so for `changed_files`.
     """
-    already_chunked = {
-        node.metadata.get("source_path")
+    existing_checksums: dict[str, str | None] = {
+        node.metadata["source_path"]: node.metadata.get("checksum")
         for node in (docstore.docs.values() if docstore else [])
+        if node.metadata.get("source_path") is not None
     }
 
-    return [
-        p for p in sorted(root.rglob("*.json"))
-        if p.name != "_failures.json" and str(p.relative_to(root)) not in already_chunked
-    ]
+    new_files: list[Path] = []
+    changed_files: list[Path] = []
+    for p in sorted(root.rglob("*.json")):
+        if p.name == "_failures.json":
+            continue
+        rel = str(p.relative_to(root))
+        if rel not in existing_checksums:
+            new_files.append(p)
+        elif read_checksum(p) != existing_checksums[rel]:
+            changed_files.append(p)
+
+    return new_files, changed_files
+
+def _assign_deterministic_ids(leaf_nodes: list[BaseNode]) -> None:
+    """Replaces LlamaIndex's random per-run node ids with ones derived from
+    each document's stable "id".
+
+    Args:
+        leaf_nodes (list[BaseNode]): Leaf chunks, mutated in place. Nodes
+            with no "id" metadata (shouldn't happen in practice) are left
+            with their original id.
+    """
+    positions: dict[str, int] = defaultdict(int)
+    for node in leaf_nodes:
+        doc_id = node.metadata.get("id")
+        if doc_id is None:
+            continue
+        position = positions[doc_id]
+        positions[doc_id] += 1
+        node.id_ = str(uuid.uuid5(ID_NAMESPACE, f"{doc_id}:{position}"))
+
 
 def _resolve_image_paths(nodes: list, converted_root: Path) -> None:
     """Resolves each node's picture self_ref (e.g. "#/pictures/3") to an
@@ -127,19 +160,25 @@ def build_parent_nodes(leaf_nodes: list[BaseNode]) -> list[TextNode]:
             continue
 
         first = children[0]
+        doc_id = first.metadata.get("id")
         image_paths = [p for c in children for p in (c.metadata.get("image_paths") or [])]
 
         parent = TextNode(
             text="\n\n".join(c.text for c in children),
             metadata={
                 **{key: first.metadata.get(key) for key in settings.metadata_schema},
+                "anno_accademico": first.metadata.get("anno_accademico"),
                 "stato": first.metadata.get("stato"),
+                "id": doc_id,
+                "checksum": first.metadata.get("checksum"),
                 "source_file": first.metadata.get("source_file"),
                 "source_path": source_path,
                 "headings": list(headings),
                 "image_paths": image_paths,
             },
         )
+        if doc_id is not None:
+            parent.id_ = str(uuid.uuid5(ID_NAMESPACE, f"{doc_id}:parent:{'/'.join(headings)}"))
 
         for child in children:
             child.relationships[NodeRelationship.PARENT] = parent.as_related_node_info()
@@ -170,6 +209,7 @@ def chunk_documents(files: list[Path], root: Path,  chunk_max_tokens: int = sett
         if p.name != "_failures.json"
     ]
     leaf_nodes = parser.get_nodes_from_documents(documents, show_progress=True)
+    _assign_deterministic_ids(leaf_nodes)
     _resolve_image_paths(leaf_nodes, root)
     parent_nodes = build_parent_nodes(leaf_nodes)
     return leaf_nodes, parent_nodes

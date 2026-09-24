@@ -28,6 +28,8 @@ def rerank(query: str, candidates: list, reranker: FlagReranker, limit: int = 5)
     Returns:
         list: (candidate, score) pairs, sorted by score descending, truncated to `limit`.
     """
+    if not candidates:
+        return []
     pairs = [(query, c.payload["text"]) for c in candidates]
     scores = reranker.compute_score(pairs)
     ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)

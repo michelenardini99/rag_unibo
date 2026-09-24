@@ -21,7 +21,8 @@ def embed_query(query: str, model: BGEM3FlagModel) -> dict:
 
 
 def search_candidates(client: QdrantClient, collection_name: str, query_embedding: dict, limit: int = 20,
-                       prefetch_limit: int = 50, mode: str = "hybrid_no_colbert") -> list:
+                       prefetch_limit: int = 50, mode: str = "hybrid_no_colbert",
+                       filters: dict[str, str] | None = None) -> list:
     """Searches candidate nodes in Qdrant.
 
     Args:
@@ -34,6 +35,12 @@ def search_candidates(client: QdrantClient, collection_name: str, query_embeddin
         mode (str): Retrieval strategy — default "hybrid_no_colbert" (RRF
             fusion) measured best on this corpus; "hybrid" (adds a ColBERT
             stage), "dense_only", "sparse_only" kept for ablation.
+        filters (dict[str, str] | None): Extra payload field -> value
+            constraints, ANDed with the always-on "stato" filter (see
+            `retrieval.query_filters.extract_query_filters`) — restricts
+            search to (e.g.) one course/subject/academic year so a
+            topically-similar chunk from a different one can't outrank the
+            actually relevant one.
 
     Returns:
         list: Candidate points from Qdrant, ranked by the chosen strategy.
@@ -42,27 +49,28 @@ def search_candidates(client: QdrantClient, collection_name: str, query_embeddin
     weights = query_embedding["lexical_weights"][0]
     sparse_vec = models.SparseVector(indices=[int(k) for k in weights], values=list(weights.values()))
 
-    vigente_filter = models.Filter(
-        must=[models.FieldCondition(key="stato", match=models.MatchValue(value="vigente"))]
-    )
+    conditions = [models.FieldCondition(key="stato", match=models.MatchValue(value="vigente"))]
+    for field, value in (filters or {}).items():
+        conditions.append(models.FieldCondition(key=field, match=models.MatchValue(value=value)))
+    search_filter = models.Filter(must=conditions)
 
     if mode == "dense_only":
         result = client.query_points(
             collection_name, query=dense_vec, using="dense",
-            query_filter=vigente_filter, limit=limit, with_payload=True,
+            query_filter=search_filter, limit=limit, with_payload=True,
         )
         return result.points
 
     if mode == "sparse_only":
         result = client.query_points(
             collection_name, query=sparse_vec, using="sparse",
-            query_filter=vigente_filter, limit=limit, with_payload=True,
+            query_filter=search_filter, limit=limit, with_payload=True,
         )
         return result.points
 
     prefetch = [
-        models.Prefetch(query=dense_vec, using="dense", limit=prefetch_limit, filter=vigente_filter),
-        models.Prefetch(query=sparse_vec, using="sparse", limit=prefetch_limit, filter=vigente_filter),
+        models.Prefetch(query=dense_vec, using="dense", limit=prefetch_limit, filter=search_filter),
+        models.Prefetch(query=sparse_vec, using="sparse", limit=prefetch_limit, filter=search_filter),
     ]
 
     if mode == "hybrid_no_colbert":

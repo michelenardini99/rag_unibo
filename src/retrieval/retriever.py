@@ -21,7 +21,7 @@ class HybridQdrantRetriever(BaseRetriever):
     def __init__(self, client: QdrantClient, collection_name: str, embed_model, reranker_model,
                  docstore: SimpleDocumentStore, candidate_pool: int = settings.retrieval_candidate_limit,
                  prefetch_limit: int = settings.retrieval_prefetch_limit, use_reranker: bool = True,
-                 mode: str = "hybrid_no_colbert"):
+                 mode: str = "hybrid_no_colbert", filters: dict[str, str] | None = None):
         self._client = client
         self._collection_name = collection_name
         self._embed_model = embed_model
@@ -31,6 +31,7 @@ class HybridQdrantRetriever(BaseRetriever):
         self._prefetch_limit = prefetch_limit
         self._use_reranker = use_reranker
         self._mode = mode
+        self._filters = filters
         super().__init__()
 
     def _retrieve(self, query_bundle: QueryBundle) -> list[NodeWithScore]:
@@ -46,6 +47,7 @@ class HybridQdrantRetriever(BaseRetriever):
         candidates = search_candidates(
             self._client, self._collection_name, query_embedding,
             limit=self._candidate_pool, prefetch_limit=self._prefetch_limit, mode=self._mode,
+            filters=self._filters,
         )
 
         if self._use_reranker:
@@ -54,11 +56,15 @@ class HybridQdrantRetriever(BaseRetriever):
             scored = [(c, c.score) for c in candidates]
 
         results = []
+        missing = 0
         for candidate, score in scored:
             node = self._docstore.get_document(str(candidate.id))
             if node is None:
+                missing += 1
                 continue
             results.append(NodeWithScore(node=node, score=float(score)))
+        print(f"[retrieve debug] filters={self._filters} candidates={len(candidates)} "
+              f"scored={len(scored)} missing_in_docstore={missing} results={len(results)}")
         return results
 
 
@@ -79,6 +85,7 @@ def retrieve(
     top_k: int = settings.rerank_top_k,
     score_threshold: float = settings.rerank_score_threshold,
     merged_fallback_threshold: float = settings.merged_threshold,
+    filters: dict[str, str] | None = None,
 ) -> list:
     """Retrieves relevant nodes, merging sibling chunks into their parent
     section via AutoMergingRetriever when enough of them match.
@@ -108,6 +115,9 @@ def retrieve(
         score_threshold (float): Minimum score for a node to pass on the first try.
         merged_fallback_threshold (float): Fallback threshold used when
             `fallback_mode="absolute"` and nothing passes `score_threshold`.
+        filters (dict[str, str] | None): Extra metadata constraints (e.g.
+            {"corso": "...", "anno_accademico": "..."}), see
+            `retrieval.query_filters.extract_query_filters`.
 
     Returns:
         list: Selected nodes as dicts with "text", "headings", "source_file", "image_paths".
@@ -115,6 +125,7 @@ def retrieve(
     base_retriever = HybridQdrantRetriever(
         client, collection_name, embed_model, reranker, docstore,
         candidate_pool=candidate_pool, prefetch_limit=prefetch_limit, use_reranker=use_reranker, mode=mode,
+        filters=filters,
     )
 
     if use_automerging:
@@ -123,6 +134,8 @@ def retrieve(
         merged_nodes = auto_merging.retrieve(query)
     else:
         merged_nodes = base_retriever.retrieve(query)
+    print(f"[retrieve debug] after automerging merged_nodes={len(merged_nodes)} "
+          f"scores={[round(n.score or 0.0, 3) for n in merged_nodes]}")
 
     def select(threshold: float) -> list[NodeWithScore]:
         def passes(n: NodeWithScore) -> bool:
@@ -135,6 +148,8 @@ def retrieve(
             final_nodes = sorted(merged_nodes, key=lambda n: n.score or 0.0, reverse=True)[:top_k]
         else:
             final_nodes = select(merged_fallback_threshold)
+    print(f"[retrieve debug] final_nodes={len(final_nodes)} (score_threshold={score_threshold}, "
+          f"merged_fallback_threshold={merged_fallback_threshold})")
 
     return [
         {
