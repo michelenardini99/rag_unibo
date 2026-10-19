@@ -1,3 +1,5 @@
+from collections.abc import AsyncIterator
+
 from llama_index.llms.openai_like import OpenAILike
 from generation.prompt import build_prompt
 from config import settings
@@ -59,3 +61,29 @@ def generate_response(llm: OpenAILike, query: str, chunks: list[dict], history: 
     response = llm.chat(build_prompt(query, chunks, history), temperature=0.0)
     answer = response.message.content
     return f"{answer}\n"
+
+
+async def astream_response(llm: OpenAILike, query: str, chunks: list[dict],
+                           history: list[tuple[str, str]] | None = None) -> AsyncIterator[str]:
+    """Streaming counterpart of `generate_response`, for the chat UI: yields
+    tokens as vLLM produces them instead of waiting for the full answer, so
+    the first words show up as soon as generation starts. Same prompt, same
+    temperature, same no-context short-circuit — only the delivery differs.
+
+    Args:
+        llm (OpenAILike): The LLM instance to use for generation.
+        query (str): The (condensed, standalone) question, see `generate_response`.
+        chunks (list[dict]): Retrieved context chunks.
+        history (list[tuple[str, str]] | None): Prior (question, answer) turns.
+
+    Yields:
+        str: Successive text deltas of the answer.
+    """
+    if not chunks:
+        yield f"{NO_CONTEXT_RESPONSE}\n"
+        return
+
+    stream = await llm.astream_chat(build_prompt(query, chunks, history), temperature=0.0)
+    async for response in stream:
+        if response.delta:
+            yield response.delta

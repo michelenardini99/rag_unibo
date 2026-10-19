@@ -5,7 +5,7 @@ import chainlit as cl
 from config import settings
 from embedding.embedder import build_embedding_model
 from generation.condense import condense_question, decompose_question
-from generation.generator import build_llm, generate_response
+from generation.generator import astream_response, build_llm
 from generation.prompt import build_prompt, clean_source_name
 from llama_index.core.storage.docstore import SimpleDocumentStore
 from qdrant_client import QdrantClient
@@ -213,11 +213,10 @@ async def on_message(msg: Message):
             step_prompt.input = search_query
             step_prompt.output = _format_debug_prompt(build_prompt(search_query, chunks, history))
 
-    response_text = await asyncio.to_thread(generate_response, LLM, search_query, chunks, history)
-
-    for token in response_text.split(" "):
-        await final_response.stream_token(token + " ")
-        await asyncio.sleep(0.03)
+    response_text = ""
+    async for token in astream_response(LLM, search_query, chunks, history):
+        response_text += token
+        await final_response.stream_token(token)
 
     await final_response.send()
 
