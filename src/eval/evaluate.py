@@ -8,7 +8,7 @@ from pathlib import Path
 import openai
 from datasets import Dataset
 from FlagEmbedding import BGEM3FlagModel, FlagReranker
-from generation.condense import condense_question
+from generation.condense import condense_question, decompose_question
 from generation.generator import generate_response
 from llama_index.core.storage.docstore import SimpleDocumentStore
 from llama_index.llms.openai_like import OpenAILike
@@ -25,7 +25,8 @@ from ragas.metrics import (
     answer_similarity,
 )
 from ragas.run_config import RunConfig
-from retrieval.retriever import retrieve
+from retrieval.query_filters import course_tipo_laurea_map, extract_query_filters, known_values_for_fields
+from retrieval.retriever import retrieve_decomposed
 
 RETRIEVING_METRICS = [context_precision, context_recall]
 GENERATIVE_METRICS = [faithfulness, answer_relevancy]
@@ -72,7 +73,8 @@ class BGEM3RagasEmbeddings(BaseRagasEmbeddings):
 
 def _run_case(case: dict, llm: OpenAILike, embed: BGEM3FlagModel, client: QdrantClient,
               reranker: FlagReranker, docstore: SimpleDocumentStore, collection_name: str,
-              retrieval_kwargs: dict, retrieval_lock: threading.Lock) -> tuple[dict, dict]:
+              retrieval_kwargs: dict, retrieval_lock: threading.Lock,
+              known_values: dict[str, list[str]], tipo_laurea_by_corso: dict[str, str]) -> tuple[dict, dict]:
     """Runs one test case through condense -> retrieve -> generate.
 
     Returns:
@@ -82,6 +84,14 @@ def _run_case(case: dict, llm: OpenAILike, embed: BGEM3FlagModel, client: Qdrant
     history = [tuple(turn) for turn in case.get("history", [])]
 
     search_query = condense_question(llm, history, query)
+    sub_queries = decompose_question(llm, search_query)
+    # Same "corso" priority app.py applies per message (see
+    # REPORT_ARCHITETTURA.md §4.4/§6.2): a ranking boost, not a hard filter —
+    # without it, the dataset's deliberate cross-course near-duplicate
+    # documents (e.g. both indexed courses have their own "Prova Pratica
+    # Valutativa") make retrieval harder than in live chat, where this
+    # signal is almost always available from the conversation.
+    priority_corso = extract_query_filters(llm, search_query, known_values, tipo_laurea_by_corso).get("corso")
     with retrieval_lock:
         # embed/reranker share HuggingFace fast tokenizers, which mutate
         # internal truncation/padding state and aren't safe to call
@@ -89,7 +99,10 @@ def _run_case(case: dict, llm: OpenAILike, embed: BGEM3FlagModel, client: Qdrant
         # segfaults outright depending on timing). Only condense/generate
         # (HTTP round trips to the batching vLLM server) actually benefit
         # from running in parallel, so retrieval stays serialized here.
-        chunks = retrieve(search_query, client, collection_name, embed, reranker, docstore, **retrieval_kwargs)
+        chunks = retrieve_decomposed(
+            sub_queries, client, collection_name, embed, reranker, docstore,
+            priority_corso=priority_corso, **retrieval_kwargs,
+        )
     t0 = time.perf_counter()
     # search_query (condensed), not the raw query: it's already a
     # self-contained question consistent with what was actually
@@ -143,10 +156,13 @@ def build_eval_dataset(dataset: list[dict], llm: OpenAILike, embed: BGEM3FlagMod
     """
     retrieval_kwargs = retrieval_kwargs or {}
     retrieval_lock = threading.Lock()
+    known_values = known_values_for_fields(client, collection_name)
+    tipo_laurea_by_corso = course_tipo_laurea_map(client, collection_name, known_values.get("corso") or [])
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         results = list(executor.map(
             lambda case: _run_case(
                 case, llm, embed, client, reranker, docstore, collection_name, retrieval_kwargs, retrieval_lock,
+                known_values, tipo_laurea_by_corso,
             ),
             dataset,
         ))

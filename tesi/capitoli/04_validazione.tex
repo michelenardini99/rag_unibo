@@ -1,0 +1,47 @@
+\chapter{Validazione del sistema}
+\label{cap:validazione}
+
+\notaredazionale{Obiettivo: 30 pagine.}
+
+\section{Benchmark di test}
+\notaredazionale{Il dataset diagnostico: 124 casi (\texttt{datasets/eval/qa\_test\_set\_diagnostic.json}), com'è stato
+costruito e perché, le categorie diagnostiche (\texttt{single\_fact}, \texttt{multi\_fact}, \texttt{synthesis},
+\texttt{conversational\_condensation}, \texttt{image\_grounded}, \texttt{distractor}, \texttt{out\_of\_scope},
+\texttt{no\_information}, ecc.) e cosa ciascuna è pensata per stressare. Descrivere anche il disegno deliberato di
+documenti ``quasi omonimi'' tra i due corsi indicizzati, usato per testare la disambiguazione.}
+
+\section{Indicatori di accuratezza}
+\notaredazionale{Vedi \texttt{REPORT\_ARCHITETTURA.md} \S6.1: le due famiglie di metriche --- RAGAS (\texttt{context\_precision},
+\texttt{context\_recall}, \texttt{faithfulness}, \texttt{answer\_relevancy}, \texttt{answer\_correctness},
+\texttt{answer\_similarity}) e le metriche deterministiche Top-1/Top-5 --- cosa misura ciascuna, perché servono
+entrambe le famiglie (qualità percepita end-to-end vs. qualità isolata del recupero).}
+
+\section{Esperimenti effettuati}
+\notaredazionale{Vedi \S6.2--6.3: l'ablation della pipeline di retrieval (13 configurazioni,
+\texttt{datasets/eval/retrieval\_screening/}) e il confronto tra modelli generativi
+(\texttt{datasets/eval/model\_comparison/}), con relativa discussione dei risultati.
+
+\textbf{Attenzione}: questi risultati sono precedenti ad alcune correzioni successive (fusione dei chunk corti, filtro
+di corso diventato bonus di priorità invece di esclusione, decomposizione delle domande multi-parte) --- vanno
+rieseguiti per avere numeri aggiornati prima della consegna finale (vedi \S7 di \texttt{REPORT\_ARCHITETTURA.md} per
+l'elenco completo dei limiti noti al momento della stesura di questa nota).}
+
+\section{Risultati}
+\notaredazionale{Sintesi dei risultati quantitativi (tabelle/grafici), confronto tra configurazioni di retrieval e tra
+modelli generativi, discussione del compromesso qualità/latenza.}
+
+\subsection{Esempi di casi errati}
+\notaredazionale{Materiale già raccolto durante lo sviluppo e lo hardening del sistema, utile da riportare come casi di
+studio concreti (con screenshot/log della risposta sbagliata e della diagnosi):
+\begin{enumerate}
+    \item una domanda su un importo (marca da bollo) ha ricevuto in risposta un numero corretto ma attribuito al fatto
+      sbagliato, per contaminazione tra due blocchi di contesto forniti contemporaneamente al modello;
+    \item la pagina ``Iscriversi ad anni successivi al primo'' veniva sistematicamente confusa con la pagina
+      sull'Obbligo Formativo Aggiuntivo (OFA), per un chunk introduttivo troppo corto per essere distintivo
+      nell'embedding;
+    \item una domanda sull'accordo di doppio titolo con la Colombia è stata classificata erroneamente come riferita
+      a un corso diverso da quello corretto;
+    \item il mancato recupero della pagina ``Cosa dicono i nostri studenti'' su una domanda lunga e lessicalmente
+      sovraccarica del nome ufficiale del corso --- limite non ancora risolto al momento della stesura di questa nota,
+      utile da riportare anche come lavoro futuro.
+\end{enumerate}}

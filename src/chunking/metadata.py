@@ -50,6 +50,25 @@ def read_checksum(json_path: Path) -> str | None:
         return None
 
 
+def read_source_url(json_path: Path) -> str | None:
+    """Reads a document's original web page URL, if it has one (see
+    `ingestion.web_crawler`'s sidecar, carried over by
+    `ingestion.converter.backfill_url_sidecars`). PDF/DOCX/PPTX documents
+    never have one — they were never a web page to begin with.
+
+    Args:
+        json_path (Path): Path to the converted document JSON.
+
+    Returns:
+        str | None: The page's URL, or None if there isn't one.
+    """
+    sidecar = json_path.with_name(json_path.name + ".url")
+    try:
+        return sidecar.read_text(encoding="utf-8").strip() or None
+    except OSError:
+        return None
+
+
 def extract_metadata(json_path: Path, converted_root: Path, schema: list[str] | None = None) -> dict:
     """Derives document metadata from its folder position under `converted_root`.
 
@@ -62,7 +81,7 @@ def extract_metadata(json_path: Path, converted_root: Path, schema: list[str] | 
 
     Returns:
         dict: Schema fields plus "anno_accademico", "stato", "id",
-        "checksum", "source_file" and "source_path".
+        "checksum", "source_file", "source_path" and "source_url".
     """
     rel = json_path.relative_to(converted_root)
     dir_parts = rel.parts[:-1]
@@ -77,4 +96,5 @@ def extract_metadata(json_path: Path, converted_root: Path, schema: list[str] | 
         "checksum": read_checksum(json_path),
         "source_file": rel.name,
         "source_path": str(rel),
+        "source_url": read_source_url(json_path),
     }

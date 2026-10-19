@@ -5,7 +5,7 @@ from config import settings
 
 FILTER_ONLY_KEYS = [
     *settings.metadata_schema, "anno_accademico", "stato", "id", "checksum", "source_file", "source_path",
-    "image_paths",
+    "source_url", "image_paths",
 ]
 
 def build_embedding_model(device_id: int) -> BGEM3FlagModel:

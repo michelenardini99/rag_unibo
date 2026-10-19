@@ -1,0 +1,69 @@
+\chapter{Architettura e sviluppo del sistema}
+\label{cap:architettura}
+
+\notaredazionale{Obiettivo: 25--30 pagine. Descrizione dettagliata di tutto quello che è stato sviluppato e che
+teoricamente andrà in deploy. Gran parte del contenuto esiste già, scritto in dettaglio, in
+\texttt{REPORT\_ARCHITETTURA.md} (capitoli 1--5): va \emph{riadattato in prosa da tesi} (più discorsivo e argomentato,
+meno nella forma di report tecnico a punti elenco) piuttosto che riscritto da zero. La struttura in sezioni qui sotto
+ricalca quella del report e può essere modificata liberamente.}
+
+\section{Analisi dei requisiti e vincoli di progetto}
+\notaredazionale{Vedi \texttt{REPORT\_ARCHITETTURA.md} \S1: il bisogno, i tre vincoli (riservatezza, hardware limitato,
+precisione fattuale), perché non basta un LLM generico, perché RAG. Questa sezione può in parte richiamare/espandere
+quanto già anticipato nell'Introduzione, senza ripetersi integralmente.}
+
+\section{Architettura ad alto livello}
+\notaredazionale{Vedi \S2: i sei componenti del sistema (Acquisizione, Indicizzatore, Orchestratore, Recupero,
+Generatore, Valutatore), il diagramma dei due cicli offline/online, il contratto tra componenti, perché due cicli
+separati. Includere il diagramma a blocchi (flowchart) già presente nel report.}
+
+\section{Scelte tecnologiche}
+\notaredazionale{Vedi \S3: strumenti concreti scelti per ciascun componente e motivazioni (Docling, LlamaIndex, BGE-M3,
+Qdrant, vLLM, RAGAS, Chainlit), il vincolo hardware come forza trainante delle scelte, la revisione in corsa della
+scelta del modello di comprensione visiva.}
+
+\section{Design di dettaglio}
+\notaredazionale{Vedi \S4: per ciascun componente --- file sorgente, responsabilità, contratto in uscita. Includere il
+diagramma di sequenza del flusso completo di una domanda.}
+
+\subsection{Acquisizione}
+\notaredazionale{Parsing documentale (Docling), normalizzazione dei difetti di parsing, didascalie automatiche delle
+immagini, crawler web per le pagine online.}
+
+\subsection{Indicizzatore}
+\notaredazionale{Segmentazione in chunk, struttura gerarchica (fusione in sezioni genitore), vettorializzazione
+(dense/sparse/ColBERT) e archiviazione in Qdrant. Includere la correzione sui chunk troppo corti (vedi sotto, \S3.6).}
+
+\subsection{Recupero}
+\notaredazionale{Ricerca ibrida (RRF), riordinamento con cross-encoder, fusione gerarchica e selezione finale.
+Includere la revisione architetturale dal filtro di corso duro al bonus di priorità (vedi \S3.6).}
+
+\subsection{Orchestratore}
+\notaredazionale{Condensazione della query sullo storico conversazionale, decomposizione delle domande multi-parte,
+risoluzione reattiva del corso di laurea (chiesto solo quando necessario, non più all'avvio della conversazione).}
+
+\subsection{Generatore}
+\notaredazionale{Costruzione del prompt, vincoli anti-allucinazione, citazione delle fonti (deterministica via codice,
+non lasciata al modello), gestione delle immagini per i modelli vision-capable.}
+
+\subsection{Valutatore}
+\notaredazionale{Framework RAGAS e metriche deterministiche Top-1/Top-5, rimandato in dettaglio al Capitolo
+\ref{cap:validazione}.}
+
+\section{Problematiche affrontate e soluzioni}
+\notaredazionale{Vedi \S5 del report, più il lavoro di hardening svolto successivamente (ottimo materiale per
+raccontare il \emph{processo} di sviluppo, non solo il risultato finale):
+\begin{itemize}
+    \item normalizzazione sistematica dei difetti di parsing (intestazioni, tabelle spezzate tra pagine);
+    \item didascalie delle immagini rotte dal modello di visione iniziale, e relativa correzione;
+    \item condensazione della query e troncamento del budget di token (bug osservato e corretto);
+    \item decomposizione delle domande multi-parte, per evitare che un sotto-argomento scacci l'altro dal ranking;
+    \item chunk troppo corti per essere distintivi nell'embedding (caso concreto: confusione tra la pagina
+      ``Iscriversi ad anni successivi al primo'' e la pagina OFA), e la fusione in fase di chunking come soluzione;
+    \item evoluzione del filtro per corso di laurea: da richiesta obbligatoria a inizio conversazione, a
+      disambiguazione reattiva solo quando necessaria, a bonus di priorità nel ranking invece di esclusione dura
+      (caso concreto che ha motivato il cambio: una domanda erroneamente classificata su un corso diverso perdeva
+      completamente la risposta corretta con un filtro duro);
+    \item gestione degli accessi concorrenti (lock sulle risorse condivise embedding/reranker, e perché il lock va
+      posizionato nel thread secondario e non sul thread dell'event loop, per evitare un deadlock).
+\end{itemize}}

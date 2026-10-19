@@ -107,6 +107,37 @@ def file_already_converted(file: Path, input_dir: Path, output_dir: Path) -> boo
     return recorded_hash == _raw_file_hash(file)
 
 
+def backfill_url_sidecars(input_dir: Path, output_dir: Path) -> int:
+    """Copies each raw file's URL sidecar (see `ingestion.web_crawler`) to its
+    converted JSON's matching sidecar, for documents whose conversion was
+    skipped by `file_already_converted` — they never got the chance to carry
+    it over themselves. Kept as a sidecar rather than injected into Docling's
+    own JSON, so it can't collide with or be dropped by Docling's own
+    (de)serialization. A no-op for PDF/DOCX/PPTX sources: they were never a
+    web page, so they never have a `.url` sidecar to begin with.
+
+    Args:
+        input_dir (Path): Root of raw documents.
+        output_dir (Path): Root of converted-documents output.
+
+    Returns:
+        int: Number of sidecars backfilled.
+    """
+    input_dir = input_dir.resolve()
+    output_dir = output_dir.resolve()
+    count = 0
+    for raw_sidecar in input_dir.rglob("*.url"):
+        raw_file = raw_sidecar.with_name(raw_sidecar.name[: -len(".url")])
+        converted_json = output_dir / raw_file.relative_to(input_dir).parent / f"{raw_file.stem}.json"
+        if not converted_json.exists():
+            continue
+        converted_sidecar = converted_json.with_name(converted_json.name + ".url")
+        if not converted_sidecar.exists():
+            converted_sidecar.write_text(raw_sidecar.read_text(encoding="utf-8"), encoding="utf-8")
+            count += 1
+    return count
+
+
 def convert_corpus(input_dir: Path, output_dir: Path, device: int) -> dict[str, list[str]]:
     """Converts every unconverted document under `input_dir` to normalized
     Markdown + JSON under `output_dir`.
@@ -155,6 +186,11 @@ def convert_corpus(input_dir: Path, output_dir: Path, device: int) -> dict[str, 
     if times:
         print(f"Converted {len(times)} document(s) in {sum(times):.2f}s "
               f"({sum(times) / len(times):.2f}s/document on average)")
+
+    if input_dir.is_dir():
+        backfilled = backfill_url_sidecars(input_dir, output_dir)
+        if backfilled:
+            print(f"Backfilled {backfilled} URL sidecar(s) for previously-converted pages.")
 
     return {"failures": failures}
 

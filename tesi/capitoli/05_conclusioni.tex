@@ -1,0 +1,25 @@
+\chapter{Conclusioni e sviluppi futuri}
+\label{cap:conclusioni}
+
+\notaredazionale{Obiettivo: 3 pagine. Riassumere il contributo del lavoro rispetto agli obiettivi enunciati nel
+Capitolo \ref{cap:introduzione}, senza ripetere in dettaglio quanto già argomentato nei capitoli precedenti.
+
+Limiti noti da richiamare (vedi \texttt{REPORT\_ARCHITETTURA.md} \S7 per l'elenco completo e aggiornato):
+\begin{itemize}
+    \item nessuna verifica automatica di fedeltà numerica prima della consegna della risposta;
+    \item il rifiuto su domande fuori tema/senza informazione resta debole, indipendentemente dal modello;
+    \item nessuna gestione della validità temporale dei documenti;
+    \item la fusione gerarchica copre solo la sintesi interna a una sezione/documento, non tra documenti diversi;
+    \item recall debole della ricerca ibrida su domande lunghe e lessicalmente sovraccariche del nome del corso.
+\end{itemize}
+
+Sviluppi futuri concreti già individuati:
+\begin{itemize}
+    \item batching dinamico delle richieste di embedding/reranking, per servire più studenti davvero in concorrenza
+      sulla GPU condivisa (alternativa più scalabile del lock attuale);
+    \item autenticazione reale / integrazione con il sistema informativo studenti, per eliminare alla radice il
+      problema della disambiguazione del corso (vedi anche Capitolo \ref{cap:stato-arte}, \S2.4);
+    \item ri-esecuzione della valutazione sperimentale del Capitolo \ref{cap:validazione} dopo le correzioni più
+      recenti, per avere numeri aggiornati;
+    \item eventuale estensione della fusione gerarchica all'aggregazione di informazione sparsa su più documenti.
+\end{itemize}}

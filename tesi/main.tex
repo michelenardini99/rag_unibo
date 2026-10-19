@@ -1,0 +1,73 @@
+\documentclass[12pt,oneside,a4paper]{report}
+
+% ============================================================
+% Norme redazionali applicate in questo preambolo:
+%  - font Times New Roman (approssimato con Times/Nimbus via
+%    mathptmx: rende il documento compilabile ovunque, senza
+%    dipendere dai font Microsoft installati nel sistema. Se si
+%    preferisce Arial, commentare mathptmx e usare il blocco
+%    "Alternativa Arial" subito sotto)
+%  - corpo 12pt (le note a piè di pagina sono automaticamente a
+%    10pt con la classe "report" a 12pt: \footnotesize = 10pt)
+%  - margini 2,5 cm su tutti i lati (pacchetto geometry)
+%  - interlinea 1,5 (pacchetto setspace, \onehalfspacing)
+% ============================================================
+
+\usepackage{mathptmx} % Times New Roman (approssimato)
+
+% --- Alternativa Arial: scommentare queste due righe e commentare mathptmx sopra ---
+% \usepackage{helvet}
+% \renewcommand{\familydefault}{\sfdefault}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[italian,provide=*]{babel} % provide=*: questa installazione TeX Live ha solo i dati
+    % linguistici generici dell'italiano, non il file .ldf dedicato -- vedi tesi/README.md
+
+\usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, fit, backgrounds}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=black,
+    urlcolor=blue,
+    pdftitle={Un assistente RAG locale per l'assistenza universitaria},
+}
+
+% --- Nota di redazione: comando per segnalare punti da scrivere/completare.
+% Cercare "\notaredazionale" nei file sorgente per trovare tutti i placeholder. ---
+\newcommand{\notaredazionale}[1]{%
+    \par\noindent{\color{gray!70!black}\itshape [NOTA PER LA STESURA --- #1]}\par\medskip
+}
+
+\title{%
+    Un assistente RAG locale per l'assistenza universitaria\\[0.3em]
+    \large progettazione e valutazione
+}
+\author{Michele Nardini}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\include{capitoli/01_introduzione}
+\include{capitoli/02_stato_dell_arte}
+\include{capitoli/03_architettura_e_sviluppo}
+\include{capitoli/04_validazione}
+\include{capitoli/05_conclusioni}
+
+\bibliographystyle{plain}
+\bibliography{bibliografia}
+
+\end{document}

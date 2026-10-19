@@ -52,11 +52,6 @@ def generate_response(llm: OpenAILike, query: str, chunks: list[dict], history: 
         str: The generated response.
     """
     if not chunks:
-        # Don't hand the model an empty CONTESTO block and trust it to admit
-        # that: observed in practice to instead fabricate a plausible-looking
-        # answer (even a fake "[Fonte: ...]" citation) rather than say so, the
-        # system prompt's instruction to the contrary notwithstanding. An
-        # empty retrieval result is answered deterministically instead.
         return f"{NO_CONTEXT_RESPONSE}\n"
 
     # Deterministic on purpose: factual QA over retrieved context doesn't need

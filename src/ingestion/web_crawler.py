@@ -38,24 +38,30 @@ def normalize_url(url: str, base_url: str | None = None) -> str:
     return urlunparse(parsed._replace(netloc=parsed.netloc.lower(), fragment="", query=query))
 
 
-def is_in_scope(url: str, root_url: str) -> bool:
-    """Checks whether `url` is on the same host as `root_url` and nested
-    under (or equal to) its path.
+def is_in_scope(url: str, root_urls: list[str]) -> bool:
+    """Checks whether `url` is on the same host as, and nested under (or
+    equal to), at least one of `root_urls` — each root defines its own
+    independent scope, so crawling several at once (even across different
+    hosts) never leaks into a root's parent or an unrelated section.
 
     Args:
         url (str): URL to check.
-        root_url (str): Crawl root defining the allowed scope.
+        root_urls (list[str]): Crawl roots defining the allowed scope(s).
 
     Returns:
         bool: True if `url` should be followed.
     """
-    target, root = urlparse(url), urlparse(root_url)
+    target = urlparse(url)
     if target.scheme not in ("http", "https"):
         return False
-    if target.netloc.lower() != root.netloc.lower():
-        return False
-    root_path = root.path.rstrip("/")
-    return target.path == root_path or target.path.startswith(root_path + "/")
+    for root_url in root_urls:
+        root = urlparse(root_url)
+        if target.netloc.lower() != root.netloc.lower():
+            continue
+        root_path = root.path.rstrip("/")
+        if target.path == root_path or target.path.startswith(root_path + "/"):
+            return True
+    return False
 
 
 def _sanitize_segment(segment: str) -> str:
@@ -160,6 +166,31 @@ def extract_links(html: str, page_url: str) -> list[str]:
     return links
 
 
+def url_sidecar_path(local_path: Path) -> Path:
+    """Path of the plain-text file recording the exact URL a saved page came
+    from, since `url_to_local_path`'s sanitization isn't perfectly reversible
+    (accents, case, encoding) — the local folder structure alone can't be
+    trusted to reconstruct the original address for citing back to students.
+
+    Args:
+        local_path (Path): Path a page was saved to (e.g. `.../index.html`).
+
+    Returns:
+        Path: Same path with `.url` appended (e.g. `.../index.html.url`).
+    """
+    return local_path.with_name(local_path.name + ".url")
+
+
+def save_url_sidecar(local_path: Path, url: str) -> None:
+    """Records the exact URL a saved page came from, next to it.
+
+    Args:
+        local_path (Path): Path the page was saved to.
+        url (str): The page's final (post-redirect) URL.
+    """
+    url_sidecar_path(local_path).write_text(url, encoding="utf-8")
+
+
 def fetch_and_save(
     url: str, output_dir: Path, client: httpx.Client, user_agent: str
 ) -> tuple[Path, str, str] | None:
@@ -189,54 +220,83 @@ def fetch_and_save(
     local_path = url_to_local_path(final_url, output_dir)
     local_path.parent.mkdir(parents=True, exist_ok=True)
     local_path.write_text(response.text, encoding="utf-8")
+    save_url_sidecar(local_path, final_url)
     return local_path, response.text, final_url
 
 
 def crawl_site(
-    root_url: str,
+    root_urls: str | list[str],
     output_dir: Path,
     delay: float = settings.crawl_delay_seconds,
     user_agent: str = settings.crawl_user_agent,
     max_pages: int | None = settings.crawl_max_pages,
 ) -> dict[str, list[str]]:
-    """Crawls every in-scope HTML page reachable from `root_url`, saving each
-    one to a local path that mirrors its URL path.
+    """Crawls every in-scope HTML page reachable from one or more root URLs,
+    saving each one to a local path that mirrors its URL path. Roots can be
+    on different hosts (or different sections of the same host) in a single
+    run — each defines its own independent scope (`is_in_scope`) *and* its
+    own `max_pages` budget, so a large section doesn't starve a smaller one
+    queued after it.
 
     Args:
-        root_url (str): Page to start from; also defines the allowed scope
-            (same host, same-or-nested path).
+        root_urls (str | list[str]): Page(s) to start from; each also
+            defines its own allowed scope (same host, same-or-nested path).
+            A single URL is accepted as a plain string too.
         output_dir (Path): Root directory to save pages under.
         delay (float): Minimum seconds between network fetches.
         user_agent (str): Sent as the User-Agent header and used for
             robots.txt permission checks.
-        max_pages (int | None): Safety cap on the number of network fetches
-            (cache hits from a prior run don't count against it).
+        max_pages (int | None): Safety cap on the number of network fetches,
+            applied *per root* (cache hits from a prior run don't count
+            against it) — not a total shared across all of them.
 
     Returns:
         dict[str, list[str]]: {"failures": [...], "skipped_robots": [...]}
             URLs that errored, and URLs disallowed by robots.txt.
     """
-    if not urlparse(root_url).scheme:
-        root_url = f"https://{root_url}"
-    root_url = normalize_url(root_url)
+    if isinstance(root_urls, str):
+        root_urls = [root_urls]
+
+    normalized_roots = []
+    for root_url in root_urls:
+        if not urlparse(root_url).scheme:
+            root_url = f"https://{root_url}"
+        normalized_roots.append(normalize_url(root_url))
+
+    def root_index_for(url: str) -> int | None:
+        """Index of the first root `url` falls under, or None (shouldn't
+        happen for a URL that was enqueued via `is_in_scope`)."""
+        for i, root in enumerate(normalized_roots):
+            if is_in_scope(url, [root]):
+                return i
+        return None
+
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     robots_cache: dict[str, RobotFileParser] = {}
-    rp = _get_robot_parser(root_url, robots_cache)
-    effective_delay = max(delay, rp.crawl_delay(user_agent) or 0)
+    # robots.txt crawl-delay can differ per host; honor the strictest one
+    # among all roots rather than tracking a separate delay per host.
+    effective_delay = delay
+    for root_url in normalized_roots:
+        rp = _get_robot_parser(root_url, robots_cache)
+        effective_delay = max(effective_delay, rp.crawl_delay(user_agent) or 0)
 
-    visited: set[str] = {root_url}
-    queue: deque[str] = deque([root_url])
+    visited: set[str] = set(normalized_roots)
+    queue: deque[str] = deque(normalized_roots)
     failures: list[str] = []
     skipped_robots: list[str] = []
-    fetched_count = 0
+    fetched_per_root = [0] * len(normalized_roots)
 
     with httpx.Client(follow_redirects=True, timeout=10.0, headers={"User-Agent": user_agent}) as client:
         while queue:
-            if max_pages is not None and fetched_count >= max_pages:
-                break
             url = queue.popleft()
+            root_idx = root_index_for(url)
+            if root_idx is not None and max_pages is not None and fetched_per_root[root_idx] >= max_pages:
+                # This root's budget is exhausted — skip just this URL (no
+                # fetch, so nothing further gets discovered through it), but
+                # keep draining the queue for every other root.
+                continue
 
             if not can_fetch(url, robots_cache, user_agent):
                 skipped_robots.append(url)
@@ -246,23 +306,28 @@ def crawl_site(
             if local_path.exists():
                 html_text = local_path.read_text(encoding="utf-8")
                 base_for_links = url
+                if not url_sidecar_path(local_path).exists():
+                    # Backfills the URL for a page saved by a crawl predating
+                    # this sidecar, without re-fetching it over the network.
+                    save_url_sidecar(local_path, url)
             else:
                 time.sleep(effective_delay)
                 result = fetch_and_save(url, output_dir, client, user_agent)
-                fetched_count += 1
+                if root_idx is not None:
+                    fetched_per_root[root_idx] += 1
                 if result is None:
                     failures.append(url)
                     continue
                 saved_path, html_text, final_url = result
                 if final_url != url:
-                    if not is_in_scope(final_url, root_url):
+                    if not is_in_scope(final_url, normalized_roots):
                         saved_path.unlink(missing_ok=True)
                         continue
                     visited.add(final_url)
                 base_for_links = final_url
 
             for link in extract_links(html_text, base_for_links):
-                if link not in visited and is_in_scope(link, root_url):
+                if link not in visited and is_in_scope(link, normalized_roots):
                     visited.add(link)
                     queue.append(link)
 
@@ -273,14 +338,14 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) < 2:
-        print("Uso: python -m ingestion.web_crawler <root_url> [output_dir] [max_pages]")
+        print("Uso: python -m ingestion.web_crawler <root_url>[,<root_url>...] [output_dir] [max_pages]")
         sys.exit(1)
 
-    root_url = sys.argv[1]
+    root_urls = [u.strip() for u in sys.argv[1].split(",") if u.strip()]
     output_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else settings.data_raw_dir
     max_pages = int(sys.argv[3]) if len(sys.argv) > 3 else settings.crawl_max_pages
 
-    result = crawl_site(root_url, output_dir, max_pages=max_pages)
+    result = crawl_site(root_urls, output_dir, max_pages=max_pages)
     if result["failures"]:
         print(f"Crawling completato con {len(result['failures'])} errore/i:")
         for failure in result["failures"]:

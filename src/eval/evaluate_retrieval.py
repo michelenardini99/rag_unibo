@@ -6,13 +6,14 @@ from pathlib import Path
 
 from config import settings
 from embedding.embedder import build_embedding_model
-from generation.condense import condense_question
+from generation.condense import condense_question, decompose_question
 from generation.generator import build_llm
 from generation.prompt import clean_source_name
 from llama_index.core.storage.docstore import SimpleDocumentStore
 from qdrant_client import QdrantClient
+from retrieval.query_filters import course_tipo_laurea_map, extract_query_filters, known_values_for_fields
 from retrieval.reranker import build_reranker
-from retrieval.retriever import retrieve
+from retrieval.retriever import retrieve_decomposed
 
 
 @dataclass
@@ -126,6 +127,17 @@ def evaluate_retrieval(config: RetrievalConfig, dataset: list[dict], client: Qdr
     if config.random_baseline:
         pool_ids = list(docstore.docs.keys())
 
+    # Same "corso" priority app.py applies per message (see
+    # REPORT_ARCHITETTURA.md §4.4/§6.2): a ranking boost, not a hard filter —
+    # without it, the dataset's deliberate cross-course near-duplicate
+    # documents (e.g. both indexed courses have their own "Prova Pratica
+    # Valutativa") make retrieval harder here than in live chat, where this
+    # signal is almost always available from the conversation. Read
+    # per-config since each chunking config has its own Qdrant collection
+    # (`collection_name` above).
+    known_values = {} if config.random_baseline else known_values_for_fields(client, collection_name)
+    tipo_laurea_by_corso = course_tipo_laurea_map(client, collection_name, known_values.get("corso") or [])
+
     per_case = []
     for case in dataset:
         history = [tuple(turn) for turn in case.get("history", [])]
@@ -137,8 +149,10 @@ def evaluate_retrieval(config: RetrievalConfig, dataset: list[dict], client: Qdr
         if config.random_baseline:
             chunks = _random_chunks(client, collection_name, docstore, pool_ids)
         else:
-            chunks = retrieve(
-                query, client, collection_name, embed_model, reranker, docstore,
+            sub_queries = decompose_question(llm, query)
+            priority_corso = extract_query_filters(llm, query, known_values, tipo_laurea_by_corso).get("corso")
+            chunks = retrieve_decomposed(
+                sub_queries, client, collection_name, embed_model, reranker, docstore, priority_corso=priority_corso,
                 use_reranker=config.use_reranker, mode=config.mode, fallback_mode=config.fallback_mode,
             )
 

@@ -1,0 +1,50 @@
+\chapter{Introduzione}
+\label{cap:introduzione}
+
+Il sito web e la documentazione di un ateneo raccolgono un'enorme quantità di informazioni --- regolamenti, tasse,
+scadenze, piani di studio, materiali didattici --- ma lo fanno in modo estremamente dispersivo: argomenti correlati
+tra loro finiscono su pagine diverse, i documenti sono distribuiti su sezioni distinte del sito senza un percorso di
+consultazione unico, e le informazioni cambiano da un anno accademico all'altro senza che sia sempre immediato
+capire dove si trovi la versione aggiornata. Uno studente che cerca una risposta puntuale (\emph{``quando scade la
+prima rata?''}) o composita (\emph{``quali sono le diverse modalità di pagamento?''}) si trova spesso a dover
+incrociare più fonti per ricostruire un quadro coerente, con un dispendio di tempo non indifferente e un margine
+concreto di errore di interpretazione.
+
+A questa dispersione si aggiunge una seconda difficoltà, che riguarda gli studenti che per ragioni diverse faticano a
+seguire le lezioni con regolarità: per loro, un assistente capace di rispondere anche su contenuti didattici --- non
+solo su procedure amministrative --- rappresenta un supporto concreto per recuperare e comprendere quanto trattato a
+lezione, anche senza avervi potuto assistere di persona. Lo stesso tipo di supporto porta con sé un beneficio
+speculare per i docenti: chi tiene più corsi, spesso con un numero elevato di studenti iscritti, fatica a propria
+volta a rispondere individualmente a tutte le domande che riceve, molte delle quali ricorrenti e già risposte in
+precedenza ad altri studenti. Un assistente che risponde autonomamente alle domande più comuni allegerisce questo
+carico, lasciando ai docenti le domande che richiedono davvero la loro attenzione diretta.
+
+La soluzione proposta in questo lavoro di tesi è un assistente conversazionale basato sul paradigma del
+\emph{Retrieval-Augmented Generation} (RAG). A fronte di una domanda posta in linguaggio naturale, il sistema
+recupera automaticamente, tra tutta la documentazione e il materiale didattico indicizzato, i frammenti più
+pertinenti alla domanda posta, e li fornisce a un modello linguistico incaricato di formulare una risposta diretta
+basandosi su di essi, citando la fonte da cui ogni affermazione proviene. In questo modo chi pone la domanda --- sia
+esso uno studente o un docente che voglia verificare rapidamente un'informazione --- non deve più cercare manualmente
+tra le pagine del sito o i materiali del corso: riceve una risposta puntuale e, soprattutto, verificabile, perché
+ancorata a un documento reale e non semplicemente generata liberamente dal modello.
+
+Il presente lavoro ha natura di \textbf{studio di fattibilità}: l'obiettivo primario non è consegnare un sistema
+pronto per il deployment in produzione, ma verificare se un assistente di questo tipo --- completamente locale,
+vincolato a un hardware non professionale --- possa rispondere con una qualità sufficiente a domande reali in questo
+dominio, e individuare concretamente dove e perché un simile approccio fatica o fallisce. I contributi di questo
+lavoro sono, di conseguenza: la progettazione e l'implementazione di un assistente RAG completamente locale per il
+dominio universitario; un dataset diagnostico costruito appositamente per isolare le cause di errore lungo l'intera
+pipeline, dal recupero alla generazione; un confronto sperimentale tra più modelli linguistici open-weight eseguibili
+sull'hardware disponibile; l'identificazione e la risoluzione di una serie di problematiche concrete emerse durante
+lo sviluppo, documentate insieme al processo diagnostico che le ha portate alla luce.
+
+Il resto di questo lavoro di tesi è organizzato come segue. Il Capitolo~\ref{cap:stato-arte} inquadra il problema
+nella letteratura esistente, introduce i concetti alla base dei modelli linguistici di grandi dimensioni e del
+paradigma RAG, e passa in rassegna sistemi esistenti che affrontano problemi analoghi in ambito universitario. Il
+Capitolo~\ref{cap:architettura} discute i vincoli di progetto che hanno guidato le scelte realizzative e descrive in
+dettaglio l'architettura del sistema sviluppato, le scelte tecnologiche operate per ciascun componente e le
+problematiche concrete incontrate durante lo sviluppo, insieme alle soluzioni adottate per risolverle. Il
+Capitolo~\ref{cap:validazione} presenta la metodologia di valutazione sperimentale impiegata, gli esperimenti
+condotti e i risultati ottenuti, inclusi alcuni casi di errore analizzati in dettaglio. Il
+Capitolo~\ref{cap:conclusioni}, infine, riassume il contributo di questo lavoro rispetto agli obiettivi qui
+enunciati, ne discute i limiti noti e ne delinea i possibili sviluppi futuri.

@@ -13,9 +13,11 @@ from chunking.metadata import ID_NAMESPACE, extract_metadata, read_checksum
 from config import settings
 
 
-def build_node_parser(chunk_max_tokens: int = settings.chunk_max_tokens,
-                       tokenizer_model: str = settings.embedding_model_id) -> DoclingNodeParser:
-    """Builds the chunking pipeline that splits DoclingDocuments into LlamaIndex nodes.
+def build_tokenizer(chunk_max_tokens: int = settings.chunk_max_tokens,
+                     tokenizer_model: str = settings.embedding_model_id) -> HuggingFaceTokenizer:
+    """Builds the tokenizer shared by the hybrid chunker's own token budget
+    and by `_merge_short_leaf_chunks`, so short-chunk detection counts tokens
+    the same way the chunker itself does.
 
     Args:
         chunk_max_tokens (int): Maximum tokens per chunk.
@@ -23,13 +25,81 @@ def build_node_parser(chunk_max_tokens: int = settings.chunk_max_tokens,
             (should match the embedding model for accurate limits).
 
     Returns:
+        HuggingFaceTokenizer: Tokenizer instance.
+    """
+    return HuggingFaceTokenizer.from_pretrained(tokenizer_model, max_tokens=chunk_max_tokens)
+
+
+def build_node_parser(tokenizer: HuggingFaceTokenizer) -> DoclingNodeParser:
+    """Builds the chunking pipeline that splits DoclingDocuments into LlamaIndex nodes.
+
+    Args:
+        tokenizer (HuggingFaceTokenizer): Tokenizer for the hybrid chunker's
+            token budget, see `build_tokenizer`.
+
+    Returns:
         DoclingNodeParser: Parser configured with the hybrid chunker.
     """
-    tokenizer = HuggingFaceTokenizer.from_pretrained(tokenizer_model, max_tokens=chunk_max_tokens)
     chunker = HybridChunker(tokenizer=tokenizer, merge_peers=True)
     return DoclingNodeParser(
         chunker=chunker
     )
+
+
+def _merge_short_leaf_chunks(leaf_nodes: list[BaseNode], tokenizer: HuggingFaceTokenizer,
+                              min_tokens: int = 40, max_tokens: int | None = None) -> list[BaseNode]:
+    """Merges a leaf chunk that's too short to be semantically distinctive
+    (typically a one-sentence section lead-in with no peer chunk under the
+    *same* heading to merge with — `HybridChunker`'s own `merge_peers` only
+    merges same-heading siblings) into the next chunk of the same document,
+    regardless of heading.
+
+    Without this, a thin lead-in chunk can lose retrieval ranking against a
+    long, keyword-dense chunk from an unrelated document that happens to
+    share similar phrasing — observed in practice on "Iscriversi ad anni
+    successivi al primo" (13-word chunk) losing to a 435-word OFA chunk
+    whose subheading is almost the same phrase (REPORT_ARCHITETTURA.md §7).
+
+    Args:
+        leaf_nodes (list[BaseNode]): Leaf chunks, assumed in each document's
+            original reading order (as `HybridChunker` produces them).
+        tokenizer (HuggingFaceTokenizer): Tokenizer used to count tokens,
+            see `build_tokenizer` — kept consistent with the chunker's own budget.
+        min_tokens (int): Chunks below this many tokens get merged forward.
+        max_tokens (int | None): Safety cap on the merged chunk's size, to
+            avoid cascading merges ballooning past a usable chunk size on a
+            document with several consecutive thin chunks. Defaults to 3x
+            `tokenizer`'s configured max token budget.
+
+    Returns:
+        list[BaseNode]: Chunks with short leaves merged forward, same total
+        document coverage, in the same relative order.
+    """
+    cap = max_tokens if max_tokens is not None else tokenizer.get_max_tokens() * 3
+
+    by_doc: dict[str, list[BaseNode]] = defaultdict(list)
+    for node in leaf_nodes:
+        by_doc[node.metadata.get("source_path")].append(node)
+
+    merged: list[BaseNode] = []
+    for nodes in by_doc.values():
+        i = 0
+        while i < len(nodes):
+            current = nodes[i]
+            while (
+                tokenizer.count_tokens(current.text) < min_tokens
+                and i + 1 < len(nodes)
+                and tokenizer.count_tokens(f"{current.text}\n\n{nodes[i + 1].text}") <= cap
+            ):
+                nxt = nodes[i + 1]
+                current.text = f"{current.text.rstrip()}\n\n{nxt.text.lstrip()}"
+                current.metadata["image_paths"] = list(dict.fromkeys(
+                    (current.metadata.get("image_paths") or []) + (nxt.metadata.get("image_paths") or [])
+                ))
+                i += 1
+            merged.append(current)
+            i += 1
+    return merged
 
 
 def load_as_li_document(json_path: Path, converted_root: Path) -> Document:
@@ -173,6 +243,7 @@ def build_parent_nodes(leaf_nodes: list[BaseNode]) -> list[TextNode]:
                 "checksum": first.metadata.get("checksum"),
                 "source_file": first.metadata.get("source_file"),
                 "source_path": source_path,
+                "source_url": first.metadata.get("source_url"),
                 "headings": list(headings),
                 "image_paths": image_paths,
             },
@@ -202,13 +273,15 @@ def chunk_documents(files: list[Path], root: Path,  chunk_max_tokens: int = sett
     Returns:
         tuple[list[BaseNode], list[TextNode]]: (leaf_nodes, parent_nodes).
     """
-    parser = build_node_parser(chunk_max_tokens=chunk_max_tokens, tokenizer_model=tokenizer_model)
+    tokenizer = build_tokenizer(chunk_max_tokens=chunk_max_tokens, tokenizer_model=tokenizer_model)
+    parser = build_node_parser(tokenizer)
     documents = [
         load_as_li_document(p, root)
         for p in files
         if p.name != "_failures.json"
     ]
     leaf_nodes = parser.get_nodes_from_documents(documents, show_progress=True)
+    leaf_nodes = _merge_short_leaf_chunks(leaf_nodes, tokenizer)
     _assign_deterministic_ids(leaf_nodes)
     _resolve_image_paths(leaf_nodes, root)
     parent_nodes = build_parent_nodes(leaf_nodes)

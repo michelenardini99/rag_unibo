@@ -69,10 +69,10 @@ Avvia Qdrant (`localhost:6333`) e il server di generazione vLLM (`localhost:8000
 
 Copia i documenti (PDF, DOCX, PPTX, HTML) in `datasets/raw/`, organizzati in sottocartelle secondo lo schema `tipo_laurea/corso/sezione/materia` (ogni livello di cartella diventa un metadato usato poi per filtrare le ricerche, es. `datasets/raw/magistrale/informatica/regolamenti/tasse/documento.pdf`).
 
-In alternativa, per acquisire pagine da un sito web:
+In alternativa, per acquisire pagine da un sito web (una o più pagine radice, separate da virgola — ciascuna definisce il proprio ambito di crawling, anche su host diversi):
 
 ```bash
-python -m ingestion.web_crawler <url-radice> [cartella-output] [numero-massimo-pagine]
+python -m ingestion.web_crawler <url-radice>[,<url-radice>...] [cartella-output] [numero-massimo-pagine]
 ```
 
 Poi converti i documenti grezzi in formato strutturato:

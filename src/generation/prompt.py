@@ -42,16 +42,23 @@ def build_context_block(chunks: list[dict]) -> str:
     """Formats retrieved chunks as labeled "[Fonte: ...]" blocks for the prompt.
 
     Args:
-        chunks (list[dict]): Chunks with "text", "headings", "source_file" keys.
+        chunks (list[dict]): Chunks with "text", "headings", "source_file"
+            keys, and optionally "source_url" (only crawled web pages have
+            one — PDF/DOCX/PPTX documents never do).
 
     Returns:
         str: Chunks joined into a single context string.
     """
     parts = []
     for c in chunks:
-        headings = " > ".join(c.get("headings") or [])
-        source_name = clean_source_name(c["source_file"])
-        parts.append(f"[Fonte: {source_name} - {headings}\n{c["text"]}]")
+        source_url = c.get("source_url")
+        if source_url:
+            label = source_url
+        else:
+            headings = " > ".join(c.get("headings") or [])
+            source_name = clean_source_name(c["source_file"])
+            label = f"{source_name} - {headings}"
+        parts.append(f"[Fonte: {label}\n{c["text"]}]")
     return "\n\n---\n\n".join(parts)
 
 def build_prompt(query: str, chunks: list[dict], history: list[tuple[str, str]]) -> list[ChatMessage]:

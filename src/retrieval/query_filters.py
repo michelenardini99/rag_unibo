@@ -260,3 +260,44 @@ def extract_query_filters(
         if tipo_laurea is not None:
             filters["tipo_laurea"] = tipo_laurea
     return filters
+
+
+def needs_course_disambiguation(chunks: list[dict], remembered_corso: str | None = None) -> bool:
+    """True when an unfiltered retrieval can't confirm which course's
+    (near-duplicate) document is the right one to answer from — the student
+    should be asked which course they mean, instead of silently picking
+    whichever course's chunk happened to rank highest (see
+    REPORT_ARCHITETTURA.md §4.4/§7: distinct courses can each have their own
+    "Prova Pratica Valutativa", "Tasse ed esenzioni", etc.).
+
+    Without a remembered course (`remembered_corso=None`, e.g. the first time
+    in a session), "can't confirm" means 2+ distinct courses appear among the
+    chunks. With one already known, re-asking on every topic that merely
+    *also* exists for another course would be annoying and pointless — a
+    generic duplicated topic still answers correctly from the already-known
+    course. So instead this re-asks only when that remembered course is
+    *absent* from the results altogether (observed in practice: a question
+    about "Informatica per il Bene Comune" with "Psicologia" remembered
+    returned only Ingegneria chunks — a real course switch — while a
+    question about "formazione sulla sicurezza" returned the remembered
+    course's own chunks ranked highest alongside another course's, which
+    should NOT re-trigger the question).
+
+    A single-course corpus, or a genuinely course-agnostic question (no
+    chunk carries a "corso" at all), never triggers this either way.
+
+    Args:
+        chunks (list[dict]): Chunks from an unfiltered `retrieve()`/
+            `retrieve_decomposed()` call, each optionally carrying "corso".
+        remembered_corso (str | None): The course already resolved earlier
+            in the session, if any (`default_filters["corso"]` in `app.py`).
+
+    Returns:
+        bool: True if the question should be (re-)disambiguated.
+    """
+    courses = {c["corso"] for c in chunks if c.get("corso")}
+    if not courses:
+        return False
+    if remembered_corso is None:
+        return len(courses) > 1
+    return remembered_corso not in courses

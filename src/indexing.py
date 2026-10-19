@@ -60,7 +60,8 @@ def indexing(config: IndexConfig) -> None:
     Args:
         config (IndexConfig): Paths, device and chunking parameters for the run.
     """
-    client = QdrantClient(url=settings.qdrant_url, grpc_port=settings.qdrant_grpc_port, prefer_grpc=True)
+
+    client = QdrantClient(url=settings.qdrant_url, grpc_port=settings.qdrant_grpc_port, prefer_grpc=True, timeout=120)
     ensure_collection(client, config.collection_name, recreate=config.recreate)
 
     if config.recreate:

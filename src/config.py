@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     rerank_top_k: int = 5
     rerank_score_threshold: float = 0.3
     merged_threshold: float = 0.12
+    corso_priority_boost: float = 0.1
 
     chunk_max_tokens: int = 512
 
