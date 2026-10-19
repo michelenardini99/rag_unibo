@@ -8,6 +8,7 @@ from llama_index.core.storage.storage_context import StorageContext
 from qdrant_client import QdrantClient
 
 from retrieval.hybrid_search import embed_query, search_candidates
+from retrieval.query_filters import strip_course_mention
 from retrieval.reranker import rerank
 from config import settings
 
@@ -95,6 +96,7 @@ def retrieve(
     score_threshold: float = settings.rerank_score_threshold,
     merged_fallback_threshold: float = settings.merged_threshold,
     priority_corso: str | None = None,
+    strip_course: bool = True,
 ) -> list:
     """Retrieves relevant nodes, merging sibling chunks into their parent
     section via AutoMergingRetriever when enough of them match.
@@ -130,6 +132,11 @@ def retrieve(
             course's content hard-excluded from the search (see
             REPORT_ARCHITETTURA.md §4.4: a question only covered by a
             *different* course must still be answerable).
+        strip_course (bool): If True (default) and `priority_corso` is set,
+            search and rerank on the query with the course mention removed
+            (`query_filters.strip_course_mention`) — the course is already
+            honored by the boost, and its name in the query otherwise
+            dominates the reranker. False keeps the query as-is (ablation).
 
     Returns:
         list: Selected nodes as dicts with "text", "headings", "source_file", "image_paths".
@@ -139,6 +146,9 @@ def retrieve(
         candidate_pool=candidate_pool, prefetch_limit=prefetch_limit, use_reranker=use_reranker, mode=mode,
         priority_corso=priority_corso,
     )
+
+    if strip_course:
+        query = strip_course_mention(query, priority_corso)
 
     if use_automerging:
         storage_context = StorageContext.from_defaults(docstore=docstore)

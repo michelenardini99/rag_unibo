@@ -3,6 +3,7 @@ import io
 import json
 import multiprocessing as mp
 import time
+from html import escape
 from pathlib import Path
 from queue import Empty
 from bs4 import BeautifulSoup
@@ -138,6 +139,79 @@ def backfill_url_sidecars(input_dir: Path, output_dir: Path) -> int:
     return count
 
 
+# Interface controls inside <main> that carry no content of their own: tabs
+# switching between course codes ("Codice 6673 Codice 8615"), filter forms
+# with their dropdowns ("A.A. 2016/2017 ... A.A. 2010/2011 Vai").
+_HTML_UI_SELECTORS = ("form", "select", "ul.tabs")
+
+
+def _move_header_legends_below_table(soup: BeautifulSoup, main) -> None:
+    """Moves "?" tooltips out of table header cells into a legend paragraph
+    right after the table, e.g. the study plans' `<th>periodo<span
+    class="legend">? L'arco di tempo... 1: 21/09/2026 - 23/12/2026 ...</span>`.
+    Left in place, the tooltip becomes part of the column header, which the
+    chunker repeats on every row of the table.
+    """
+    for table in main.find_all("table"):
+        legends = []
+        for legend in table.select("th span.legend"):
+            header = legend.find_parent("th")
+            legend.extract()
+            text = legend.get_text("\n", strip=True).lstrip("?").strip()
+            if text:
+                legends.append((header.get_text(" ", strip=True), text))
+        for header, text in reversed(legends):
+            p = soup.new_tag("p")
+            p.string = f"Legenda — {header}: {text}"
+            table.insert_after(p)
+
+
+def preprocess_html(html: str) -> str:
+    """Reduces a crawled page to its actual content before Docling sees it.
+
+    - Keeps only <main> (present on every corsi.unibo.it page, with the <h1>
+      inside and the menu/footer/cookie banner outside): the site footer
+      otherwise ends up glued to the page's last paragraph.
+    - Un-hides collapsed accordion panels: Docling drops anything marked
+      `aria-hidden="true"`/`hidden`, which on these pages is real content
+      (contact cards, admission steps, exam sessions...).
+    - Drops interface controls, see `_HTML_UI_SELECTORS`.
+
+    Args:
+        html (str): Raw page HTML.
+
+    Returns:
+        str: A minimal HTML document with the page title and <main>'s
+        content, or `html` unchanged if the page has no <main>.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    main = soup.find("main")
+    if main is None:
+        return html
+
+    for selector in _HTML_UI_SELECTORS:
+        for tag in main.select(selector):
+            tag.decompose()
+    for tag in main.select('[aria-hidden="true"], [hidden]'):
+        if tag.get_text(strip=True):
+            tag.attrs.pop("aria-hidden", None)
+            tag.attrs.pop("hidden", None)
+    _move_header_legends_below_table(soup, main)
+
+    title = soup.title.string if soup.title and soup.title.string else ""
+    return (
+        f'<!DOCTYPE html><html><head><meta charset="utf-8"><title>{escape(title)}</title></head>'
+        f"<body>{main.decode_contents()}</body></html>"
+    )
+
+
+def _html_stream(path: Path, base_dir: Path) -> DocumentStream:
+    """Wraps a preprocessed HTML page (see `preprocess_html`) as a Docling
+    input stream, named by its path relative to `base_dir`."""
+    html = preprocess_html(path.read_text(encoding="utf-8", errors="ignore"))
+    return DocumentStream(name=str(path.relative_to(base_dir)), stream=io.BytesIO(html.encode("utf-8")))
+
+
 def convert_corpus(input_dir: Path, output_dir: Path, device: int) -> dict[str, list[str]]:
     """Converts every unconverted document under `input_dir` to normalized
     Markdown + JSON under `output_dir`.
@@ -162,26 +236,38 @@ def convert_corpus(input_dir: Path, output_dir: Path, device: int) -> dict[str, 
         base_dir = input_dir
     failures: list[str] = []
 
-    paths = [f for f in paths if not file_already_converted(f, input_dir, output_dir)]
+    paths = [f for f in paths if not file_already_converted(f, base_dir, output_dir)]
+
+    # HTML pages go in as preprocessed streams (see `_html_stream`), named by
+    # their path relative to `base_dir` so each result can be mapped back to
+    # its raw file; other formats go in as plain paths.
+    sources = [_html_stream(p, base_dir) if p.suffix.lower() == ".html" else p for p in paths]
+    raw_by_input = {
+        (s.name if isinstance(s, DocumentStream) else str(s)): p for s, p in zip(sources, paths)
+    }
 
     times: list[float] = []
     t_prev = time.perf_counter()
-    for result in converter.convert_all(paths, raises_on_error=False):
+    for result in converter.convert_all(sources, raises_on_error=False):
         now = time.perf_counter()
         times.append(now - t_prev)
         t_prev = now
 
-        stem = result.input.file.stem
-        dest = output_dir / result.input.file.relative_to(base_dir).parent
+        raw_file = raw_by_input[str(result.input.file)]
+        stem = raw_file.stem
+        dest = output_dir / raw_file.relative_to(base_dir).parent
         dest.mkdir(parents=True, exist_ok=True)
 
         if result.status == ConversionStatus.SUCCESS:
             doc = result.document
+            # A preprocessed stream would otherwise record the hash of the
+            # stream, not of the raw file `file_already_converted` compares against.
+            doc.origin.binary_hash = _raw_file_hash(raw_file)
             normalize_document(doc)
             doc.save_as_markdown(dest / f"{stem}.md", image_mode=ImageRefMode.REFERENCED)
             doc.save_as_json(dest / f"{stem}.json", image_mode=ImageRefMode.REFERENCED)
         else:
-            failures.append(str(result.input.file))
+            failures.append(str(raw_file))
 
     if times:
         print(f"Converted {len(times)} document(s) in {sum(times):.2f}s "

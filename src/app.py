@@ -130,11 +130,15 @@ async def on_message(msg: Message):
 
         step_condense.output = f"Query ottimizzata per il Vector DB:\n`{search_query}`"
 
-        sub_queries = await asyncio.to_thread(decompose_question, LLM, search_query)
+        # Both depend only on search_query, not on each other: run them
+        # concurrently so their latencies overlap instead of adding up.
+        sub_queries, extracted_filters = await asyncio.gather(
+            asyncio.to_thread(decompose_question, LLM, search_query),
+            asyncio.to_thread(extract_query_filters, LLM, search_query, KNOWN_VALUES, TIPO_LAUREA_BY_CORSO),
+        )
         if len(sub_queries) > 1:
             step_condense.output += "\nDomanda scomposta in:\n" + "\n".join(f"- `{q}`" for q in sub_queries)
 
-        extracted_filters = await asyncio.to_thread(extract_query_filters, LLM, search_query, KNOWN_VALUES, TIPO_LAUREA_BY_CORSO)
         extracted_corso = extracted_filters.get("corso")
         default_corso = user_session.get("default_corso")
         print(f"[metadata] query={search_query!r} -> extracted_corso={extracted_corso} default_corso={default_corso}")

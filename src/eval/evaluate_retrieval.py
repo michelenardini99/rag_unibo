@@ -25,6 +25,7 @@ class RetrievalConfig:
     use_reranker: bool = True
     fallback_mode: str = "absolute"
     random_baseline: bool = False
+    strip_course: bool = True
 
     @property
     def index_key(self) -> str:
@@ -49,6 +50,9 @@ CONFIGS: list[RetrievalConfig] = [
     RetrievalConfig(name="chunk_768_no_colbert", chunk_max_tokens=768, mode="hybrid_no_colbert"),
     RetrievalConfig(name="no_colbert_no_reranker", mode="hybrid_no_colbert", use_reranker=False),
     RetrievalConfig(name="no_colbert_relative_fallback", mode="hybrid_no_colbert", fallback_mode="relative"),
+    # Course name kept in the search/rerank query (behavior before
+    # `query_filters.strip_course_mention`).
+    RetrievalConfig(name="no_colbert_no_strip", mode="hybrid_no_colbert", strip_course=False),
 ]
 
 
@@ -154,6 +158,7 @@ def evaluate_retrieval(config: RetrievalConfig, dataset: list[dict], client: Qdr
             chunks = retrieve_decomposed(
                 sub_queries, client, collection_name, embed_model, reranker, docstore, priority_corso=priority_corso,
                 use_reranker=config.use_reranker, mode=config.mode, fallback_mode=config.fallback_mode,
+                strip_course=config.strip_course,
             )
 
         hit_top1, hit_top5 = _matches(chunks, case.get("expected_source", ""))

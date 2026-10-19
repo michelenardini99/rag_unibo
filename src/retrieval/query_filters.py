@@ -262,6 +262,58 @@ def extract_query_filters(
     return filters
 
 
+_ACCENT_CLASSES = {"a": "[aàáâ]", "e": "[eèéê]", "i": "[iìíî]", "o": "[oòóô]", "u": "[uùúû]"}
+
+# What can precede a course name and only makes sense together with it:
+# "nel corso di laurea magistrale in", "del corso di", or a bare preposition.
+# "laurea" is only consumed after "corso", so "domanda di laurea in X" keeps
+# "domanda di laurea" — that's the topic of the question, not the course.
+_COURSE_PREFIX = (
+    r"(?:(?:\b(?:del|nel|al|dal|il|per\s+il)\s+)?\bcorso\s+(?:di\s+)?(?:laurea\s+)?"
+    r"(?:magistrale\s+|triennale\s+)?(?:a\s+ciclo\s+unico\s+)?(?:in\s+|di\s+)?"
+    r"|\b(?:in|di|per|a|ad|al|del|nel|dal)\s+)?"
+)
+
+
+def _course_name_pattern(corso: str) -> re.Pattern:
+    """Builds a regex matching a natural-language mention of `corso` from
+    its CamelCase identifier alone ("PsicologiaScolasticaComunita" ->
+    "psicologia ... scolastica ... comunità"), tolerant of case, accents and
+    up to two filler words between the identifier's words ("e di") — no
+    separate display-name lookup needed.
+    """
+    words = re.findall(r"[A-Z][a-z]*|[a-z]+|\d+", corso)
+    word_patterns = ["".join(_ACCENT_CLASSES.get(ch, re.escape(ch)) for ch in w.lower()) for w in words]
+    name = r"\W+(?:\w+\W+){0,2}?".join(word_patterns)
+    return re.compile(rf"{_COURSE_PREFIX}\b{name}\b", re.IGNORECASE)
+
+
+def strip_course_mention(query: str, corso: str | None, min_words: int = 3) -> str:
+    """Removes the mention of `corso` from a query used for search/rerank.
+
+    The course name (repeated on nearly every page of that course) dominates
+    the cross-encoder's judgement: on "requisiti per la domanda di laurea nel
+    corso di laurea magistrale in Psicologia scolastica e di comunità" the
+    right chunk scored 0.195 against 0.978 for an unrelated page that repeats
+    the course name; without the name, 0.993 vs 0.195. The course is still
+    honored, as the `corso_priority_boost` applied in the retriever.
+
+    Args:
+        query (str): A standalone (sub-)question.
+        corso (str | None): The course identifier being prioritized.
+        min_words (int): If fewer words than this survive (the query was
+            mostly the course name itself), the original query is kept.
+
+    Returns:
+        str: `query` without the course mention, or `query` unchanged.
+    """
+    if not corso:
+        return query
+    stripped = _course_name_pattern(corso).sub(" ", query)
+    stripped = re.sub(r"\s+([?.,;:!])", r"\1", re.sub(r"\s{2,}", " ", stripped)).strip()
+    return stripped if len(stripped.split()) >= min_words else query
+
+
 def needs_course_disambiguation(chunks: list[dict], remembered_corso: str | None = None) -> bool:
     """True when an unfiltered retrieval can't confirm which course's
     (near-duplicate) document is the right one to answer from — the student
