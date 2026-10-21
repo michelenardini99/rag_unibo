@@ -6,6 +6,8 @@ from llama_index.core.base.llms.types import ChatMessage, MessageRole, TextBlock
 from llama_index.llms.openai_like import OpenAILike
 from qdrant_client import QdrantClient, models
 
+from config import settings
+
 NO_VALUE = "NESSUNO"
 
 CATEGORICAL_FIELDS = ["corso"]
@@ -314,7 +316,10 @@ def strip_course_mention(query: str, corso: str | None, min_words: int = 3) -> s
     return stripped if len(stripped.split()) >= min_words else query
 
 
-def needs_course_disambiguation(chunks: list[dict], remembered_corso: str | None = None) -> bool:
+def needs_course_disambiguation(
+    chunks: list[dict], remembered_corso: str | None = None, ambiguity_ratio: float = settings.corso_ambiguity_ratio,
+    min_score: float = settings.rerank_score_threshold,
+) -> bool:
     """True when an unfiltered retrieval can't confirm which course's
     (near-duplicate) document is the right one to answer from — the student
     should be asked which course they mean, instead of silently picking
@@ -335,21 +340,92 @@ def needs_course_disambiguation(chunks: list[dict], remembered_corso: str | None
     course's own chunks ranked highest alongside another course's, which
     should NOT re-trigger the question).
 
+    In both cases only courses that genuinely compete for the answer count:
+    a course whose best chunk scores below `ambiguity_ratio` × the overall
+    best is a marginal match, not an alternative. Observed in practice:
+    "Che ruolo ha Franco Callegati?" with "Psicologia" remembered returned
+    only Ingegneria chunks (info existing in that course alone) and
+    "agevolazioni per muoversi in città" returned Ingegneria at 0.918 next
+    to an unrelated Infermieristica chunk at 0.501 — both re-asked the
+    course pointlessly, since only one course could answer.
+
+    University-wide chunks (no "corso", see `chunking.metadata`) answer for
+    every course alike: when one of them is the best match, there is nothing
+    to disambiguate. Only the best, not just a competing one: on "Entro
+    quando devo presentare la domanda di laurea?" a university page ranked
+    close behind the courses' own deadline pages, and it only says to check
+    "the deadlines on your course's website" — the course still had to be
+    asked.
+
     A single-course corpus, or a genuinely course-agnostic question (no
     chunk carries a "corso" at all), never triggers this either way.
 
     Args:
         chunks (list[dict]): Chunks from an unfiltered `retrieve()`/
-            `retrieve_decomposed()` call, each optionally carrying "corso".
+            `retrieve_decomposed()` call, each optionally carrying "corso"
+            and "score".
         remembered_corso (str | None): The course already resolved earlier
             in the session, if any (`default_filters["corso"]` in `app.py`).
+        ambiguity_ratio (float): Fraction of the best score a course's best
+            chunk must reach to count as a competing course.
+        min_score (float): Score from which another course's same-titled
+            page counts as relevant, see `_leading_page_in_other_course`.
 
     Returns:
         bool: True if the question should be (re-)disambiguated.
     """
-    courses = {c["corso"] for c in chunks if c.get("corso")}
-    if not courses:
+    best_by_course: dict[str, float] = {}
+    best_general = 0.0
+    for c in chunks:
+        score = c.get("score", 0.0)
+        if c.get("corso"):
+            best_by_course[c["corso"]] = max(best_by_course.get(c["corso"], 0.0), score)
+        else:
+            best_general = max(best_general, score)
+    if not best_by_course:
         return False
-    if remembered_corso is None:
-        return len(courses) > 1
-    return remembered_corso not in courses
+    if remembered_corso in best_by_course:
+        return False
+    top = max(best_general, *best_by_course.values())
+    if best_general >= top:
+        return False
+    competing = [corso for corso, score in best_by_course.items() if score >= ambiguity_ratio * top]
+    return len(competing) > 1 or _leading_page_in_other_course(chunks, ambiguity_ratio * top, min_score)
+
+
+def _page_title(chunk: dict) -> str:
+    """A chunk's page title (its first heading), normalized for comparison."""
+    headings = chunk.get("headings") or []
+    return " ".join(headings[0].lower().split()) if headings else ""
+
+
+def _leading_page_in_other_course(chunks: list[dict], lead_score: float, min_score: float) -> bool:
+    """True when a leading course page (scoring at least `lead_score`) has a
+    same-titled page from another course that is relevant too (above
+    `min_score`): a topic every course has its own version of.
+
+    Scores alone don't show it: on "Entro quando devo presentare la domanda
+    di laurea?" Psicologia's pages scored 0.970, Infermieristica's and
+    Ingegneria's "Prova finale: modalità e scadenze" 0.696 and 0.596 — below
+    the ambiguity ratio, though each course has its own deadlines. The same
+    title tells. A page only one course has ("Muoversi in città"), or other
+    courses' same-titled pages that aren't relevant (the "Coordinatore" pages
+    on "Che ruolo ha Franco Callegati?", ~0), don't count.
+
+    Args:
+        chunks (list[dict]): Retrieved chunks with "corso", "score", "headings".
+        lead_score (float): Score from which a course chunk counts as leading.
+        min_score (float): Score from which another course's page counts as
+            relevant.
+
+    Returns:
+        bool: True if the course should be asked.
+    """
+    leading = {(_page_title(c), c["corso"]) for c in chunks
+               if c.get("corso") and c.get("score", 0.0) >= lead_score and _page_title(c)}
+    return any(
+        (_page_title(c), other) in leading
+        for c in chunks
+        if c.get("corso") and c.get("score", 0.0) > min_score
+        for other in {corso for _, corso in leading} - {c["corso"]}
+    )

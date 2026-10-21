@@ -7,6 +7,7 @@ from llama_index.core.storage.docstore import SimpleDocumentStore
 from llama_index.core.storage.storage_context import StorageContext
 from qdrant_client import QdrantClient
 
+from retrieval.glossary import expand_acronyms
 from retrieval.hybrid_search import embed_query, search_candidates
 from retrieval.query_filters import strip_course_mention
 from retrieval.reranker import rerank
@@ -149,6 +150,7 @@ def retrieve(
 
     if strip_course:
         query = strip_course_mention(query, priority_corso)
+    query = expand_acronyms(query)
 
     if use_automerging:
         storage_context = StorageContext.from_defaults(docstore=docstore)
@@ -160,9 +162,15 @@ def retrieve(
           f"scores={[round(n.score or 0.0, 3) for n in merged_nodes]}")
 
     def select(threshold: float) -> list[NodeWithScore]:
-        def passes(n: NodeWithScore) -> bool:
-            return (n.score or 0.0) > threshold
-        return sorted((n for n in merged_nodes if passes(n)), key=lambda n: n.score or 0.0, reverse=True)[:top_k]
+        # Ties go to the university-wide copy (no "corso"): it applies to
+        # every course, while the course pages copying it say the same thing.
+        ranked = sorted(
+            (n for n in merged_nodes if (n.score or 0.0) > threshold),
+            key=lambda n: (n.score or 0.0, not n.node.metadata.get("corso")),
+            reverse=True,
+        )
+        ranked = _keep_priority_course(ranked, priority_corso)
+        return _dedupe_by_text(ranked, lambda n: n.node.text)[:top_k]
 
     final_nodes = select(score_threshold)
     if not final_nodes:
@@ -190,10 +198,75 @@ def retrieve(
     ]
 
 
-def _chunk_key(chunk: dict) -> tuple:
-    """Identity used to dedupe chunks retrieved for different sub-questions
-    of the same compound query (see `retrieve_decomposed`)."""
-    return (chunk.get("source_file"), tuple(chunk.get("headings") or []), chunk["text"])
+def _keep_priority_course(ranked: list[NodeWithScore], priority_corso: str | None,
+                          ratio: float = settings.corso_ambiguity_ratio) -> list[NodeWithScore]:
+    """Drops other courses' nodes once the prioritized course genuinely
+    answers — its best node reaches `ratio` × the overall best — keeping its
+    own and university-wide (no "corso") nodes.
+
+    The ranking boost alone isn't enough when every course has its own
+    version of a page: on "requisiti per la domanda di laurea" with
+    Ingegneria chosen, Ingegneria's page ranked first but the other 4 context
+    slots went to Psicologia's and Infermieristica's equally relevant pages,
+    and the answer was built (and cited) from those. When the prioritized
+    course has nothing competitive ("Che ruolo ha Franco Callegati?" with
+    Psicologia known), nothing is dropped, so a question covered only by
+    another course still gets answered (REPORT_ARCHITETTURA.md §4.4).
+
+    Short of that, other courses' versions of a page the prioritized course
+    also has (same page title) are dropped anyway: they can outscore it by
+    wording alone — Psicologia's deadlines table names its "Invernale"
+    session, Ingegneria's only lists dates — and the model then answered an
+    Ingegneria student with Psicologia's winter deadline, even told the
+    course. Pages only another course has are kept.
+
+    Args:
+        ranked (list[NodeWithScore]): Nodes, best first.
+        priority_corso (str | None): The course being prioritized, if any.
+        ratio (float): See `settings.corso_ambiguity_ratio`.
+
+    Returns:
+        list[NodeWithScore]: `ranked`, possibly without other courses' nodes.
+    """
+    if not priority_corso or not ranked:
+        return ranked
+    top = ranked[0].score or 0.0
+    best_priority = max(
+        ((n.score or 0.0) for n in ranked if n.node.metadata.get("corso") == priority_corso), default=0.0,
+    )
+    if best_priority >= ratio * top:
+        return [n for n in ranked if n.node.metadata.get("corso") in (priority_corso, None)]
+    own_titles = {_page_title(n) for n in ranked if n.node.metadata.get("corso") == priority_corso} - {""}
+    return [
+        n for n in ranked
+        if n.node.metadata.get("corso") in (priority_corso, None) or _page_title(n) not in own_titles
+    ]
+
+
+def _page_title(node: NodeWithScore) -> str:
+    """A node's page title (its first heading), normalized for comparison."""
+    headings = node.node.metadata.get("headings") or []
+    return " ".join(headings[0].lower().split()) if headings else ""
+
+
+def _text_key(text: str) -> str:
+    """Whitespace- and case-insensitive identity of a chunk's text."""
+    return " ".join(text.split()).lower()
+
+
+def _dedupe_by_text(items: list, get_text) -> list:
+    """Keeps only the first of the items sharing the same text — many course
+    pages copy a university-wide page (or each other) verbatim, and without
+    this the same paragraph from 3-4 sources fills the whole top-k context.
+    Order is preserved, so callers pass items best-first."""
+    seen: set[str] = set()
+    kept = []
+    for item in items:
+        key = _text_key(get_text(item))
+        if key not in seen:
+            seen.add(key)
+            kept.append(item)
+    return kept
 
 def _retrieve_locked(lock: threading.Lock, *args, **kwargs) -> list:
     """Wrapper for `retrieve_decomposed()` that serializes retrieval behind a
@@ -244,15 +317,9 @@ def retrieve_decomposed(
         return retrieve(queries[0], client, collection_name, embed_model, reranker, docstore, top_k=top_k, **kwargs)
 
     per_query_top_k = max(2, top_k // len(queries))
-    seen: set[tuple] = set()
-    merged: list[dict] = []
-    for q in queries:
-        for chunk in retrieve(
-            q, client, collection_name, embed_model, reranker, docstore, top_k=per_query_top_k, **kwargs,
-        ):
-            key = _chunk_key(chunk)
-            if key in seen:
-                continue
-            seen.add(key)
-            merged.append(chunk)
-    return merged
+    merged = [
+        chunk
+        for q in queries
+        for chunk in retrieve(q, client, collection_name, embed_model, reranker, docstore, top_k=per_query_top_k, **kwargs)
+    ]
+    return _dedupe_by_text(merged, lambda c: c["text"])
