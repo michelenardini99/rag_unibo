@@ -4,7 +4,7 @@ from llama_index.core.schema import BaseNode
 from config import settings
 
 FILTER_ONLY_KEYS = [
-    *settings.metadata_schema, "anno_accademico", "stato", "id", "checksum", "source_file", "source_path",
+    *settings.metadata_fields, "anno_accademico", "stato", "id", "checksum", "source_file", "source_path",
     "source_url", "image_paths",
 ]
 

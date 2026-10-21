@@ -79,7 +79,7 @@ def indexing(config: IndexConfig) -> None:
                                                 tokenizer_model=config.tokenizer_model)
     print(f"Chunked {len(leaf_nodes)} leaf chunk(s) + {len(parent_nodes)} parent section(s) from {config.root}.")
 
-    persist_nodes(leaf_nodes + parent_nodes, config.chunked_dir)
+    persist_nodes(leaf_nodes + parent_nodes, config.chunked_dir, replace=config.recreate)
     print(f"Persisted docstore to {config.chunked_dir / 'docstore.json'}.")
 
     if not leaf_nodes:

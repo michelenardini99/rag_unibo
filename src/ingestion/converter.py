@@ -2,6 +2,7 @@ import argparse
 import io
 import json
 import multiprocessing as mp
+import re
 import time
 from html import escape
 from pathlib import Path
@@ -166,6 +167,46 @@ def _move_header_legends_below_table(soup: BeautifulSoup, main) -> None:
             table.insert_after(p)
 
 
+def _flatten_accordion_lists(soup: BeautifulSoup, main) -> None:
+    """Turns www.unibo.it accordion lists (`ul.accordion-box > li >
+    button.accordion-title + div.accordion-content`) into plain sections: a
+    heading from the button, then the panel's content.
+
+    Left as list items, Docling concatenates all of a panel's paragraphs into
+    the item's text and emits its nested lists after it, separating each list
+    from the sentence introducing it — e.g. "ISEE pari o inferiore a
+    27.000 €" lost "Hai l'esenzione totale ... se ti trovi in una delle
+    seguenti condizioni:", so no chunk said what the threshold was for.
+
+    The button becomes one level below the heading preceding the list, and
+    the panel's own headings one level below that, so the chunker's heading
+    path keeps the page's nesting ("1° anno" > "Importi, esenzioni..." >
+    "Avere l'esenzione...").
+    """
+    boxes = main.select("ul.accordion-box")
+    # Levels are read before any change: once a box is flattened, its
+    # demoted headings would be found as the "preceding heading" of the next.
+    levels = []
+    for box in boxes:
+        previous = box.find_previous(re.compile(r"^h[1-6]$"))
+        levels.append(int(previous.name[1]) if previous else 2)
+
+    for box, level in zip(boxes, levels):
+        section = soup.new_tag("div")
+        for item in box.find_all("li", recursive=False):
+            button = item.find("button", recursive=False)
+            panel = item.find("div", class_="accordion-content", recursive=False)
+            if button and button.get_text(strip=True):
+                title = soup.new_tag(f"h{min(level + 1, 6)}")
+                title.string = button.get_text(" ", strip=True)
+                section.append(title)
+            if panel:
+                for heading in panel.find_all(re.compile(r"^h[1-6]$")):
+                    heading.name = f"h{min(level + 2, 6)}"
+                section.append(panel.extract())
+        box.replace_with(section)
+
+
 def preprocess_html(html: str) -> str:
     """Reduces a crawled page to its actual content before Docling sees it.
 
@@ -176,6 +217,7 @@ def preprocess_html(html: str) -> str:
       `aria-hidden="true"`/`hidden`, which on these pages is real content
       (contact cards, admission steps, exam sessions...).
     - Drops interface controls, see `_HTML_UI_SELECTORS`.
+    - Turns accordion lists into plain sections, see `_flatten_accordion_lists`.
 
     Args:
         html (str): Raw page HTML.
@@ -196,6 +238,7 @@ def preprocess_html(html: str) -> str:
         if tag.get_text(strip=True):
             tag.attrs.pop("aria-hidden", None)
             tag.attrs.pop("hidden", None)
+    _flatten_accordion_lists(soup, main)
     _move_header_legends_below_table(soup, main)
 
     title = soup.title.string if soup.title and soup.title.string else ""

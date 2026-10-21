@@ -38,10 +38,13 @@ class Settings(BaseSettings):
     rerank_score_threshold: float = 0.3
     merged_threshold: float = 0.12
     corso_priority_boost: float = 0.1
+    corso_ambiguity_ratio: float = 0.8
 
     chunk_max_tokens: int = 512
 
-    metadata_schema: list[str] = ["tipo_laurea", "corso", "sezione", "materia"]
+    metadata_schema: list[str | None] = ["tipo_laurea", "corso", "sezione", "materia"]
+
+    metadata_schemas_by_root: dict[str, list[str | None]] = {"ateneo": ["ambito", None, "sezione"]}
     academic_year_start_month: int = 9
 
     assistant_institution: str = "Università di Bologna"
@@ -53,6 +56,16 @@ class Settings(BaseSettings):
     max_history_turns: int = 5
     condense_max_tokens: int = 64
     condense_temperature: float = 0.0
+
+    @property
+    def metadata_fields(self) -> list[str]:
+        """Every folder-derived metadata field across all schemas, plus
+        "ambito" ("corso" or "ateneo", see `chunking.metadata.extract_metadata`),
+        so every chunk carries the same payload keys whichever schema applied."""
+        fields = ["ambito"]
+        for schema in [self.metadata_schema, *self.metadata_schemas_by_root.values()]:
+            fields += [name for name in schema if name and name not in fields]
+        return fields
 
 
 settings = Settings()

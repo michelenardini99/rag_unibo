@@ -42,7 +42,7 @@ def ensure_collection(client: QdrantClient, collection_name: str, recreate: bool
 # Fields queried by an exact-match filter or faceted for their vocabulary
 # (see retrieval.query_filters) — "stato" for the always-on vigente filter,
 # "id" for delete_by_doc_id, the rest for query-time metadata filtering.
-_INDEXED_FIELDS = ("stato", "id", "tipo_laurea", "corso", "sezione", "materia", "anno_accademico")
+_INDEXED_FIELDS = ("stato", "id", "ambito", "tipo_laurea", "corso", "sezione", "materia", "anno_accademico")
 
 
 def _ensure_payload_indexes(client: QdrantClient, collection_name: str) -> None:

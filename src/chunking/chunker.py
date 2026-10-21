@@ -1,3 +1,4 @@
+import re
 import uuid
 from collections import defaultdict
 from pathlib import Path
@@ -5,7 +6,9 @@ from llama_index.core import Document
 from llama_index.core.schema import BaseNode, NodeRelationship, TextNode
 from llama_index.core.storage.docstore import SimpleDocumentStore
 from llama_index.node_parser.docling import DoclingNodeParser
+from docling_core.transforms.chunker.hierarchical_chunker import ChunkingDocSerializer, ChunkingSerializerProvider
 from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
+from docling_core.transforms.serializer.markdown import MarkdownTableSerializer
 from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
 from docling_core.types.doc import DoclingDocument
 
@@ -40,10 +43,68 @@ def build_node_parser(tokenizer: HuggingFaceTokenizer) -> DoclingNodeParser:
     Returns:
         DoclingNodeParser: Parser configured with the hybrid chunker.
     """
-    chunker = HybridChunker(tokenizer=tokenizer, merge_peers=True)
+    chunker = HybridChunker(tokenizer=tokenizer, merge_peers=True, serializer_provider=_MarkdownTableProvider())
     return DoclingNodeParser(
         chunker=chunker
     )
+
+
+_MONTHS = ("gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
+           "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre")
+_DATE_RE = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
+_TABLE_SEPARATOR_RE = re.compile(r"^\|\s*-")
+
+
+def _readable_tables(text: str) -> str:
+    """Rewrites the Markdown tables in a chunk (see `_MarkdownTableProvider`)
+    in the words a student's question uses, leaving other text untouched:
+    the header row loses bold and capitals ("**APPELLO DI LAUREA**" ->
+    "appello di laurea"), and dates are spelled out ("16/11/2026" ->
+    "16 novembre 2026").
+
+    The reranker matched tables of bare dates poorly: for the graduation
+    deadlines table, "...domanda di laurea tardiva per l'appello di
+    ottobre?" scored 0.589 against it as is, 0.840 rewritten ("...per
+    l'appello del 16 luglio 2026?" 0.630 -> 0.813).
+    """
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        if not line.startswith("|"):
+            continue
+        if i + 1 < len(lines) and _TABLE_SEPARATOR_RE.match(lines[i + 1]):
+            line = line.replace("**", "").lower()
+        lines[i] = _DATE_RE.sub(_date_in_words, line)
+    return "\n".join(lines)
+
+
+def _date_in_words(match: re.Match) -> str:
+    day, month, year = int(match.group(1)), int(match.group(2)), match.group(3)
+    if not (1 <= month <= 12 and 1 <= day <= 31):
+        return match.group(0)
+    return f"{day} {_MONTHS[month - 1]} {year}"
+
+
+class _MarkdownTableProvider(ChunkingSerializerProvider):
+    """Serializes tables as (compact) Markdown in chunks, instead of the
+    chunker's default "row header, column header = value" triplets.
+
+    The triplets need the table's header row and first column to be detected
+    as headers, which on scraped pages they often aren't: the graduation
+    deadlines table came out as "04/06/2026, 1 = 18/06/2026. 04/06/2026, 6 =
+    16/07/2026", with the column names ("domanda tardiva", "appello di
+    laurea") stated once, far from the values — and the model gave the
+    graduation date, then the late-application date, as the application
+    deadline. A Markdown table keeps every value under its column name, and
+    the chunker repeats the header row when it splits a large table
+    (`HybridChunker.repeat_table_header`).
+    """
+
+    def get_serializer(self, doc: DoclingDocument) -> ChunkingDocSerializer:
+        return ChunkingDocSerializer(
+            doc=doc,
+            table_serializer=MarkdownTableSerializer(),
+            params=ChunkingDocSerializer.model_fields["params"].default.model_copy(update={"compact_tables": True}),
+        )
 
 
 def _merge_short_leaf_chunks(leaf_nodes: list[BaseNode], tokenizer: HuggingFaceTokenizer,
@@ -110,13 +171,34 @@ def load_as_li_document(json_path: Path, converted_root: Path) -> Document:
         converted_root (Path): Root of the converted-documents tree (for metadata extraction).
 
     Returns:
-        Document: The document, ready for chunking.
+        Document: The document, ready for chunking, without link targets
+        (see `_without_hyperlinks`).
     """
     metadata = extract_metadata(json_path, converted_root)
     return Document(
-        text=json_path.read_text(encoding="utf-8"),
+        text=_without_hyperlinks(json_path.read_text(encoding="utf-8")),
         metadata=metadata,
     )
+
+
+def _without_hyperlinks(doc_json: str) -> str:
+    """Drops link targets from a DoclingDocument, keeping the link text, so
+    chunks read "[simula l'importo delle tasse]" instead of carrying the full
+    URL.
+
+    URLs are ~26% of the corpus' tokens and carry no meaning for search: on
+    the fees page a 5-item list was 411 tokens, 285 of them URLs, which
+    pushed it past the chunk budget apart from the sentence introducing it
+    ("Hai l'esenzione totale ... se ti trovi in una delle seguenti
+    condizioni:"), so no chunk said what "ISEE pari o inferiore a 27.000 €"
+    was for. They also cost context window and reranker input (512 tokens)
+    and gave the model URLs to recombine into invented links. The page's own
+    URL stays in the "source_url" metadata, which the app shows as source.
+    """
+    doc = DoclingDocument.model_validate_json(doc_json)
+    for item in doc.texts:
+        item.hyperlink = None
+    return doc.model_dump_json()
 
 def find_unchunked_files(root: Path, docstore: SimpleDocumentStore | None) -> tuple[list[Path], list[Path]]:
     """Lists converted documents that need (re)chunking: ones not yet present
@@ -236,7 +318,7 @@ def build_parent_nodes(leaf_nodes: list[BaseNode]) -> list[TextNode]:
         parent = TextNode(
             text="\n\n".join(c.text for c in children),
             metadata={
-                **{key: first.metadata.get(key) for key in settings.metadata_schema},
+                **{key: first.metadata.get(key) for key in settings.metadata_fields},
                 "anno_accademico": first.metadata.get("anno_accademico"),
                 "stato": first.metadata.get("stato"),
                 "id": doc_id,
@@ -281,6 +363,8 @@ def chunk_documents(files: list[Path], root: Path,  chunk_max_tokens: int = sett
         if p.name != "_failures.json"
     ]
     leaf_nodes = parser.get_nodes_from_documents(documents, show_progress=True)
+    for node in leaf_nodes:
+        node.text = _readable_tables(node.text)
     leaf_nodes = _merge_short_leaf_chunks(leaf_nodes, tokenizer)
     _assign_deterministic_ids(leaf_nodes)
     _resolve_image_paths(leaf_nodes, root)
@@ -288,16 +372,19 @@ def chunk_documents(files: list[Path], root: Path,  chunk_max_tokens: int = sett
     return leaf_nodes, parent_nodes
 
 
-def persist_nodes(nodes: list[BaseNode], persist_dir: Path) -> None:
+def persist_nodes(nodes: list[BaseNode], persist_dir: Path, replace: bool = False) -> None:
     """Writes chunked nodes to disk so later stages (embedding/Qdrant) can
     load them without re-running chunking from scratch.
 
     Args:
         nodes (list[BaseNode]): Leaf and/or parent nodes to persist.
         persist_dir (Path): Directory holding (or to create) the docstore.
+        replace (bool): If True, `nodes` replace the whole docstore instead
+            of being added to it — for a full rebuild, where nodes from a
+            previous chunking (no longer in Qdrant) must not survive.
     """
     docstore_path = persist_dir / "docstore.json"
-    if docstore_path.exists():
+    if docstore_path.exists() and not replace:
         docstore = SimpleDocumentStore.from_persist_path(docstore_path)
     else:        
         persist_dir.mkdir(parents=True, exist_ok=True)

@@ -72,22 +72,36 @@ def read_source_url(json_path: Path) -> str | None:
 def extract_metadata(json_path: Path, converted_root: Path, schema: list[str] | None = None) -> dict:
     """Derives document metadata from its folder position under `converted_root`.
 
+    Course documents (laurea/<corso>/...) and university-wide ones
+    (ateneo/...) live under different top-level folders with different
+    layouts, so the schema is picked by that folder
+    (`settings.metadata_schemas_by_root`, falling back to
+    `settings.metadata_schema`). "ambito" tells the two apart: "ateneo" for
+    university-wide documents (named by their folder), "corso" otherwise —
+    an ateneo document has no "corso", so it is never offered as a course
+    to choose and never receives the course priority boost.
+
     Args:
         json_path (Path): Path to the converted document JSON.
         converted_root (Path): Root of the converted-documents tree.
-        schema (list[str] | None): Name for each directory level, in order.
-            Defaults to `settings.metadata_schema`. Levels beyond the actual
-            folder depth are left `None`.
+        schema (list[str | None] | None): Name for each directory level, in
+            order (None skips a level). Defaults to the schema for the
+            document's top-level folder. Levels beyond the actual folder
+            depth are left `None`.
 
     Returns:
-        dict: Schema fields plus "anno_accademico", "stato", "id",
-        "checksum", "source_file", "source_path" and "source_url".
+        dict: Every field in `settings.metadata_fields` plus
+        "anno_accademico", "stato", "id", "checksum", "source_file",
+        "source_path" and "source_url".
     """
     rel = json_path.relative_to(converted_root)
     dir_parts = rel.parts[:-1]
-    schema = schema or settings.metadata_schema
+    top_folder = dir_parts[0] if dir_parts else None
+    schema = schema or settings.metadata_schemas_by_root.get(top_folder, settings.metadata_schema)
 
-    metadata = {name: (dir_parts[i] if i < len(dir_parts) else None) for i, name in enumerate(schema)}
+    metadata = dict.fromkeys(settings.metadata_fields)
+    metadata.update({name: dir_parts[i] for i, name in enumerate(schema) if name and i < len(dir_parts)})
+    metadata["ambito"] = metadata["ambito"] or "corso"
     return {
         **metadata,
         "anno_accademico": current_academic_year(),
