@@ -6,7 +6,8 @@ from config import settings
 from embedding.embedder import build_embedding_model
 from generation.condense import condense_question, decompose_question
 from generation.generator import astream_response, build_llm
-from generation.prompt import build_prompt, clean_source_name
+from generation.prompt import (CitationStripper, ClarificationDetector, build_prompt, format_sources,
+                               question_for_answer, strip_citations, strip_clarification_marker)
 from llama_index.core.storage.docstore import SimpleDocumentStore
 from qdrant_client import QdrantClient
 from retrieval.query_filters import closest_known_value, course_tipo_laurea_map, extract_query_filters, known_values_for_fields, needs_course_disambiguation
@@ -200,31 +201,37 @@ async def on_message(msg: Message):
         step_retrieve.output = (step_retrieve.output or "") + \
             f"Recuperati e riordinati **{len(chunks)} chunk** rilevanti da `{settings.qdrant_collection}`."
 
-    for i, chunk in enumerate(chunks):
-        text = chunk["text"]
-        source_url = chunk.get("source_url")
-        if source_url:
-            label = source_url
-            content = f"{source_url}\n\n{text}"
-        else:
-            label = clean_source_name(chunk["source_file"])
-            content = text
-
-    final_response = Message(content="", elements=user_session.get("source_elements"))
+    final_response = Message(content="")
+    answer_question = question_for_answer(search_query, sub_queries)
+    # The course retrieval just prioritized, if any (extracted, chosen or remembered).
+    student_corso = user_session.get("default_corso")
 
     if debug:
         async with Step(name="Prompt completo inviato al modello") as step_prompt:
-            step_prompt.input = search_query
-            step_prompt.output = _format_debug_prompt(build_prompt(search_query, chunks, history))
+            step_prompt.input = answer_question
+            step_prompt.output = _format_debug_prompt(build_prompt(answer_question, chunks, history, student_corso))
 
     response_text = ""
-    async for token in astream_response(LLM, search_query, chunks, history):
+    clarification = ClarificationDetector()
+    stripper = CitationStripper()
+    async for token in astream_response(LLM, answer_question, chunks, history, student_corso):
         response_text += token
-        await final_response.stream_token(token)
+        if visible := stripper.feed(clarification.feed(token)):
+            await final_response.stream_token(visible)
+    if tail := stripper.feed(clarification.flush()) + stripper.flush():
+        await final_response.stream_token(tail)
+    # A clarifying question ("Per quale sessione...?") cites nothing: no sources.
+    # Otherwise listed by the code, not the model: links come from the chunks' metadata.
+    sources = "" if clarification.is_clarification else format_sources(response_text, chunks)
+    if sources:
+        await final_response.stream_token(sources)
 
     await final_response.send()
 
-    history.append((search_query, response_text))
+    # Without "[n]": next turn's numbers refer to different chunks. A
+    # clarifying question stays in history, so the student's reply ("1° anno")
+    # is condensed together with the question it answers.
+    history.append((search_query, strip_citations(strip_clarification_marker(response_text))))
     history = history[-settings.max_history_turns:]
     user_session.set("history", history)
 

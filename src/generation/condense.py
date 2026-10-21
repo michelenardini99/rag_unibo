@@ -17,8 +17,11 @@ CONDENSE_SYSTEM_PROMPT = (
         (es. "non", "senza", "eccetto", "a differenza di", "diverso da"). 
         Se presente, assicurati che la negazione sia esplicitamente preservata 
         nella domanda riformulata.
-    - Se la nuova domanda ha una struttura diversa da quella precedente, mantieni comunque nell'domanda riformulata 
+    - Se la nuova domanda ha una struttura diversa da quella precedente, mantieni comunque nell'domanda riformulata
         l'argomento/le entità principali della conversazione (es. nome di corso, procedura, programma) necessarie a capirla da sola.
+    - Se l'ultimo messaggio dell'assistente è una domanda di chiarimento e la nuova domanda ne è la risposta
+        (una risposta breve che sceglie una delle alternative proposte), riformula l'ultima domanda dello
+        studente aggiungendo il dettaglio fornito.
 
     Esempi:
 
@@ -41,6 +44,12 @@ CONDENSE_SYSTEM_PROMPT = (
     Assistente: [risposta]
     Nuova domanda: E in quanto tempo arriva la risposta?
     Domanda riformulata: In quanto tempo arriva la risposta alla richiesta di equipollenza di un titolo di laurea conseguito all'estero?
+
+    Cronologia:
+    Utente: Quali sono gli orari di apertura dello sportello?
+    Assistente: Di quale sede: Bologna, Forlì o Rimini?
+    Nuova domanda: Forlì
+    Domanda riformulata: Quali sono gli orari di apertura dello sportello della sede di Forlì?
 
     Ora riformula:
 

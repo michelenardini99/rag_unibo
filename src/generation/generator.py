@@ -37,7 +37,8 @@ def build_llm(base_url: str, model: str = "generation-llm", context_window: int 
         timeout=timeout,
     )
 
-def generate_response(llm: OpenAILike, query: str, chunks: list[dict], history: list[tuple[str, str]] | None = None) -> str:
+def generate_response(llm: OpenAILike, query: str, chunks: list[dict], history: list[tuple[str, str]] | None = None,
+                      corso: str | None = None) -> str:
     """Generates a grounded response from the LLM given the query and retrieved context.
 
     Args:
@@ -49,6 +50,7 @@ def generate_response(llm: OpenAILike, query: str, chunks: list[dict], history: 
         chunks (list[dict]): Retrieved context chunks.
         history (list[tuple[str, str]] | None): Prior (question, answer) turns,
             included in the prompt for conversational continuity.
+        corso (str | None): The student's course, if known, see `build_prompt`.
 
     Returns:
         str: The generated response.
@@ -58,13 +60,14 @@ def generate_response(llm: OpenAILike, query: str, chunks: list[dict], history: 
 
     # Deterministic on purpose: factual QA over retrieved context doesn't need
     # creativity, and a fixed temperature keeps answers (and eval scores) reproducible.
-    response = llm.chat(build_prompt(query, chunks, history), temperature=0.0)
+    response = llm.chat(build_prompt(query, chunks, history, corso), temperature=0.0)
     answer = response.message.content
     return f"{answer}\n"
 
 
 async def astream_response(llm: OpenAILike, query: str, chunks: list[dict],
-                           history: list[tuple[str, str]] | None = None) -> AsyncIterator[str]:
+                           history: list[tuple[str, str]] | None = None,
+                           corso: str | None = None) -> AsyncIterator[str]:
     """Streaming counterpart of `generate_response`, for the chat UI: yields
     tokens as vLLM produces them instead of waiting for the full answer, so
     the first words show up as soon as generation starts. Same prompt, same
@@ -75,6 +78,7 @@ async def astream_response(llm: OpenAILike, query: str, chunks: list[dict],
         query (str): The (condensed, standalone) question, see `generate_response`.
         chunks (list[dict]): Retrieved context chunks.
         history (list[tuple[str, str]] | None): Prior (question, answer) turns.
+        corso (str | None): The student's course, if known, see `build_prompt`.
 
     Yields:
         str: Successive text deltas of the answer.
@@ -83,7 +87,7 @@ async def astream_response(llm: OpenAILike, query: str, chunks: list[dict],
         yield f"{NO_CONTEXT_RESPONSE}\n"
         return
 
-    stream = await llm.astream_chat(build_prompt(query, chunks, history), temperature=0.0)
+    stream = await llm.astream_chat(build_prompt(query, chunks, history, corso), temperature=0.0)
     async for response in stream:
         if response.delta:
             yield response.delta

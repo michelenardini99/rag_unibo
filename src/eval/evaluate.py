@@ -10,6 +10,7 @@ from datasets import Dataset
 from FlagEmbedding import BGEM3FlagModel, FlagReranker
 from generation.condense import condense_question, decompose_question
 from generation.generator import generate_response
+from generation.prompt import question_for_answer
 from llama_index.core.storage.docstore import SimpleDocumentStore
 from llama_index.llms.openai_like import OpenAILike
 from qdrant_client import QdrantClient
@@ -108,7 +109,8 @@ def _run_case(case: dict, llm: OpenAILike, embed: BGEM3FlagModel, client: Qdrant
     # self-contained question consistent with what was actually
     # retrieved, so the model isn't left resolving "e per il 2026/27?"
     # against history on its own during generation.
-    response = generate_response(llm, search_query, chunks, history or None)
+    response = generate_response(llm, question_for_answer(search_query, sub_queries), chunks, history or None,
+                                 corso=priority_corso)
     t1 = time.perf_counter()
 
     row = {
