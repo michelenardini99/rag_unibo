@@ -26,7 +26,7 @@ class HybridQdrantRetriever(BaseRetriever):
                  docstore: SimpleDocumentStore, candidate_pool: int = settings.retrieval_candidate_limit,
                  prefetch_limit: int = settings.retrieval_prefetch_limit, use_reranker: bool = True,
                  mode: str = "hybrid_no_colbert", priority_corso: str | None = None,
-                 corso_boost: float = settings.corso_priority_boost):
+                 corso_boost: float = settings.corso_priority_boost, scope: list[str] | None = None):
         self._client = client
         self._collection_name = collection_name
         self._embed_model = embed_model
@@ -38,6 +38,7 @@ class HybridQdrantRetriever(BaseRetriever):
         self._mode = mode
         self._priority_corso = priority_corso
         self._corso_boost = corso_boost
+        self._scope = scope
         super().__init__()
 
     def _retrieve(self, query_bundle: QueryBundle) -> list[NodeWithScore]:
@@ -55,7 +56,7 @@ class HybridQdrantRetriever(BaseRetriever):
         query_embedding = embed_query(query_bundle.query_str, self._embed_model)
         candidates = search_candidates(
             self._client, self._collection_name, query_embedding,
-            limit=self._candidate_pool, prefetch_limit=self._prefetch_limit, mode=self._mode,
+            limit=self._candidate_pool, prefetch_limit=self._prefetch_limit, mode=self._mode, scope=self._scope,
         )
 
         if self._use_reranker:
@@ -74,7 +75,7 @@ class HybridQdrantRetriever(BaseRetriever):
             if self._priority_corso and node.metadata.get("corso") == self._priority_corso:
                 score += self._corso_boost
             results.append(NodeWithScore(node=node, score=score))
-        print(f"[retrieve debug] priority_corso={self._priority_corso} candidates={len(candidates)} "
+        print(f"[retrieve debug] priority_corso={self._priority_corso} scope={self._scope} candidates={len(candidates)} "
               f"scored={len(scored)} missing_in_docstore={missing} results={len(results)}")
         return results
 
@@ -98,6 +99,7 @@ def retrieve(
     merged_fallback_threshold: float = settings.merged_threshold,
     priority_corso: str | None = None,
     strip_course: bool = True,
+    scope: list[str] | None = None,
 ) -> list:
     """Retrieves relevant nodes, merging sibling chunks into their parent
     section via AutoMergingRetriever when enough of them match.
@@ -133,6 +135,10 @@ def retrieve(
             course's content hard-excluded from the search (see
             REPORT_ARCHITETTURA.md §4.4: a question only covered by a
             *different* course must still be answerable).
+        scope (list[str] | None): Documents to search, see
+            `hybrid_search.search_candidates`: None for all, [] for the
+            university-wide ones only, [corso] for that course's and the
+            university-wide ones.
         strip_course (bool): If True (default) and `priority_corso` is set,
             search and rerank on the query with the course mention removed
             (`query_filters.strip_course_mention`) — the course is already
@@ -145,7 +151,7 @@ def retrieve(
     base_retriever = HybridQdrantRetriever(
         client, collection_name, embed_model, reranker, docstore,
         candidate_pool=candidate_pool, prefetch_limit=prefetch_limit, use_reranker=use_reranker, mode=mode,
-        priority_corso=priority_corso,
+        priority_corso=priority_corso, scope=scope,
     )
 
     if strip_course:
@@ -290,6 +296,8 @@ def retrieve_decomposed(
     docstore: SimpleDocumentStore,
     *,
     top_k: int = settings.rerank_top_k,
+    subquery_top_k: int = settings.subquery_top_k,
+    decomposed_top_k: int = settings.decomposed_top_k,
     **kwargs,
 ) -> list[dict]:
     """Retrieves for one or more sub-questions and merges the results,
@@ -304,9 +312,17 @@ def retrieve_decomposed(
             `generation.condense.decompose_question`. A single-element list
             behaves exactly like calling `retrieve()` directly.
         client, collection_name, embed_model, reranker, docstore: Forwarded to `retrieve()`.
-        top_k (int): Total chunk budget for the merged result, split evenly
-            across sub-questions (at least 2 each) so a 2-3 part question
-            doesn't multiply the context size by the number of parts.
+        top_k (int): Chunk budget for a single question.
+        subquery_top_k (int): Chunks per sub-question of a compound one.
+        decomposed_top_k (int): Total chunk budget for a compound question,
+            lowering the per-sub-question budget (to at least 2) when there
+            are many parts, so the context can't grow with their number.
+            Splitting the single-question budget (5 // 2 = 2 each) was too
+            little: on "i requisiti sono uguali se sono iscritto al primo
+            anno o al secondo?" the second-year exemption section ranked 4th
+            behind near-identical sections of the same page (0.941 vs
+            0.975-0.965) and never reached the model, which answered with
+            the "fuori corso" rules instead.
         **kwargs: Forwarded to `retrieve()` (e.g. `priority_corso`, `fallback_mode`).
 
     Returns:
@@ -316,7 +332,7 @@ def retrieve_decomposed(
     if len(queries) == 1:
         return retrieve(queries[0], client, collection_name, embed_model, reranker, docstore, top_k=top_k, **kwargs)
 
-    per_query_top_k = max(2, top_k // len(queries))
+    per_query_top_k = max(2, min(subquery_top_k, decomposed_top_k // len(queries)))
     merged = [
         chunk
         for q in queries

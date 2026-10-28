@@ -21,7 +21,8 @@ def embed_query(query: str, model: BGEM3FlagModel) -> dict:
 
 
 def search_candidates(client: QdrantClient, collection_name: str, query_embedding: dict, limit: int = 20,
-                       prefetch_limit: int = 50, mode: str = "hybrid_no_colbert") -> list:
+                       prefetch_limit: int = 50, mode: str = "hybrid_no_colbert",
+                       scope: list[str] | None = None) -> list:
     """Searches candidate nodes in Qdrant.
 
     Args:
@@ -34,6 +35,12 @@ def search_candidates(client: QdrantClient, collection_name: str, query_embeddin
         mode (str): Retrieval strategy — default "hybrid_no_colbert" (RRF
             fusion) measured best on this corpus; "hybrid" (adds a ColBERT
             stage), "dense_only", "sparse_only" kept for ablation.
+        scope (list[str] | None): Which documents may be searched: None for
+            the whole corpus; otherwise the university-wide ones
+            ("ambito" = "ateneo") plus those of the listed courses — [] for
+            university-wide only. The chat restricts every search to the
+            student's course and the university pages (see `app.py`), so
+            near-identical pages of other courses can't stand in for theirs.
 
     Returns:
         list: Candidate points from Qdrant, ranked by the chosen strategy.
@@ -42,14 +49,13 @@ def search_candidates(client: QdrantClient, collection_name: str, query_embeddin
     weights = query_embedding["lexical_weights"][0]
     sparse_vec = models.SparseVector(indices=[int(k) for k in weights], values=list(weights.values()))
 
-    # Only "stato" is a hard filter (document validity, not a relevance
-    # preference). "corso" is never hard-filtered here: a student's course is
-    # a ranking *priority*, applied as a score boost in
-    # `HybridQdrantRetriever._retrieve`, not an exclusion — see
-    # REPORT_ARCHITETTURA.md §4.4. Hard-excluding another course's content
-    # would hide the right answer on questions that are genuinely only
-    # covered by a different course (e.g. a specific subject's materials).
+    # "stato" is always a hard filter (document validity). "corso" is one only
+    # when `scope` is given; without it every course is searched.
     search_filter = models.Filter(must=[models.FieldCondition(key="stato", match=models.MatchValue(value="vigente"))])
+    if scope is not None:
+        search_filter.should = [models.FieldCondition(key="ambito", match=models.MatchValue(value="ateneo"))] + [
+            models.FieldCondition(key="corso", match=models.MatchValue(value=corso)) for corso in scope
+        ]
 
     if mode == "dense_only":
         result = client.query_points(

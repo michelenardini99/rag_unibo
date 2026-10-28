@@ -10,6 +10,7 @@ from datasets import Dataset
 from FlagEmbedding import BGEM3FlagModel, FlagReranker
 from generation.condense import condense_question, decompose_question
 from generation.generator import generate_response
+from generation.hyde import hyde_query
 from generation.prompt import question_for_answer
 from llama_index.core.storage.docstore import SimpleDocumentStore
 from llama_index.llms.openai_like import OpenAILike
@@ -22,16 +23,25 @@ from ragas.metrics import (
     answer_relevancy,
     context_precision,
     context_recall,
-    answer_correctness,
     answer_similarity,
 )
+from ragas.metrics._answer_correctness import AnswerCorrectness
 from ragas.run_config import RunConfig
 from retrieval.query_filters import course_tipo_laurea_map, extract_query_filters, known_values_for_fields
 from retrieval.retriever import retrieve_decomposed
 
 RETRIEVING_METRICS = [context_precision, context_recall]
 GENERATIVE_METRICS = [faithfulness, answer_relevancy]
-END_TO_END_METRICS = [answer_correctness, answer_similarity]
+# Il default di RAGAS (weights=[0.75, 0.25], beta=1.0) pesa troppo la componente
+# fattuale F1: un singolo dettaglio secondario mancante nel riferimento (es. "chi
+# nomina la commissione" quando il nucleo della domanda e' "quanti membri") conta
+# come false negative a pieno peso e affonda il punteggio di risposte sostanzialmente
+# corrette (osservato su un campione di 15 casi a basso punteggio, vedi Capitolo 4).
+# weights=[0.5, 0.5] alza il peso della similarita' semantica; beta=0.5 pesa la
+# precision piu' della recall nell'F-beta fattuale, coerente con la priorita' del
+# progetto (un'affermazione inventata, FP, e' peggio di un dettaglio omesso, FN).
+answer_correctness_relaxed = AnswerCorrectness(weights=[0.5, 0.5], beta=0.5)
+END_TO_END_METRICS = [answer_correctness_relaxed, answer_similarity]
 
 
 class BGEM3RagasEmbeddings(BaseRagasEmbeddings):
@@ -86,24 +96,29 @@ def _run_case(case: dict, llm: OpenAILike, embed: BGEM3FlagModel, client: Qdrant
 
     search_query = condense_question(llm, history, query)
     sub_queries = decompose_question(llm, search_query)
-    # Same "corso" priority app.py applies per message (see
-    # REPORT_ARCHITETTURA.md §4.4/§6.2): a ranking boost, not a hard filter —
-    # without it, the dataset's deliberate cross-course near-duplicate
-    # documents (e.g. both indexed courses have their own "Prova Pratica
-    # Valutativa") make retrieval harder than in live chat, where this
-    # signal is almost always available from the conversation.
-    priority_corso = extract_query_filters(llm, search_query, known_values, tipo_laurea_by_corso).get("corso")
-    with retrieval_lock:
+    # As in app.py: the course named by the student, else the one the
+    # conversation is about (the session's default_corso, here the case's
+    # "corso"); search the university-wide pages plus that course's.
+    student_text = " ".join([past for past, _ in history] + [query])
+    priority_corso = (extract_query_filters(llm, search_query, known_values, tipo_laurea_by_corso, student_text).get("corso")
+                      or case.get("corso"))
+    retrieval_kwargs = {"priority_corso": priority_corso, "scope": [priority_corso] if priority_corso else [],
+                        **retrieval_kwargs}
+
+    def retrieve_locked(queries: list[str]) -> list[dict]:
         # embed/reranker share HuggingFace fast tokenizers, which mutate
         # internal truncation/padding state and aren't safe to call
         # concurrently from multiple threads (raises "Already borrowed", or
         # segfaults outright depending on timing). Only condense/generate
         # (HTTP round trips to the batching vLLM server) actually benefit
         # from running in parallel, so retrieval stays serialized here.
-        chunks = retrieve_decomposed(
-            sub_queries, client, collection_name, embed, reranker, docstore,
-            priority_corso=priority_corso, **retrieval_kwargs,
-        )
+        with retrieval_lock:
+            return retrieve_decomposed(queries, client, collection_name, embed, reranker, docstore, **retrieval_kwargs)
+
+    chunks = retrieve_locked(sub_queries)
+    if not chunks and priority_corso:
+        # As in app.py: retry with a HyDE query, only with a course.
+        chunks = retrieve_locked([hyde_query(llm, search_query)])
     t0 = time.perf_counter()
     # search_query (condensed), not the raw query: it's already a
     # self-contained question consistent with what was actually

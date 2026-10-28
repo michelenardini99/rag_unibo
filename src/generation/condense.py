@@ -17,11 +17,10 @@ CONDENSE_SYSTEM_PROMPT = (
         (es. "non", "senza", "eccetto", "a differenza di", "diverso da"). 
         Se presente, assicurati che la negazione sia esplicitamente preservata 
         nella domanda riformulata.
-    - Se la nuova domanda ha una struttura diversa da quella precedente, mantieni comunque nell'domanda riformulata
+    - Se la nuova domanda ha una struttura diversa da quella precedente, mantieni comunque nell'domanda riformulata 
         l'argomento/le entità principali della conversazione (es. nome di corso, procedura, programma) necessarie a capirla da sola.
-    - Se l'ultimo messaggio dell'assistente è una domanda di chiarimento e la nuova domanda ne è la risposta
-        (una risposta breve che sceglie una delle alternative proposte), riformula l'ultima domanda dello
-        studente aggiungendo il dettaglio fornito.
+    - Non aggiungere il nome di un corso di laurea che lo studente non ha scritto nella nuova domanda: il corso
+        dello studente è gestito a parte.
 
     Esempi:
 
@@ -44,12 +43,6 @@ CONDENSE_SYSTEM_PROMPT = (
     Assistente: [risposta]
     Nuova domanda: E in quanto tempo arriva la risposta?
     Domanda riformulata: In quanto tempo arriva la risposta alla richiesta di equipollenza di un titolo di laurea conseguito all'estero?
-
-    Cronologia:
-    Utente: Quali sono gli orari di apertura dello sportello?
-    Assistente: Di quale sede: Bologna, Forlì o Rimini?
-    Nuova domanda: Forlì
-    Domanda riformulata: Quali sono gli orari di apertura dello sportello della sede di Forlì?
 
     Ora riformula:
 
@@ -110,7 +103,12 @@ DECOMPOSE_SYSTEM_PROMPT = (
       invariata, su un'unica riga.
     - Se la domanda contiene più richieste distinte, dividila in altrettante domande autonome
       e complete, una per riga, ciascuna comprensibile da sola: ripeti in ciascuna il
-      soggetto/corso/contesto necessario, senza pronomi o riferimenti che rimandano alle altre righe.
+      soggetto/corso/procedura/contesto necessario, senza pronomi o riferimenti che rimandano alle altre righe.
+    - Attenzione alle richieste che, nella domanda originale, dipendono implicitamente dalla
+      procedura o dall'argomento nominato in una clausola precedente (es. "...per presentare X,
+      quanto costa Y" dove Y è inteso come "Y di/per X", non Y in generale): la sotto-domanda
+      risultante deve nominare esplicitamente quella procedura, non solo il corso, altrimenti
+      diventa una domanda diversa e più generica di quella posta.
     - Non rispondere alle domande, non aggiungere spiegazioni, numerazione, elenchi puntati o altro testo.
     - Mantieni la lingua originale (italiano).
 
@@ -119,11 +117,18 @@ DECOMPOSE_SYSTEM_PROMPT = (
     Output:
     Qual è il voto minimo per superare la prova finale?
 
-    Esempio 2 (due richieste distinte):
+    Esempio 2 (due richieste distinte, argomenti già autonomi):
     Domanda: Quali sono i requisiti per presentare domanda di laurea in Psicologia scolastica e di comunità, e quali invece per poter accedere al corso?
     Output:
     Quali sono i requisiti per presentare domanda di laurea nel corso di laurea magistrale in Psicologia scolastica e di comunità?
     Quali sono i requisiti per accedere al corso di laurea magistrale in Psicologia scolastica e di comunità?
+
+    Esempio 3 (una richiesta dipende implicitamente dalla procedura nominata nella clausola precedente):
+    Domanda: Quali sono i requisiti per presentare domanda di laurea in Psicologia scolastica e di comunità, quanto costa la marca da bollo, e qual è la scala di voto della prova finale?
+    Output:
+    Quali sono i requisiti per presentare domanda di laurea nel corso di laurea magistrale in Psicologia scolastica e di comunità?
+    Quanto costa la marca da bollo per la domanda di laurea nel corso di laurea magistrale in Psicologia scolastica e di comunità?
+    Qual è la scala di voto della prova finale nel corso di laurea magistrale in Psicologia scolastica e di comunità?
 
     Ora analizza:
 

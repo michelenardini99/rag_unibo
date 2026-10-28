@@ -19,27 +19,20 @@ SYSTEM_PROMPT = (
     "quell'informazione non vale per la domanda attuale a meno che non sia ripetuta anche "
     "nel CONTESTO qui sotto. In caso di dubbio, tratta ogni domanda come indipendente dalla "
     "cronologia e basati solo sul CONTESTO fornito per questo turno.\n\n"
-    "Se nel CONTESTO la risposta cambia a seconda di una condizione che la domanda non "
-    "specifica (ad esempio un periodo, una sede o una categoria di studenti):\n"
-    "- se i casi sono due o tre e la risposta per ciascuno è breve, rispondi per ciascun "
-    "caso, indicando chiaramente a quale caso si riferisce ogni parte;\n"
-    "Il titolo di ogni blocco di CONTESTO (dopo il numero) dice a quale sezione, e quindi "
-    "a quale caso, si riferisce il suo contenuto: usalo per non mescolare regole di casi "
-    "diversi in un'unica lista.\n"
-    "- se i casi sono di più, o la risposta completa sarebbe troppo lunga, non rispondere "
-    "e non elencare i casi: la tua intera risposta deve essere solo 'CHIARIMENTO:' seguito "
-    "da una sola domanda breve che chieda allo studente quale caso lo riguarda, elencando "
-    "le alternative presenti nel CONTESTO.\n"
-    "Le righe di una tabella (ad esempio più date o scadenze, una per riga) sono casi "
-    "diversi: se la domanda non indica a quale riga si riferisce, non scegliere la prima, "
-    "applica le stesse regole.\n"
-    "Se il CONTESTO contiene un solo caso, o la domanda specifica già la condizione, "
-    "rispondi direttamente.\n\n"
-    "Il titolo di ogni blocco indica anche se viene dalle pagine di un corso di laurea o "
+    "Se il contesto riporta risposte diverse per casistiche diverse(es. sessioni di laurea, "
+    "scadenze o rate distinte, studenti iscritti a anni differenti o corsi differenti)"
+    "e la domanda non specifica a quale casistica si riferisce, elenca tutte le "
+    "possibili risposte, indicando per ciascuna a quale casistica si riferisce, se invece "
+    "la domanda specifica una casistica, rispondi solo per quella.\n\n"
+    "Il titolo di ogni blocco indica se viene dalle pagine di un corso di laurea o "
     "da quelle generali di ateneo. Se è indicato il CORSO DELLO STUDENTE, usa solo i "
     "blocchi di quel corso e quelli generali di ateneo; se l'informazione richiesta "
-    "c'è solo per un altro corso, dillo esplicitamente, indicando a quale corso si "
-    "riferisce.\n\n"
+    "c'è solo per un altro corso, rispondi comunque con quell'informazione, "
+    "specificando che si riferisce a quel corso.\n\n"
+    "Rispondi direttamente allo studente: non nominare il CONTESTO, i blocchi o il "
+    "corso dello studente come elementi del prompt (non scrivere ad esempio \"secondo "
+    "il contesto fornito\"); se un'informazione manca, di' semplicemente che non è "
+    "disponibile nei documenti consultati.\n\n"
     "Ogni blocco di CONTESTO inizia con il suo numero tra parentesi quadre. Per ogni "
     "affermazione cita il numero del blocco da cui l'hai presa, sempre tra parentesi "
     "quadre, uno per coppia di parentesi (più blocchi: uno dopo l'altro). Non scrivere "
@@ -47,68 +40,15 @@ SYSTEM_PROMPT = (
     "dopo la tua risposta."
 )
 
-CLARIFICATION_MARKER = "CHIARIMENTO:"
-
-
-class ClarificationDetector:
-    """Watches the start of a streamed answer for `CLARIFICATION_MARKER`
-    (the model asking the student which case applies, see SYSTEM_PROMPT),
-    holding tokens back only until the marker is confirmed or ruled out, so
-    it is never shown.
-
-    After the stream, `is_clarification` tells whether the answer was a
-    question: if so, the app shows no sources list under it.
-    """
-
-    def __init__(self):
-        self._head = ""
-        self.is_clarification: bool | None = None
-
-    def feed(self, token: str) -> str:
-        """Returns the part of the stream that can be passed on."""
-        if self.is_clarification is not None:
-            return token
-        self._head += token
-        head = self._head.lstrip()
-        if len(head) < len(CLARIFICATION_MARKER) and CLARIFICATION_MARKER.startswith(head.upper()):
-            return ""
-        self.is_clarification = head.upper().startswith(CLARIFICATION_MARKER)
-        return head[len(CLARIFICATION_MARKER):].lstrip() if self.is_clarification else self._head
-
-    def flush(self) -> str:
-        """Returns whatever was held back, once the stream has ended."""
-        if self.is_clarification is None:
-            self.is_clarification = False
-            return self._head
-        return ""
-
-
-def strip_clarification_marker(text: str) -> str:
-    """`text` without a leading `CLARIFICATION_MARKER`, if it has one."""
-    stripped = text.lstrip()
-    if stripped.upper().startswith(CLARIFICATION_MARKER):
-        return stripped[len(CLARIFICATION_MARKER):].lstrip()
-    return text
-
-
 # One citation: "[3]", or the list/range forms the model also writes despite
 # the prompt, "[3, 4, 5]" and "[3-5]".
 _CITATION = r"\[\s*\d+(?:\s*[,;\-–]\s*\d+)*\s*\]"
 _CITATION_RE = re.compile(_CITATION)
 # What `strip_citations` removes: a run of citations with its leading space
-# (" [1]", " [1], [2], [3]", " [1][3]", " [3, 4, 5]"), or a clarification
-# marker the model put mid-answer — it sometimes lists the cases and then
-# ends with "CHIARIMENTO: ...?", where the question is fine but the marker
-# isn't. Uppercase only, so a plain "per un chiarimento: contatta..." stays.
-_CITATION_GROUP_RE = re.compile(
-    rf"\s*{_CITATION}(?:\s*,?\s*{_CITATION})*|" + re.escape(CLARIFICATION_MARKER) + r"[ \t]*"
-)
-# A text tail that may still turn into one of those once more tokens arrive.
-_PENDING_CITATION_RE = re.compile(
-    rf"(?:\s*{_CITATION}\s*,?)*\s*(?:\[[\d\s,;\-–]*)?$|" + re.escape(CLARIFICATION_MARKER) + r"\s*$|(?:" + "|".join(
-        re.escape(CLARIFICATION_MARKER[:i]) for i in range(len(CLARIFICATION_MARKER), 0, -1)
-    ) + r")$"
-)
+# (" [1]", " [1], [2], [3]", " [1][3]", " [3, 4, 5]").
+_CITATION_GROUP_RE = re.compile(rf"\s*{_CITATION}(?:\s*,?\s*{_CITATION})*")
+# A text tail that may still turn into one once more tokens arrive.
+_PENDING_CITATION_RE = re.compile(rf"(?:\s*{_CITATION}\s*,?)*\s*(?:\[[\d\s,;\-–]*)?$")
 
 
 def _cited_numbers(answer: str) -> list[int]:
@@ -123,11 +63,10 @@ def _cited_numbers(answer: str) -> list[int]:
 
 
 def strip_citations(text: str) -> str:
-    """Removes "[n]" citations (and a stray mid-answer clarification marker)
-    from an answer. The model still cites (the code needs it to know which
-    sources to list, see `format_sources`), but the student only sees the
-    sources list: several chunks of one page made the answer read
-    "... 29 ottobre 2026 [1], [2], [3]."."""
+    """Removes "[n]" citations from an answer. The model still cites (the
+    code needs it to know which sources to list, see `format_sources`), but
+    the student only sees the sources list: several chunks of one page made
+    the answer read "... 29 ottobre 2026 [1], [2], [3]."."""
     return _CITATION_GROUP_RE.sub("", text)
 
 

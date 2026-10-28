@@ -5,12 +5,16 @@ import chainlit as cl
 from config import settings
 from embedding.embedder import build_embedding_model
 from generation.condense import condense_question, decompose_question
+from generation.hyde import hyde_query
+from generation.smalltalk import small_talk_reply
+from generation.topic import OFF_TOPIC_REPLY, is_off_topic
 from generation.generator import astream_response, build_llm
-from generation.prompt import (CitationStripper, ClarificationDetector, build_prompt, format_sources,
-                               question_for_answer, strip_citations, strip_clarification_marker)
+from generation.prompt import (CitationStripper, build_prompt, course_display_name, format_sources, question_for_answer,
+                               strip_citations)
 from llama_index.core.storage.docstore import SimpleDocumentStore
 from qdrant_client import QdrantClient
-from retrieval.query_filters import closest_known_value, course_tipo_laurea_map, extract_query_filters, known_values_for_fields, needs_course_disambiguation
+from retrieval.query_filters import (course_tipo_laurea_map, extract_query_filters, known_values_for_fields,
+                                     match_course_answer, names_course_heads)
 from retrieval.reranker import build_reranker
 from retrieval.retriever import _retrieve_locked
 import threading
@@ -122,6 +126,12 @@ async def on_message(msg: Message):
     query = msg.content
     history = user_session.get("history")
 
+    # Greetings and thanks get a fixed reply: no search, no sources, and not
+    # added to history (where the condensation took the reply for a question).
+    if reply := small_talk_reply(query):
+        await Message(content=reply).send()
+        return
+
     debug = msg.modes.get("debug_selector") == "debug"
 
     async with _step("Analisi e Condensazione query", debug) as step_condense:
@@ -129,13 +139,26 @@ async def on_message(msg: Message):
         # condense_question is a blocking HTTP call; to_thread keeps it off the event loop.
         search_query = await asyncio.to_thread(condense_question, LLM, history, query)
 
+        # The course travels through the session, not through the rewrite: a
+        # rewrite naming a course the student didn't name now, other than the
+        # session's, is dropped for the student's own message (it once revived
+        # "Ingegneria Informatica" from four turns back, against the session's
+        # Psicologia, and the answer refused over the mismatch).
+        known_courses = KNOWN_VALUES.get("corso") or []
+        allowed = names_course_heads(query, known_courses) | {user_session.get("default_corso")}
+        if names_course_heads(search_query, known_courses) - allowed:
+            print(f"[condense] rewrite {search_query!r} names a course the student didn't -> using {query!r}")
+            search_query = query
+
         step_condense.output = f"Query ottimizzata per il Vector DB:\n`{search_query}`"
 
         # Both depend only on search_query, not on each other: run them
         # concurrently so their latencies overlap instead of adding up.
         sub_queries, extracted_filters = await asyncio.gather(
             asyncio.to_thread(decompose_question, LLM, search_query),
-            asyncio.to_thread(extract_query_filters, LLM, search_query, KNOWN_VALUES, TIPO_LAUREA_BY_CORSO),
+            # The course must be named by the student (`query`), not only by the
+            # condensed rewrite; one named earlier is kept as default_corso.
+            asyncio.to_thread(extract_query_filters, LLM, search_query, KNOWN_VALUES, TIPO_LAUREA_BY_CORSO, query),
         )
         if len(sub_queries) > 1:
             step_condense.output += "\nDomanda scomposta in:\n" + "\n".join(f"- `{q}`" for q in sub_queries)
@@ -149,57 +172,115 @@ async def on_message(msg: Message):
     async with _step("Ricerca Documenti", debug) as step_retrieve:
         step_retrieve.input = search_query
 
+        # A course the student names becomes the session's course, kept for the
+        # rest of the conversation until they name another one.
         if extracted_corso:
-            priority_corso = extracted_corso
-            user_session.set("default_corso", priority_corso)
-            chunks = await asyncio.to_thread(
-                _retrieve_locked, lock, sub_queries, VECTOR_STORE, settings.qdrant_collection, EMBED_MODEL, RERANKER, DOCSTORE,
-                priority_corso=priority_corso,
-            )
-        else:
-            probe_chunks = await asyncio.to_thread(
-                _retrieve_locked, lock, sub_queries, VECTOR_STORE, settings.qdrant_collection, EMBED_MODEL, RERANKER, DOCSTORE,
-                priority_corso=None,
+            user_session.set("default_corso", extracted_corso)
+        corso = user_session.get("default_corso")
+
+        # Per question, so a repeated search (course chosen after "nothing
+        # found") asks the model only once.
+        off_topic: dict[str, bool] = {}
+        hyde: dict[str, str] = {}
+
+        async def check_off_topic(question: str) -> bool:
+            if question not in off_topic:
+                off_topic[question] = await asyncio.to_thread(is_off_topic, LLM, question)
+            return off_topic[question]
+
+        async def retrieve_in(course: str | None, queries: list[str]) -> list[dict]:
+            # Only the university-wide documents, plus the course's if one is known.
+            return await asyncio.to_thread(
+                _retrieve_locked, lock, queries, VECTOR_STORE, settings.qdrant_collection, EMBED_MODEL, RERANKER, DOCSTORE,
+                priority_corso=course, scope=[course] if course else [],
             )
 
-            if needs_course_disambiguation(probe_chunks, default_corso):
-                known_courses = KNOWN_VALUES.get("corso") or []
-                course_list = "\n".join(f"- {c}" for c in known_courses)
-                res = await AskUserMessage(
-                    content=(
-                        "Questa domanda potrebbe riguardare più corsi — per rispondere con precisione "
-                        f"ho bisogno di sapere il tuo corso di laurea, tra questi:\n{course_list}"
-                    ),
-                    timeout=120,
-                ).send()
-                answer = (res or {}).get("output", "")
-                matched = closest_known_value(answer, known_courses)
-                print(f"[corso disambiguation] answer={answer!r} -> matched={matched}")
-                if matched:
-                    user_session.set("default_corso", matched)
-                    step_retrieve.output = f"Corso impostato: `{matched}`. Ripeto la ricerca.\n"
-                    chunks = await asyncio.to_thread(
-                        _retrieve_locked, lock, sub_queries, VECTOR_STORE, settings.qdrant_collection, EMBED_MODEL, RERANKER, DOCSTORE,
-                        priority_corso=matched,
-                    )
-                else:
-                    chunks = probe_chunks
-                    await Message(
-                        content=(
-                            f"Non ho riconosciuto \"{answer}\" tra i corsi disponibili — rispondo senza dare "
-                            "priorità a un corso specifico."
-                        )
-                    ).send()
-            elif default_corso:
-                chunks = await asyncio.to_thread(
-                    _retrieve_locked, lock, sub_queries, VECTOR_STORE, settings.qdrant_collection, EMBED_MODEL, RERANKER, DOCSTORE,
-                    priority_corso=default_corso,
+        async def search(course: str | None) -> tuple[list[dict], list[str]]:
+            """Retrieves for the sub-questions; if nothing clears the threshold,
+            retries once with a HyDE query (`generation.hyde`), which brings the
+            pages' wording to a colloquial question.
+
+            Only with a course: with none, nothing found means the answer may be
+            a course's, and the student is asked for it — a made-up passage
+            found loosely related university pages instead ("quando c'è il test
+            d'ingresso?" answered from the masters' and ISEE pages). Not for
+            off-topic questions either, for the same reason.
+
+            Returns:
+                tuple[list[dict], list[str]]: The chunks and the queries that found them.
+            """
+            chunks = await retrieve_in(course, sub_queries)
+            if chunks or not course or await check_off_topic(search_query):
+                return chunks, sub_queries
+            if search_query not in hyde:
+                hyde[search_query] = await asyncio.to_thread(hyde_query, LLM, search_query)
+            queries = [hyde[search_query]]
+            chunks = await retrieve_in(course, queries)
+            print(f"[hyde] {search_query!r} -> {len(chunks)} chunk con {hyde[search_query]!r}")
+            step_retrieve.output = (step_retrieve.output or "") + \
+                f"Nessun risultato: ricerca ripetuta con HyDE:\n`{hyde[search_query]}`\n"
+            return chunks, queries
+
+        chunks, searched = await search(corso)
+        nothing_found = not chunks
+        if not corso and chunks:
+            # With no course yet, some university page nearly always clears the
+            # threshold ("Conciliare studio e lavoro" for "chi è il coordinatore
+            # del corso?", the fees page for "scadenze delle domande di laurea"):
+            # the university has nothing for the question when the courses'
+            # pages are more relevant than its best one.
+            all_chunks = await asyncio.to_thread(
+                _retrieve_locked, lock, searched, VECTOR_STORE, settings.qdrant_collection, EMBED_MODEL, RERANKER, DOCSTORE,
+                priority_corso=None, scope=None,
+            )
+            best_course = max((c["score"] for c in all_chunks if c.get("corso")), default=0.0)
+            nothing_found = best_course > max(c["score"] for c in chunks)
+        if nothing_found and await check_off_topic(search_query):
+            # Unrelated to the university: asking for a course would make no sense.
+            await Message(content=OFF_TOPIC_REPLY).send()
+            return
+        if nothing_found:
+            # Nothing in scope: the answer may be another course's (or, with no
+            # course yet, a course's rather than the university's).
+            if corso:
+                others = "\n".join(f"- {course_display_name(c)}" for c in known_courses if c != corso)
+                ask = (
+                    f"Non ho trovato informazioni su questo argomento per il corso di "
+                    f"{course_display_name(corso)}. La domanda riguardava un altro corso? Se sì, "
+                    f"indicalo tra questi:\n{others}\n\nAltrimenti rispondi \"no\"."
                 )
             else:
-                chunks = probe_chunks
+                courses = "\n".join(f"- {course_display_name(c)}" for c in known_courses)
+                ask = (
+                    "Non ho trovato questa informazione tra i documenti generali dell'ateneo: potrebbe "
+                    f"dipendere dal tuo corso di laurea. Qual è il tuo corso, tra questi?\n{courses}"
+                )
+            res = await AskUserMessage(content=ask, timeout=120).send()
+            answer = (res or {}).get("output", "")
+            matched = match_course_answer(answer, known_courses)
+            print(f"[corso] nothing found for corso={corso}; answer={answer!r} -> matched={matched}")
+            if matched and matched != corso:
+                user_session.set("default_corso", matched)
+                corso = matched
+                # The rewrite may name the previous course ("Che ruolo ha Franco
+                # Callegati nel corso di Psicologia...?"): search and answer the
+                # student's own words for the new one.
+                search_query, sub_queries = query, [query]
+                step_retrieve.output = f"Corso impostato: `{matched}`. Ripeto la ricerca.\n"
+                chunks, _ = await search(matched)
+            elif not corso and chunks:
+                # No course given: answer from the university pages found.
+                pass
+            else:
+                chunks = []
 
         step_retrieve.output = (step_retrieve.output or "") + \
             f"Recuperati e riordinati **{len(chunks)} chunk** rilevanti da `{settings.qdrant_collection}`."
+
+    if not chunks:
+        where = f"per il corso di {course_display_name(corso)}" if corso else "nei documenti disponibili"
+        await Message(content=f"Non ho trovato informazioni su questo argomento {where}.").send()
+        return
 
     final_response = Message(content="")
     answer_question = question_for_answer(search_query, sub_queries)
@@ -212,26 +293,22 @@ async def on_message(msg: Message):
             step_prompt.output = _format_debug_prompt(build_prompt(answer_question, chunks, history, student_corso))
 
     response_text = ""
-    clarification = ClarificationDetector()
     stripper = CitationStripper()
     async for token in astream_response(LLM, answer_question, chunks, history, student_corso):
         response_text += token
-        if visible := stripper.feed(clarification.feed(token)):
+        if visible := stripper.feed(token):
             await final_response.stream_token(visible)
-    if tail := stripper.feed(clarification.flush()) + stripper.flush():
+    if tail := stripper.flush():
         await final_response.stream_token(tail)
-    # A clarifying question ("Per quale sessione...?") cites nothing: no sources.
-    # Otherwise listed by the code, not the model: links come from the chunks' metadata.
-    sources = "" if clarification.is_clarification else format_sources(response_text, chunks)
+    # Listed by the code, not the model: links come from the chunks' metadata.
+    sources = format_sources(response_text, chunks)
     if sources:
         await final_response.stream_token(sources)
 
     await final_response.send()
 
-    # Without "[n]": next turn's numbers refer to different chunks. A
-    # clarifying question stays in history, so the student's reply ("1° anno")
-    # is condensed together with the question it answers.
-    history.append((search_query, strip_citations(strip_clarification_marker(response_text))))
+    # Without "[n]": next turn's numbers refer to different chunks.
+    history.append((search_query, strip_citations(response_text)))
     history = history[-settings.max_history_turns:]
     user_session.set("history", history)
 

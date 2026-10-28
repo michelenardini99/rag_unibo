@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     retrieval_prefetch_limit: int = 50
     retrieval_candidate_limit: int = 20
     rerank_top_k: int = 5
+    subquery_top_k: int = 4
+    decomposed_top_k: int = 8
     rerank_score_threshold: float = 0.3
     merged_threshold: float = 0.12
     corso_priority_boost: float = 0.1

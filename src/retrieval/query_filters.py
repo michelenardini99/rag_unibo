@@ -237,7 +237,8 @@ def extract_categorical_filters(llm: OpenAILike, query: str, known_values: dict[
 
 
 def extract_query_filters(
-    llm: OpenAILike, query: str, known_values: dict[str, list[str]], tipo_laurea_by_corso: dict[str, str] | None = None
+    llm: OpenAILike, query: str, known_values: dict[str, list[str]], tipo_laurea_by_corso: dict[str, str] | None = None,
+    student_text: str | None = None,
 ) -> dict[str, str]:
     """Extracts every metadata filter a query implies: "corso" via a
     constrained LLM classification call, with "tipo_laurea" derived from it
@@ -250,6 +251,15 @@ def extract_query_filters(
             categorical field, see `known_values_for_fields`.
         tipo_laurea_by_corso (dict[str, str] | None): corso -> tipo_laurea,
             see `course_tipo_laurea_map`.
+        student_text (str | None): The message as the student typed it, if
+            `query` is a condensed rewrite: the course must be mentioned
+            there (see `mentions_course`). The condensation can carry a
+            course over from the assistant's own previous answer — "Cosa è
+            stato affrontato nel Social Network Analysis?" became "...durante
+            il Corso di Laurea in Infermieristica?" because the previous
+            answer said "Infermieristica", a course the student never named.
+            A course the student did name earlier is kept by the app as the
+            session's course, so it isn't lost by this.
 
     Returns:
         dict[str, str]: field -> value, ready to AND into a Qdrant filter
@@ -257,11 +267,79 @@ def extract_query_filters(
     """
     filters = extract_categorical_filters(llm, query, known_values)
     corso = filters.get("corso")
+    if corso is not None and not mentions_course(student_text or query, corso):
+        del filters["corso"]
+        corso = None
     if corso is not None:
         tipo_laurea = (tipo_laurea_by_corso or {}).get(corso)
         if tipo_laurea is not None:
             filters["tipo_laurea"] = tipo_laurea
     return filters
+
+
+def mentions_course(query: str, corso: str) -> bool:
+    """True if `query` contains at least one word of the course identifier
+    (by its first 5 letters, so "informatica" matches "Informatiche").
+
+    A check on the classification model's answer, which can name a course the
+    question never mentions: on "Se sono iscritto al primo anno in corso,
+    quali requisiti...?" it answered PsicologiaScolasticaComunita — "corso"
+    read as a course, and the course of its prompt's only example.
+
+    Args:
+        query (str): The question.
+        corso (str): A CamelCase course identifier.
+
+    Returns:
+        bool: True if the course is plausibly mentioned.
+    """
+    stems = {w.lower()[:5] for w in re.findall(r"[A-Z][a-z]+", corso) if len(w) >= 5}
+    plain = unicodedata.normalize("NFKD", query.lower()).encode("ascii", "ignore").decode("ascii")
+    return any(w[:5] in stems for w in re.findall(r"[a-z]+", plain) if len(w) >= 5)
+
+
+def _plain_words(text: str) -> list[str]:
+    plain = unicodedata.normalize("NFKD", text.lower()).encode("ascii", "ignore").decode("ascii")
+    return re.findall(r"[a-z]+", plain)
+
+
+def names_course_heads(text: str, courses: list[str]) -> set[str]:
+    """The courses whose distinctive first word ("Psicologia", "Ingegneria",
+    "Infermieristica", by its first 5 letters) appears in `text`.
+
+    Stricter than `mentions_course`, for checking what a condensed rewrite
+    names: there, "Psicologia e Scienze della Comunità" must name Psicologia
+    only, not also IngegneriaScienzeInformatiche through "scienze".
+
+    Args:
+        text (str): Any text.
+        courses (list[str]): CamelCase course identifiers.
+
+    Returns:
+        set[str]: The courses named.
+    """
+    stems = {w[:5] for w in _plain_words(text) if len(w) >= 5}
+    return {c for c in courses if (head := re.match(r"[A-Z][a-z]+", c)) and head.group(0).lower()[:5] in stems}
+
+
+def match_course_answer(answer: str, courses: list[str]) -> str | None:
+    """The course a student's reply to "qual è il tuo corso?" refers to: by
+    fuzzy match on the whole name (`closest_known_value`), or else the only
+    course whose distinctive word it contains ("ingegneria" alone was too
+    far from "IngegneriaScienzeInformatiche" for the fuzzy match).
+
+    Args:
+        answer (str): The student's reply.
+        courses (list[str]): CamelCase course identifiers.
+
+    Returns:
+        str | None: The course, or None (no course, or "no").
+    """
+    matched = closest_known_value(answer, courses)
+    if matched:
+        return matched
+    named = names_course_heads(answer, courses)
+    return next(iter(named)) if len(named) == 1 else None
 
 
 _ACCENT_CLASSES = {"a": "[aàáâ]", "e": "[eèéê]", "i": "[iìíî]", "o": "[oòóô]", "u": "[uùúû]"}

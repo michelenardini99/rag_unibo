@@ -99,6 +99,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--recreate", action="store_true", help="Ricrea da 0 i vettori della collezione data")
+    parser.add_argument("--chunk-max-tokens", type=int,
+                        help="Costruisce un indice separato con questa dimensione dei chunk (es. 256, 768), "
+                             "per il confronto in eval.evaluate_retrieval; senza, aggiorna l'indice di produzione")
 
     args = parser.parse_args()
 
@@ -107,14 +110,23 @@ if __name__ == "__main__":
     if args.recreate:
         recreate = True
 
-    docstore_path = settings.data_chunked_dir / "docstore.json"
+    chunked_dir, collection_name = settings.data_chunked_dir, settings.qdrant_collection
+    chunk_max_tokens = args.chunk_max_tokens or settings.chunk_max_tokens
+    if args.chunk_max_tokens:
+        # Same naming as eval.evaluate_retrieval.RetrievalConfig.index_key.
+        index_key = f"tok{args.chunk_max_tokens}-{settings.embedding_model_id.replace('/', '-')}"
+        chunked_dir, collection_name = chunked_dir / index_key, f"{collection_name}__{index_key}"
+        chunked_dir.mkdir(parents=True, exist_ok=True)
+
+    docstore_path = chunked_dir / "docstore.json"
     docstore = SimpleDocumentStore.from_persist_path(str(docstore_path)) if docstore_path.exists() else None
 
     indexing(IndexConfig(
         root=settings.data_converted_dir,
-        chunked_dir=settings.data_chunked_dir,
-        collection_name=settings.qdrant_collection,
+        chunked_dir=chunked_dir,
+        collection_name=collection_name,
         device_id=settings.embeddings_device_id,
         docstore=docstore,
-        recreate=recreate
+        recreate=recreate,
+        chunk_max_tokens=chunk_max_tokens,
     ))
