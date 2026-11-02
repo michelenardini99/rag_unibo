@@ -9,7 +9,10 @@ Le scelte descritte nel seguito discendono in larga parte da quattro vincoli di 
 \textbf{riservatezza}: l'intero sistema, dai modelli linguistici al database vettoriale, viene eseguito in locale,
 senza alcuna chiamata a servizi cloud di terze parti. Il secondo è l'\textbf{hardware disponibile}: il sistema è stato
 sviluppato e valutato sulle risorse messe a disposizione per il progetto, due GPU da 16~GB ciascuna, una dedicata
-al modello linguistico e l'altra ai modelli di embedding e di reranking. Questa configurazione esclude i modelli
+al modello linguistico e l'altra ai modelli di embedding e di reranking; durante l'indicizzazione se ne aggiunge
+temporaneamente una terza, per il modello multimodale che descrive le immagini dei documenti. Quest'ultima è
+una conseguenza della scelta di generare le risposte con un modello solo testuale:
+con un modello multimodale in grado di svolgere entrambi i compiti, non sarebbe più necessaria. Questa configurazione esclude i modelli
 linguistici di dimensioni maggiori e ha guidato il dimensionamento di ogni componente; non è però un requisito del
 sistema, che con risorse diverse potrebbe adottare modelli più grandi senza modifiche alla sua architettura. Il terzo è la \textbf{precisione fattuale}: in un dominio
 fatto di scadenze, importi e requisiti, una risposta fluida ma con una data sbagliata è peggiore di una risposta che
@@ -29,5 +32,3 @@ una stessa domanda può cambiare a seconda del corso dello studente.
 \input{03_Architettura_e_sviluppo_del_sistema/3.5_Componente_di_generazione}
 
 \input{03_Architettura_e_sviluppo_del_sistema/3.6_Architettura_software_e_infrastruttura}
-
-\input{03_Architettura_e_sviluppo_del_sistema/3.7_Scelte_progettuali_e_trade-off}

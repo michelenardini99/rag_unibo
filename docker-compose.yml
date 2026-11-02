@@ -1,9 +1,3 @@
-# Le porte sono pubblicate solo su 127.0.0.1: vLLM e Qdrant non hanno autenticazione e non devono
-# essere raggiungibili da altre macchine. Per l'interfaccia da remoto si usa un tunnel SSH
-# (o l'inoltro delle porte di VS Code), oppure APP_BIND=0.0.0.0 dietro un reverse proxy con login.
-#
-# Le immagini sono fissate per versione e digest: un `docker compose pull` non le cambia.
-
 services:
   qdrant:
     image: qdrant/qdrant:v1.18.3@sha256:0bd98fa7977f1e75694779359ca4e212822e5a71334e28421182f72f209d5286
@@ -86,9 +80,7 @@ services:
             - driver: nvidia
               device_ids: ["${VISION_DEVICE_ID:-2}"]
               capabilities: ["gpu"]
-
-  # Interfaccia Chainlit con la pipeline di risposta, embedding e reranker (vedi Dockerfile).
-  # Legge l'indice già costruito (datasets/chunked) e i modelli già scaricati (.cache/huggingface).
+              
   app:
     build: .
     image: rag_unibo-app

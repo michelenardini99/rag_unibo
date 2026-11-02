@@ -1,6 +1,8 @@
 from llama_index.core.base.llms.types import ChatMessage, MessageRole, TextBlock
 from llama_index.llms.openai_like import OpenAILike
 
+from config import settings
+
 CONDENSE_SYSTEM_PROMPT = (
     """Il tuo compito è riformulare l'ultima domanda dello studente in una 
     domanda autonoma e completa, comprensibile senza la cronologia della conversazione, SOLO
@@ -21,6 +23,8 @@ CONDENSE_SYSTEM_PROMPT = (
         l'argomento/le entità principali della conversazione (es. nome di corso, procedura, programma) necessarie a capirla da sola.
     - Non aggiungere il nome di un corso di laurea che lo studente non ha scritto nella nuova domanda: il corso
         dello studente è gestito a parte.
+    - Se il nuovo messaggio non chiede nulla (un saluto, un ringraziamento, un congedo o una conferma come
+        "grazie", "ok perfetto", "a presto"), restituiscilo invariato: non è un seguito della domanda precedente.
 
     Esempi:
 
@@ -93,8 +97,32 @@ def condense_question(llm: OpenAILike, history: list[tuple[str, str]], query: st
     return response.message.content.strip()
 
 
+COURTESY = "CORTESIA"
+OFF_TOPIC = "FUORI TEMA"
+
+OFF_TOPIC_REPLY = (
+    f"Posso aiutarti solo con questioni relative all'{settings.assistant_institution}: "
+    f"{settings.assistant_scope}."
+)
+COURTESY_REPLY = "Se hai domande sull'università, chiedi pure."
+
 DECOMPOSE_SYSTEM_PROMPT = (
-    """Il tuo compito è analizzare una domanda di uno studente e determinare se contiene
+    """Il tuo compito è analizzare un messaggio di uno studente.
+
+    Prima stabilisci se il messaggio contiene almeno una richiesta:
+    - Se è solo un saluto, un ringraziamento, un congedo o una conferma (es. "ciao", "grazie mille",
+      "ok perfetto", "a presto"), rispondi su un'unica riga con "CORTESIA:" seguito da una breve risposta
+      cordiale in italiano, che inviti a fare domande sull'università.
+    - Se chiede qualcosa che non ha alcun legame possibile con l'università o con la vita da studente
+      (es. "chi ha vinto la Serie A?", "come si cucina la carbonara?"), rispondi solo "FUORI TEMA".
+      È invece una domanda tutto ciò che può riguardare uno studente universitario: corsi, esami, lezioni e
+      qualunque argomento di studio (anche tecnico o teorico), persone che possono essere docenti o personale
+      dell'ateneo, tasse, borse, iscrizioni, procedure, servizi, alloggi, trasporti, mense e agevolazioni nella
+      città universitaria. Nel dubbio, trattalo come una domanda.
+    - Se il messaggio contiene una domanda insieme a un saluto o a un ringraziamento (es. "grazie, e quando
+      scade la seconda rata?"), ignora il saluto e analizza la domanda come indicato sotto.
+
+    Se è una domanda, determina se contiene
     più richieste informative distinte (es. unite da "e", "oppure", o elencate in sequenza),
     che nel corpus documentale dell'ateneo potrebbero essere coperte da documenti diversi.
 
@@ -130,6 +158,16 @@ DECOMPOSE_SYSTEM_PROMPT = (
     Quanto costa la marca da bollo per la domanda di laurea nel corso di laurea magistrale in Psicologia scolastica e di comunità?
     Qual è la scala di voto della prova finale nel corso di laurea magistrale in Psicologia scolastica e di comunità?
 
+    Esempio 4 (nessuna richiesta):
+    Domanda: grazie mille, gentilissimo
+    Output:
+    CORTESIA: Prego! Se hai altre domande sull'università, chiedi pure.
+
+    Esempio 5 (estraneo all'università):
+    Domanda: mi consigli una serie tv da guardare stasera?
+    Output:
+    FUORI TEMA
+
     Ora analizza:
 
     Domanda: {query}
@@ -153,12 +191,20 @@ def build_decompose_prompt(query: str) -> list[ChatMessage]:
     ]
 
 
-def decompose_question(llm: OpenAILike, query: str, max_subquestions: int = 3) -> list[str]:
+def decompose_question(llm: OpenAILike, query: str, max_subquestions: int = 3) -> tuple[list[str], str | None]:
     """Splits a question into independently-retrievable sub-questions when it
     bundles multiple distinct informational needs that a single combined
     query's retrieval pass could fail to cover jointly (see
     REPORT_ARCHITETTURA.md §5.4/§6.3: one compound query reranked as a whole
     can let one sub-topic's chunks crowd the other out of the top-k).
+
+    The same call recognizes messages that aren't questions, so no extra model
+    call is needed for them: greetings and thanks get the model's own short
+    reply, and questions unrelated to the university a fixed one. Before, a
+    word list caught greetings ahead of retrieval and a separate classifier
+    caught off-topic questions after it, when nothing was found; the list
+    missed any other wording, and the classifier, asked about a question,
+    judged most greetings pertinent, so "ciao" got "Qual è il tuo corso?".
 
     Args:
         llm (OpenAILike): Model used to decompose the question.
@@ -167,12 +213,20 @@ def decompose_question(llm: OpenAILike, query: str, max_subquestions: int = 3) -
             kept, to cap the retrieval fan-out cost.
 
     Returns:
-        list[str]: `[query]` if the model judges it a single request (or on
-        an unparseable/empty response — fail safe to the original behavior);
-        otherwise the standalone sub-questions, capped at `max_subquestions`.
+        tuple[list[str], str | None]: The sub-questions, and None — or, if
+        the message isn't a question, `[query]` and the reply to send instead
+        of searching. The sub-questions are `[query]` if the model judges it
+        a single request (or on an unparseable/empty response — fail safe to
+        the original behavior); otherwise the standalone sub-questions,
+        capped at `max_subquestions`.
     """
     response = llm.chat(build_decompose_prompt(query), max_tokens=200, temperature=0.0)
     lines = [line.strip() for line in (response.message.content or "").strip().splitlines() if line.strip()]
     if not lines:
-        return [query]
-    return lines[:max_subquestions]
+        return [query], None
+    label = lines[0].upper()
+    if label.startswith(COURTESY):
+        return [query], lines[0][len(COURTESY):].lstrip(" :") or COURTESY_REPLY
+    if label.startswith(OFF_TOPIC):
+        return [query], OFF_TOPIC_REPLY
+    return lines[:max_subquestions], None

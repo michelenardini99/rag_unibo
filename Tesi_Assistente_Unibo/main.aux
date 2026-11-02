@@ -143,7 +143,7 @@
 \@writefile{lot}{\contentsline {table}{\numberline {3.5}{\ignorespaces Peso, nella rappresentazione sparsa del frammento \emph  {Change Laboratory} della Tabella~\ref {tab:metadati}, di quattro parole che portano significato contro quello di un articolo e di una preposizione: la rappresentazione sparsa assegna peso nullo alle seconde, pur comparendo entrambe nel testo.}}{44}{table.3.5}\protected@file@percent }
 \newlabel{tab:sparse-esempio}{{3.5}{44}{Peso, nella rappresentazione sparsa del frammento \emph {Change Laboratory} della Tabella~\ref {tab:metadati}, di quattro parole che portano significato contro quello di un articolo e di una preposizione: la rappresentazione sparsa assegna peso nullo alle seconde, pur comparendo entrambe nel testo}{table.3.5}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.3.2}Cosa viene trasformato in vettore}{44}{subsection.3.3.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.3}Il database vettoriale: Qdrant}{45}{subsection.3.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.3}Il database vettoriale: Qdrant}{44}{subsection.3.3.3}\protected@file@percent }
 \newlabel{lst:qdrant-point}{{3.1}{45}{Punto Qdrant del frammento \emph {Change Laboratory} (identificativo abbreviato nei valori numerici, per brevità)}{lstlisting.3.1}{}}
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {3.1}Punto Qdrant del frammento \emph  {Change Laboratory} (identificativo abbreviato nei valori numerici, per brevità).}{45}{lstlisting.3.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.3.4}L'indice a grafo: HNSW}{46}{subsection.3.3.4}\protected@file@percent }
@@ -151,8 +151,8 @@
 \newlabel{fig:hnsw}{{3.9}{47}{Ricerca del vicino più prossimo nel grafo HNSW (schematico): dal punto di ingresso nel livello più rado (Livello 2), la ricerca scende un livello alla volta muovendosi verso il nodo più vicino alla domanda a ogni passo, fino a raggiungere il livello più fitto (Livello 0, tutti i punti) ed esplorarne l'intorno. Le linee tratteggiate verticali collegano lo stesso punto presente su più livelli}{figure.3.9}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {3.4}Componente di retrieval}{47}{section.3.4}\protected@file@percent }
 \newlabel{sec:retrieval}{{3.4}{47}{Componente di retrieval}{section.3.4}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3.10}{\ignorespaces I quattro stadi del recupero, ciascuno descritto in questa sezione. Un quinto meccanismo, HyDE (Sezione~\ref {sec:hyde-retrieval}), interviene solo quando la ricerca ibrida non restituisce nulla.}}{47}{figure.3.10}\protected@file@percent }
-\newlabel{fig:imbuto-retrieval}{{3.10}{47}{I quattro stadi del recupero, ciascuno descritto in questa sezione. Un quinto meccanismo, HyDE (Sezione~\ref {sec:hyde-retrieval}), interviene solo quando la ricerca ibrida non restituisce nulla}{figure.3.10}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.10}{\ignorespaces I quattro stadi del recupero, ciascuno descritto in questa sezione. Un quinto meccanismo, HyDE, interviene solo quando il corso è noto e la ricerca ibrida non restituisce nulla.}}{47}{figure.3.10}\protected@file@percent }
+\newlabel{fig:imbuto-retrieval}{{3.10}{47}{I quattro stadi del recupero, ciascuno descritto in questa sezione. Un quinto meccanismo, HyDE, interviene solo quando il corso è noto e la ricerca ibrida non restituisce nulla}{figure.3.10}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.4.1}Analisi della domanda}{48}{subsection.3.4.1}\protected@file@percent }
 \newlabel{sec:analisi-domanda}{{3.4.1}{48}{Analisi della domanda}{subsection.3.4.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.4.2}Ricerca ibrida}{48}{subsection.3.4.2}\protected@file@percent }
@@ -169,49 +169,53 @@
 \citation{kwon2023vllm}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.5.1}Scelta del modello}{53}{subsection.3.5.1}\protected@file@percent }
 \newlabel{sec:scelta-modello}{{3.5.1}{53}{Scelta del modello}{subsection.3.5.1}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {3.6}{\ignorespaces Confronto tra i modelli candidati alla generazione, sulle 152 domande del benchmark di test, con giudice unico (Qwen2.5-14B-Instruct). La correttezza misura l'accordo con la risposta attesa, la fedeltà quanto le affermazioni della risposta sono supportate dai frammenti recuperati, la pertinenza quanto la risposta affronta la domanda posta.}}{53}{table.3.6}\protected@file@percent }
-\newlabel{tab:scelta-modello}{{3.6}{53}{Confronto tra i modelli candidati alla generazione, sulle 152 domande del benchmark di test, con giudice unico (Qwen2.5-14B-Instruct). La correttezza misura l'accordo con la risposta attesa, la fedeltà quanto le affermazioni della risposta sono supportate dai frammenti recuperati, la pertinenza quanto la risposta affronta la domanda posta}{table.3.6}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5.2}Struttura del prompt}{54}{subsection.3.5.2}\protected@file@percent }
-\newlabel{sec:prompt}{{3.5.2}{54}{Struttura del prompt}{subsection.3.5.2}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3.12}{\ignorespaces Struttura del prompt inviato al modello, con un esempio reale: la domanda ``quante lezioni devo seguire per forza?'' posta da uno studente di Infermieristica. Ogni frammento è un blocco numerato, preceduto dall'indicazione del corso o dell'ateneo e dal titolo della pagina e della sezione da cui proviene.}}{55}{figure.3.12}\protected@file@percent }
-\newlabel{fig:prompt}{{3.12}{55}{Struttura del prompt inviato al modello, con un esempio reale: la domanda ``quante lezioni devo seguire per forza?'' posta da uno studente di Infermieristica. Ogni frammento è un blocco numerato, preceduto dall'indicazione del corso o dell'ateneo e dal titolo della pagina e della sezione da cui proviene}{figure.3.12}{}}
-\@writefile{toc}{\contentsline {paragraph}{I frammenti.}{55}{section*.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5.2}Struttura del prompt}{53}{subsection.3.5.2}\protected@file@percent }
+\newlabel{sec:prompt}{{3.5.2}{53}{Struttura del prompt}{subsection.3.5.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.12}{\ignorespaces Struttura del prompt inviato al modello, con un esempio reale: la domanda ``quante lezioni devo seguire per forza?'' posta da uno studente di Infermieristica. Ogni frammento è un blocco numerato, preceduto dall'indicazione del corso o dell'ateneo e dal titolo della pagina e della sezione da cui proviene.}}{54}{figure.3.12}\protected@file@percent }
+\newlabel{fig:prompt}{{3.12}{54}{Struttura del prompt inviato al modello, con un esempio reale: la domanda ``quante lezioni devo seguire per forza?'' posta da uno studente di Infermieristica. Ogni frammento è un blocco numerato, preceduto dall'indicazione del corso o dell'ateneo e dal titolo della pagina e della sezione da cui proviene}{figure.3.12}{}}
+\@writefile{toc}{\contentsline {paragraph}{I frammenti.}{54}{section*.18}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{La domanda.}{55}{section*.19}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Le istruzioni.}{56}{section*.20}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5.3}Citazioni ed elenco delle fonti}{57}{subsection.3.5.3}\protected@file@percent }
-\newlabel{sec:citazioni}{{3.5.3}{57}{Citazioni ed elenco delle fonti}{subsection.3.5.3}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3.13}{\ignorespaces Dalla citazione all'elenco delle fonti, sull'esempio della Figura~\ref {fig:prompt}. Il modello cita il numero del blocco; il sistema lo traduce nel titolo e nell'indirizzo reali della pagina e lo rimuove dal testo mostrato.}}{57}{figure.3.13}\protected@file@percent }
-\newlabel{fig:citazioni}{{3.13}{57}{Dalla citazione all'elenco delle fonti, sull'esempio della Figura~\ref {fig:prompt}. Il modello cita il numero del blocco; il sistema lo traduce nel titolo e nell'indirizzo reali della pagina e lo rimuove dal testo mostrato}{figure.3.13}{}}
-\newlabel{sec:streaming}{{3.5.3}{58}{Risposta progressiva}{section*.21}{}}
-\@writefile{toc}{\contentsline {paragraph}{Risposta progressiva.}{58}{section*.21}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5.4}Gestione dei casi particolari}{58}{subsection.3.5.4}\protected@file@percent }
-\newlabel{sec:casi-particolari}{{3.5.4}{58}{Gestione dei casi particolari}{subsection.3.5.4}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3.14}{\ignorespaces Come il sistema tratta un messaggio. Il modello genera una risposta dai documenti solo quando il recupero ha trovato frammenti pertinenti; negli altri casi risponde con un messaggio fisso o chiede allo studente il corso.}}{58}{figure.3.14}\protected@file@percent }
-\newlabel{fig:casi-particolari}{{3.14}{58}{Come il sistema tratta un messaggio. Il modello genera una risposta dai documenti solo quando il recupero ha trovato frammenti pertinenti; negli altri casi risponde con un messaggio fisso o chiede allo studente il corso}{figure.3.14}{}}
-\@writefile{toc}{\contentsline {paragraph}{Saluti e ringraziamenti.}{59}{section*.22}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Nessun frammento pertinente.}{59}{section*.23}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Domande estranee all'università.}{59}{section*.24}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Informazione parzialmente presente.}{59}{section*.25}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {3.6}Architettura software e infrastruttura}{60}{section.3.6}\protected@file@percent }
-\newlabel{sec:infrastruttura}{{3.6}{60}{Architettura software e infrastruttura}{section.3.6}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {3.7}Scelte progettuali e trade-off}{60}{section.3.7}\protected@file@percent }
-\newlabel{sec:tradeoff}{{3.7}{60}{Scelte progettuali e trade-off}{section.3.7}{}}
-\@writefile{toc}{\contentsline {chapter}{\numberline {4}Validazione del sistema}{61}{chapter.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Le istruzioni.}{55}{section*.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5.3}Gestione dei casi particolari}{56}{subsection.3.5.3}\protected@file@percent }
+\newlabel{sec:casi-particolari}{{3.5.3}{56}{Gestione dei casi particolari}{subsection.3.5.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.13}{\ignorespaces Come il sistema tratta un messaggio. I messaggi che non sono domande sull'università vengono riconosciuti prima del recupero, dalla stessa chiamata al modello che scompone la domanda; il modello genera una risposta dai documenti solo quando il recupero ha trovato frammenti pertinenti.}}{56}{figure.3.13}\protected@file@percent }
+\newlabel{fig:casi-particolari}{{3.13}{56}{Come il sistema tratta un messaggio. I messaggi che non sono domande sull'università vengono riconosciuti prima del recupero, dalla stessa chiamata al modello che scompone la domanda; il modello genera una risposta dai documenti solo quando il recupero ha trovato frammenti pertinenti}{figure.3.13}{}}
+\@writefile{toc}{\contentsline {paragraph}{Messaggi che non sono domande.}{56}{section*.21}\protected@file@percent }
+\citation{docling2024}
+\citation{kwon2023vllm}
+\citation{es2023ragas}
+\@writefile{toc}{\contentsline {paragraph}{Nessun frammento pertinente.}{57}{section*.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Informazione parzialmente presente.}{57}{section*.23}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3.6}Architettura software e infrastruttura}{57}{section.3.6}\protected@file@percent }
+\newlabel{sec:infrastruttura}{{3.6}{57}{Architettura software e infrastruttura}{section.3.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6.1}Stack tecnologico}{58}{subsection.3.6.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3.6}{\ignorespaces Tecnologie principali del sistema.}}{58}{table.3.6}\protected@file@percent }
+\newlabel{tab:stack}{{3.6}{58}{Tecnologie principali del sistema}{table.3.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6.2}Distribuzione dei componenti}{58}{subsection.3.6.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3.14}{\ignorespaces Distribuzione del sistema su una singola macchina. I servizi in tratto continuo sono sempre attivi; quelli tratteggiati solo durante l'indicizzazione o la valutazione, che usano anche il servizio vllm. Ogni servizio che usa una GPU ne ha una dedicata.}}{59}{figure.3.14}\protected@file@percent }
+\newlabel{fig:deployment}{{3.14}{59}{Distribuzione del sistema su una singola macchina. I servizi in tratto continuo sono sempre attivi; quelli tratteggiati solo durante l'indicizzazione o la valutazione, che usano anche il servizio vllm. Ogni servizio che usa una GPU ne ha una dedicata}{figure.3.14}{}}
+\@writefile{toc}{\contentsline {paragraph}{vllm.}{59}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{qdrant.}{59}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{app.}{59}{section*.26}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{vllm-vision.}{60}{section*.27}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6.3}Configurazione}{60}{subsection.3.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6.4}Diagnostica e test}{60}{subsection.3.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{\numberline {4}Validazione del sistema}{62}{chapter.4}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
-\newlabel{cap:validazione}{{4}{61}{Validazione del sistema}{chapter.4}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {4.1}Benchmark di test}{61}{section.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4.2}Indicatori di accuratezza}{61}{section.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4.3}Esperimenti effettuati}{61}{section.4.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4.4}Risultati}{61}{section.4.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4.1}Risultati}{61}{subsection.4.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4.2}Esempi di casi errati}{61}{subsection.4.4.2}\protected@file@percent }
+\newlabel{cap:validazione}{{4}{62}{Validazione del sistema}{chapter.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4.1}Benchmark di test}{62}{section.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.2}Indicatori di accuratezza}{62}{section.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.3}Esperimenti effettuati}{62}{section.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.4}Risultati}{62}{section.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4.1}Risultati}{62}{subsection.4.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4.2}Esempi di casi errati}{62}{subsection.4.4.2}\protected@file@percent }
 \bibstyle{ieeetr}
 \bibdata{bibliografia}
-\@writefile{toc}{\contentsline {chapter}{\numberline {5}Conclusioni e sviluppi futuri}{62}{chapter.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{\numberline {5}Conclusioni e sviluppi futuri}{63}{chapter.5}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
-\newlabel{cap:conclusioni}{{5}{62}{Conclusioni e sviluppi futuri}{chapter.5}{}}
+\newlabel{cap:conclusioni}{{5}{63}{Conclusioni e sviluppi futuri}{chapter.5}{}}
 \bibcite{zhao2023survey}{1}
 \bibcite{huang2023survey}{2}
 \bibcite{kasneci2023chatgpt}{3}
@@ -247,4 +251,5 @@
 \bibcite{docling2024}{33}
 \bibcite{chen2024bgem3}{34}
 \bibcite{kwon2023vllm}{35}
-\gdef \@abspage@last{69}
+\bibcite{es2023ragas}{36}
+\gdef \@abspage@last{70}

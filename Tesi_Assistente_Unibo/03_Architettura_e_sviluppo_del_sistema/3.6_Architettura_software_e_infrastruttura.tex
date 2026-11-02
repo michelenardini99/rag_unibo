@@ -1,5 +1,135 @@
 \section{Architettura software e infrastruttura}\label{sec:infrastruttura}
 
-% TODO: Stack tecnologico (linguaggi, framework, librerie), componenti di backend/API, eventuale
-% interfaccia utente, gestione configurazione/logging/monitoraggio, considerazioni sul deploy
-% (containerizzazione, scalabilità, sicurezza, gestione segreti/API key).
+Le sezioni precedenti hanno descritto cosa fa ciascun componente. Questa sezione descrive come il sistema è
+realizzato ed eseguito: le tecnologie adottate, la distribuzione dei componenti in servizi, la configurazione e le
+misure che rendono l'installazione riproducibile e sicura.
+
+\subsection{Stack tecnologico}
+
+Il sistema è scritto in Python, il linguaggio in cui sono disponibili tutte le librerie dell'ecosistema RAG
+utilizzate. La Tabella~\ref{tab:stack} riassume le tecnologie principali e il ruolo di ciascuna.
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.4cm} X}
+    \toprule
+    \textbf{Tecnologia} & \textbf{Ruolo} \\
+    \midrule
+    Docling \cite{docling2024} & conversione di PDF, presentazioni e pagine web in documenti strutturati \\
+    LlamaIndex & astrazioni comuni per frammenti, docstore, recupero e chiamate al modello linguistico \\
+    BGE-M3, bge-reranker-v2-m3 & embedding denso e sparso, riordinamento (libreria FlagEmbedding, PyTorch) \\
+    Qdrant & database vettoriale: ricerca ibrida e filtri sui metadati \\
+    vLLM \cite{kwon2023vllm} & server di inferenza del modello linguistico e del modello multimodale \\
+    Chainlit & interfaccia di chat \\
+    RAGAS \cite{es2023ragas} & metriche della valutazione end-to-end \\
+    Docker Compose & definizione ed esecuzione dei servizi \\
+    pytest & test automatici \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Tecnologie principali del sistema.}
+  \label{tab:stack}
+\end{table}
+
+Il modello linguistico e il database vettoriale non sono usati come librerie, ma come servizi a cui il resto del
+sistema si rivolge attraverso interfacce standard: un'API HTTP compatibile con quella di OpenAI per vLLM, HTTP e
+gRPC per Qdrant. Questo rende ciascuno sostituibile senza modificare il codice che lo usa: cambiare il modello
+linguistico, come è stato fatto per confrontare i modelli candidati, richiede solo di cambiare un
+parametro di configurazione e riavviare il servizio, perché vLLM lo pubblica sempre con lo stesso nome logico.
+
+\subsection{Distribuzione dei componenti}
+
+Il sistema è eseguito come un insieme di servizi containerizzati con Docker, descritti in un unico file di Docker
+Compose e rappresentati nella Figura~\ref{fig:deployment}. Tutti i servizi girano sulla stessa macchina e comunicano
+attraverso una rete interna, senza alcuna chiamata verso servizi esterni.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+      svc/.style={draw, thick, rounded corners=3pt, fill=blue!6, align=center, font=\scriptsize,
+                  text width=3.4cm, inner sep=2mm},
+      opt/.style={svc, dashed, fill=gray!8},
+      ext/.style={draw, rounded corners=2pt, align=center, font=\scriptsize, inner sep=2mm},
+      gpu/.style={draw, rounded corners=1pt, fill=green!12, font=\tiny\bfseries, inner sep=1.2mm},
+      link/.style={{Stealth[length=2mm]}-{Stealth[length=2mm]}, thick},
+      lbl/.style={font=\tiny, align=center},
+    ]
+    \node[ext, text width=1.7cm] (browser) at (-1.0,0) {Browser dello studente};
+    \node[svc, text width=3.8cm] (app) at (5.0,0) {\textbf{app}\\[2pt] interfaccia Chainlit e pipeline\\
+      embedding e reranker\\ docstore in memoria};
+    \node[svc] (vllm) at (10.8,1.7) {\textbf{vllm}\\[2pt] modello linguistico\\ API compatibile OpenAI};
+    \node[svc] (qdrant) at (10.8,-0.9) {\textbf{qdrant}\\[2pt] vettori e metadati\\ volume persistente};
+    \node[opt] (vision) at (10.8,-3.3) {\textbf{vllm-vision}\\[2pt] modello multimodale\\ solo in indicizzazione};
+    \node[ext, dashed, text width=3.8cm] (scripts) at (5.0,-3.3) {Script di indicizzazione e di valutazione,
+      eseguiti su richiesta};
+
+    \node[gpu, anchor=north east] at (app.south east) {GPU 1};
+    \node[gpu, anchor=north east] at (vllm.south east) {GPU 2};
+    \node[gpu, anchor=north east] at (vision.south east) {GPU 3};
+
+    \begin{scope}[on background layer]
+      \node[draw, thick, dashed, rounded corners=6pt, fill=black!2, inner sep=4mm,
+            fit={(app) (vllm) (vision) (scripts) (12.6,2.6)}] (server) {};
+    \end{scope}
+    \node[font=\scriptsize\bfseries, anchor=north west] at (server.north west) {Server};
+
+    \draw[link] (browser) -- node[lbl, above] {HTTP, WebSocket} node[lbl, below] {porta 8001} (app);
+    \draw[link] (app.east) -- node[lbl, sloped, above] {HTTP} (vllm.west);
+    \draw[link] (app.east) -- node[lbl, sloped, below] {gRPC} (qdrant.west);
+    \draw[link, dashed] (scripts.east) -- node[lbl, sloped, above] {gRPC} (qdrant.west);
+    \draw[link, dashed] (scripts.east) -- node[lbl, below] {HTTP} (vision.west);
+  \end{tikzpicture}
+  \caption{Distribuzione del sistema su una singola macchina. I servizi in tratto continuo sono sempre attivi;
+  quelli tratteggiati solo durante l'indicizzazione o la valutazione, che usano anche il servizio vllm. Ogni
+  servizio che usa una GPU ne ha una dedicata.}
+  \label{fig:deployment}
+\end{figure}
+
+\paragraph{vllm.} Serve il modello linguistico e riceve tutte le richieste a esso rivolte: per ogni domanda la
+condensazione, la scomposizione, il riconoscimento del corso e la generazione della risposta, che arriva
+all'interfaccia token per token. Le chiamate indipendenti di una stessa domanda vengono inviate in parallelo, e vLLM
+le accorpa in un'unica elaborazione sulla GPU (\emph{continuous batching}), come quelle di studenti diversi che
+scrivono nello stesso momento: le richieste non si accodano una dopo l'altra.
+
+\paragraph{qdrant.} Conserva i vettori densi e sparsi dei frammenti con i loro metadati. Per ogni domanda, o
+sotto-domanda, riceve un'unica richiesta, che esegue la ricerca densa e quella sparsa e ne fonde i risultati direttamente nel database.
+I dati risiedono in un volume persistente, che sopravvive al riavvio o all'aggiornamento del container.
+
+\paragraph{app.} Ospita l'interfaccia, la pipeline di risposta e i modelli di embedding e di reranking. Questi ultimi
+sono molto più piccoli del modello linguistico e vengono eseguiti nello stesso processo, su una GPU diversa da
+quella di vLLM, senza
+passare per la rete. Il loro uso è serializzato, perché le librerie che li eseguono non tollerano chiamate
+concorrenti; la loro elaborazione dura però una frazione di secondo, contro i secondi della generazione, e non
+limita in pratica il numero di studenti serviti. L'indice e i pesi dei modelli non fanno parte dell'immagine del
+container, ma vengono montati dal disco della macchina: aggiornare i documenti non richiede di ricostruirla.
+
+\paragraph{vllm-vision.} Serve il modello multimodale che descrive le immagini durante la conversione dei documenti
+(Sezione~\ref{sec:ingestione}). Viene avviato solo per l'indicizzazione, su una GPU distinta, e poi spento: il
+servizio di risposta resta attivo e il sistema continua a funzionare anche mentre i documenti vengono aggiornati.
+
+L'avvio segue le dipendenze tra i servizi: l'applicazione parte solo quando Qdrant e vLLM risultano pronti, cosa che
+per vLLM richiede il caricamento del modello in memoria. Ogni servizio espone un controllo di stato, e Docker
+riavvia automaticamente quelli che si interrompono.
+
+\subsection{Configurazione}
+
+Tutti i parametri che dipendono dall'installazione sono raccolti in un unico file di variabili d'ambiente, letto sia
+da Docker Compose sia dall'applicazione: indirizzi e porte dei servizi, GPU assegnate a ciascuno, modelli da
+caricare, nome della collezione in Qdrant. L'applicazione li legge in un oggetto di configurazione tipizzato, che
+fornisce un valore predefinito per ciascuno e segnala all'avvio quelli mancanti o non validi. Nello stesso oggetto
+si trovano i parametri della pipeline, come le soglie del recupero, il numero di frammenti passati al modello e la
+lunghezza della cronologia, e i dati dell'istituzione (nome dell'ateneo e ambito dell'assistente) usati nei prompt:
+adattare il sistema a un'altra configurazione hardware, o a un altro ateneo, non richiede modifiche al codice.
+
+\subsection{Diagnostica e test}
+
+L'interfaccia offre una modalità di diagnostica, selezionabile dalla chat, che mostra lo svolgimento di ogni stadio
+della pipeline: la domanda condensata e scomposta, il corso riconosciuto, i frammenti recuperati con il loro
+punteggio e il prompt completo inviato al modello. È lo strumento con cui sono stati analizzati i casi problematici
+riportati in questo capitolo. Le stesse informazioni vengono registrate nei log dell'applicazione.
+
+La logica che non dipende dai modelli è coperta da test automatici: pulizia delle pagine e suddivisione in
+frammenti, estrazione dei metadati, riconoscimento del corso, costruzione del prompt e dell'elenco delle fonti,
+metriche di valutazione. Le chiamate al modello linguistico sono sostituite da un modello simulato con risposte
+predefinite, così che i test girino in pochi secondi, senza GPU né servizi attivi, e possano essere eseguiti
+automaticamente a ogni modifica del codice.

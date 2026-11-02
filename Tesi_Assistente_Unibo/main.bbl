@@ -106,4 +106,7 @@ J.~Chen, S.~Xiao, P.~Zhang, K.~Luo, D.~Lian, and Z.~Liu, ``{M3-Embedding}: Multi
 \bibitem{kwon2023vllm}
 W.~Kwon, Z.~Li, S.~Zhuang, Y.~Sheng, L.~Zheng, C.~H. Yu, J.~E. Gonzalez, H.~Zhang, and I.~Stoica, ``Efficient memory management for large language model serving with {PagedAttention},'' in {\em Proceedings of the 29th Symposium on Operating Systems Principles (SOSP)}, 2023.
 
+\bibitem{es2023ragas}
+S.~Es, J.~James, L.~Espinosa-Anke, and S.~Schockaert, ``Ragas: Automated evaluation of retrieval augmented generation,'' in {\em Proceedings of the 18th Conference of the European Chapter of the Association for Computational Linguistics (EACL): System Demonstrations}, 2024.
+
 \end{thebibliography}

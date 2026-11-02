@@ -13,8 +13,7 @@ scelta è motivata da una caratteristica specifica di questo modello più che da
 rappresentazioni: a differenza di un modello di embedding classico, che produce solo una rappresentazione densa, BGE-M3
 ne produce tre nello stesso passaggio di calcolo --- una densa, una sparsa e una per token --- evitando così di dover addestrare, eseguire e
 mantenere allineati modelli distinti per ciascun tipo di rappresentazione. Un secondo motivo è la finestra di
-contesto del modello, fino a 8.192 token: più ampia del limite di 512 token scelto per un frammento, lascia margine a non troncare mai un frammento durante l'embedding, anche per quelli
-risultanti da una fusione gerarchica di più frammenti originari.
+contesto del modello, fino a 8.192 token: più ampia del limite di 512 token scelto per un frammento, lascia margine a non troncare mai un frammento durante l'embedding.
 
 A titolo di esempio, per il frammento della Tabella~\ref{tab:metadati} --- il materiale didattico del corso di
 Tecniche di Consulenza nella Scuola sul \emph{Change Laboratory} --- BGE-M3 calcola, nello stesso passaggio, le tre
@@ -57,9 +56,9 @@ rappresentazioni seguenti:
 
 Non tutto il testo associato a un frammento entra nella sua rappresentazione vettoriale. Il percorso delle
 intestazioni della sezione di provenienza (Sezione~\ref{sec:chunking}) viene incluso, perché è spesso necessario a
-rendere comprensibile un frammento altrimenti ambiguo; gli altri metadati --- corso, ambito, sezione, stato,
+rendere comprensibile un frammento altrimenti ambiguo; gli altri metadati --- corso, ambito, sezione,
 l'indirizzo della pagina di provenienza e gli altri campi della Tabella~\ref{tab:metadati} --- ne restano invece
-esclusi, e intervengono solo più avanti, come filtri sul database vettoriale (Sezione~\ref{sec:ricerca-ibrida}), non
+esclusi, e intervengono solo al momento della ricerca, come filtri sul database vettoriale, non
 come parte del significato che l'embedding rappresenta: il nome del corso di un frammento, ad esempio, non deve
 influenzare quanto quel frammento è semanticamente vicino a una domanda, un compito che spetta al filtro, non alla
 rappresentazione vettoriale.
@@ -72,7 +71,7 @@ Fusion (Sezione~\ref{sec:rag}), eseguita da Qdrant stesso a partire da due vetto
 \emph{sparse}, associati allo stesso punto; un terzo vettore nominato, \emph{colbert}, multivettore con
 confronto per massima similarità, ospita la rappresentazione per token usata dalla sola modalità di recupero con
 late interaction. La seconda è l'indicizzazione dei campi del
-payload --- stato, corso, ambito, tipo di laurea, sezione, insegnamento e l'identificativo del documento --- come
+payload --- corso, ambito, tipo di laurea, sezione, insegnamento e l'identificativo del documento --- come
 indici di tipo \emph{keyword}: permettono di filtrare i candidati per questi campi nello stesso passaggio della
 ricerca vettoriale, invece di recuperare un insieme più ampio di candidati e scartare quelli con i metadati sbagliati
 in un passaggio successivo.
@@ -83,8 +82,8 @@ metadati (Sezione~\ref{sec:metadati}) come payload.
 Il Listato~\ref{lst:qdrant-point} riporta, abbreviato, il punto realmente salvato in Qdrant per il frammento
 \emph{Change Laboratory} della Tabella~\ref{tab:metadati} e della Tabella~\ref{tab:sparse-esempio}: ogni vettore
 nominato (\texttt{dense}, \texttt{sparse}, \texttt{colbert}) accanto al payload che lo accompagna, con i campi
-indicizzati --- \texttt{ambito}, \texttt{corso}, \texttt{stato} e gli altri citati sopra --- pronti per il filtro
-applicato in fase di ricerca (Sezione~\ref{sec:ricerca-ibrida}).
+indicizzati --- \texttt{ambito}, \texttt{corso} e gli altri citati sopra --- pronti per il filtro
+applicato in fase di ricerca.
 
 \begin{lstlisting}[caption={Punto Qdrant del frammento \emph{Change Laboratory} (identificativo abbreviato nei
 valori numerici, per brevità).}, label={lst:qdrant-point}]
@@ -104,7 +103,6 @@ valori numerici, per brevità).}, label={lst:qdrant-point}]
     "sezione": "corsi",
     "materia": "TecnicheDiConsulenzaNellaScuola",
     "headings": ["Change Laboratory (Change Lab)"],
-    "stato": "vigente",
     "checksum": "8e837f4622a5b4e2",
     "text": "Metodo di intervento sviluppato da Engestrom, basato sull'Activity Theory. ..."
   }
@@ -124,8 +122,8 @@ una piccola frazione dei punti, collegati tra loro a lungo raggio; il livello pi
 collegamenti brevi verso i vicini effettivi (Figura~\ref{fig:hnsw}). Una ricerca parte da un punto di ingresso nel
 livello più alto e scende un livello alla volta, spostandosi a ogni passo verso il nodo già esplorato più vicino
 alla domanda, fino a raggiungere il livello più basso, dove l'esplorazione dell'intorno del nodo raggiunto
-restituisce i candidati da passare al riordinamento (Sezione~\ref{sec:corso-priorita}). È questo grafo a rendere praticabile la ricerca densa dello stadio di ricerca ibrida
-(Sezione~\ref{sec:ricerca-ibrida}) con un tempo che cresce in modo logaritmico col numero di frammenti indicizzati
+restituisce i candidati da passare al riordinamento. È questo grafo a rendere praticabile la ricerca densa
+con un tempo che cresce in modo logaritmico col numero di frammenti indicizzati
 invece che linearmente.
 
 \begin{figure}[H]

@@ -112,6 +112,17 @@ cd src
 chainlit run app.py -w --port 8001
 ```
 
+## Test
+
+I test unitari coprono la logica che non richiede GPU, modelli scaricati né servizi in esecuzione (vLLM, Qdrant): pulizia delle pagine e chunking, metadati, riconoscimento del corso, costruzione del prompt, citazioni ed elenco delle fonti, metriche di valutazione. Le chiamate al modello linguistico sono sostituite da un modello finto con risposte predefinite.
+
+```bash
+pytest            # dalla radice del progetto
+ruff check tests  # stile del codice dei test
+```
+
+pytest e ruff sono già compresi in `requirements.lock.txt`; con un ambiente installato da `requirements.txt` vanno aggiunti con `pip install -e ".[dev]"`.
+
 ## 6. Valutazione (opzionale)
 
 Per misurare la qualità del recupero documenti e del confronto tra modelli su un set di domande di test:

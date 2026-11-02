@@ -177,7 +177,8 @@ database vettoriale insieme ai metadati; lo stesso modello calcola, al momento d
 della domanda stessa.
 
 \paragraph{Retrieving.} A ogni domanda individua i frammenti pertinenti: analizza la domanda (ne ricostruisce il
-senso rispetto alla conversazione, la scompone se contiene più richieste, riconosce il corso di laurea), cerca i
+senso rispetto alla conversazione, la scompone se contiene più richieste, riconosce il corso di laurea e i
+messaggi che non sono domande, come i saluti, a cui risponde senza cercare), cerca i
 candidati tra le pagine di ateneo e quelle del corso, li riordina in base alla pertinenza e scarta quelli
 insufficienti.
 
@@ -191,12 +192,11 @@ all'utente di indicare il corso e mostra la risposta man mano che viene generata
 
 \paragraph{Evaluation.} Esegue lo stesso percorso di recupero e generazione su un insieme di domande di test con
 risposta nota e ne misura la qualità, separatamente per il recupero e per la risposta finale. Non fa parte del
-sistema in esercizio, ma è lo strumento con cui sono state verificate le scelte descritte in questo capitolo
-(Capitolo~\ref{cap:validazione}).
+sistema in esercizio, ma è lo strumento con cui sono state verificate le scelte descritte in questo capitolo.
 
 \medskip
 \noindent La Tabella~\ref{tab:componenti} riassume, per ciascun componente, le tecnologie adottate e il momento in
-cui opera;
+cui opera.
 
 \begin{table}[H]
   \centering

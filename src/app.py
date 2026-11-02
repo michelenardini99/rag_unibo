@@ -6,8 +6,6 @@ from config import settings
 from embedding.embedder import build_embedding_model
 from generation.condense import condense_question, decompose_question
 from generation.hyde import hyde_query
-from generation.smalltalk import small_talk_reply
-from generation.topic import OFF_TOPIC_REPLY, is_off_topic
 from generation.generator import astream_response, build_llm
 from generation.prompt import (CitationStripper, build_prompt, course_display_name, format_sources, question_for_answer,
                                strip_citations)
@@ -126,12 +124,6 @@ async def on_message(msg: Message):
     query = msg.content
     history = user_session.get("history")
 
-    # Greetings and thanks get a fixed reply: no search, no sources, and not
-    # added to history (where the condensation took the reply for a question).
-    if reply := small_talk_reply(query):
-        await Message(content=reply).send()
-        return
-
     debug = msg.modes.get("debug_selector") == "debug"
 
     async with _step("Analisi e Condensazione query", debug) as step_condense:
@@ -154,7 +146,7 @@ async def on_message(msg: Message):
 
         # Both depend only on search_query, not on each other: run them
         # concurrently so their latencies overlap instead of adding up.
-        sub_queries, extracted_filters = await asyncio.gather(
+        (sub_queries, reply), extracted_filters = await asyncio.gather(
             asyncio.to_thread(decompose_question, LLM, search_query),
             # The course must be named by the student (`query`), not only by the
             # condensed rewrite; one named earlier is kept as default_corso.
@@ -162,12 +154,22 @@ async def on_message(msg: Message):
         )
         if len(sub_queries) > 1:
             step_condense.output += "\nDomanda scomposta in:\n" + "\n".join(f"- `{q}`" for q in sub_queries)
+        if reply:
+            step_condense.output += "\nNessuna domanda sull'università: nessuna ricerca."
 
         extracted_corso = extracted_filters.get("corso")
         default_corso = user_session.get("default_corso")
         print(f"[metadata] query={search_query!r} -> extracted_corso={extracted_corso} default_corso={default_corso}")
         if extracted_corso:
             step_condense.output += f"\nCorso riconosciuto nel testo: `{extracted_corso}`"
+
+    # Greetings, thanks and off-topic questions: a reply without searching (a
+    # "buongiorno" searched found a medical-specialisation page, listed as its
+    # source), not added to history (where the condensation took the reply
+    # for a question), and the course named, if any, isn't remembered.
+    if reply:
+        await Message(content=reply).send()
+        return
 
     async with _step("Ricerca Documenti", debug) as step_retrieve:
         step_retrieve.input = search_query
@@ -180,13 +182,7 @@ async def on_message(msg: Message):
 
         # Per question, so a repeated search (course chosen after "nothing
         # found") asks the model only once.
-        off_topic: dict[str, bool] = {}
         hyde: dict[str, str] = {}
-
-        async def check_off_topic(question: str) -> bool:
-            if question not in off_topic:
-                off_topic[question] = await asyncio.to_thread(is_off_topic, LLM, question)
-            return off_topic[question]
 
         async def retrieve_in(course: str | None, queries: list[str]) -> list[dict]:
             # Only the university-wide documents, plus the course's if one is known.
@@ -203,14 +199,13 @@ async def on_message(msg: Message):
             Only with a course: with none, nothing found means the answer may be
             a course's, and the student is asked for it — a made-up passage
             found loosely related university pages instead ("quando c'è il test
-            d'ingresso?" answered from the masters' and ISEE pages). Not for
-            off-topic questions either, for the same reason.
+            d'ingresso?" answered from the masters' and ISEE pages).
 
             Returns:
                 tuple[list[dict], list[str]]: The chunks and the queries that found them.
             """
             chunks = await retrieve_in(course, sub_queries)
-            if chunks or not course or await check_off_topic(search_query):
+            if chunks or not course:
                 return chunks, sub_queries
             if search_query not in hyde:
                 hyde[search_query] = await asyncio.to_thread(hyde_query, LLM, search_query)
@@ -235,10 +230,6 @@ async def on_message(msg: Message):
             )
             best_course = max((c["score"] for c in all_chunks if c.get("corso")), default=0.0)
             nothing_found = best_course > max(c["score"] for c in chunks)
-        if nothing_found and await check_off_topic(search_query):
-            # Unrelated to the university: asking for a course would make no sense.
-            await Message(content=OFF_TOPIC_REPLY).send()
-            return
         if nothing_found:
             # Nothing in scope: the answer may be another course's (or, with no
             # course yet, a course's rather than the university's).

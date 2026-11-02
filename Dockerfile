@@ -7,7 +7,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Dependencies first, so code changes don't reinstall them (torch alone is a few GB).
 COPY requirements.lock.txt .
 RUN pip install -r requirements.lock.txt
 

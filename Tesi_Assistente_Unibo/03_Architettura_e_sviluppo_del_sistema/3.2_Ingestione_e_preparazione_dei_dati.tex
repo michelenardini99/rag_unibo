@@ -96,7 +96,7 @@ I documenti in formato file vengono invece collocati nello stesso albero di cart
 un regolamento del corso di Infermieristica, ad esempio, va nella cartella del corso, mentre le slide di un
 insegnamento vanno in una sottocartella dedicata all'insegnamento, all'interno di quella del corso; i documenti
 validi per tutti gli studenti vanno nella cartella di ateneo. Questa organizzazione non è solo una comodità: la
-posizione di un documento nell'albero è la fonte da cui, più avanti, vengono ricavati i metadati di ambito, di corso
+posizione di un documento nell'albero è la fonte da cui vengono ricavati i metadati di ambito, di corso
 e di insegnamento, così che aggiungere un documento al sistema richieda soltanto di
 copiarlo nella cartella giusta.
 
@@ -278,7 +278,7 @@ discussa nel paragrafo seguente.
 
 \begin{figure}[H]
   \centering
-  \textbf{\footnotesize (a) Analisi del layout di una pagina PDF}\\[6pt]
+  \textbf{\footnotesize Analisi del layout di una pagina PDF}\\[6pt]
   \begin{tikzpicture}[
       hd/.style={draw=red!70!black, fill=red!12, line width=0.6pt},
       tx/.style={draw=blue!70!black, fill=blue!6, line width=0.6pt},
@@ -360,7 +360,15 @@ discussa nel paragrafo seguente.
 \paragraph{Descrizione delle immagini.} Documenti come slide e dispense contengono spesso diagrammi e schemi il
 cui contenuto non è espresso nel testo circostante. Per renderlo ricercabile, ogni immagine estratta durante la
 conversione viene descritta a parole da un modello linguistico capace di interpretare immagini, e la descrizione
-viene inserita nel documento al posto dell'immagine stessa (Figura~\ref{fig:descrizione-immagine}). 
+viene inserita nel documento al posto dell'immagine stessa (Figura~\ref{fig:descrizione-immagine}). Il modello
+riceve un'istruzione che chiede di riportare gli elementi principali di un diagramma e le loro relazioni, il testo
+leggibile e i valori di eventuali grafici. Le immagini più piccole di una soglia di area vengono ignorate, perché si tratta in
+genere di loghi ed elementi decorativi; la soglia predefinita dello strumento, pensata per pagine di testo, è stata
+però abbassata di dieci volte, perché su una slide un diagramma significativo occupa spesso meno del 2\% della
+pagina e sarebbe stato scartato. In Docling la descrizione delle immagini fa parte dell'elaborazione dei PDF: le
+immagini di documenti Word e presentazioni vengono estratte ma non descritte, e le presentazioni con contenuto
+visivo rilevante conviene quindi indicizzarle esportate in PDF.
+
 
 Il sistema usa quindi due modelli linguistici distinti: un modello multimodale, Qwen2.5-VL-7B-Instruct, che descrive
 le immagini durante la conversione, e un modello solo testuale che genera le risposte. Un unico
@@ -385,15 +393,6 @@ ragioni.
   modelli permette di avviare il modello multimodale, con una seconda istanza di vLLM, solo per la durata della
   conversione, senza fermare l'assistente mentre nuovi documenti vengono elaborati.
 \end{itemize}
-
- Il modello
-riceve un'istruzione che chiede di riportare gli elementi principali di un diagramma e le loro relazioni, il testo
-leggibile e i valori di eventuali grafici. Le immagini più piccole di una soglia di area vengono ignorate, perché si tratta in
-genere di loghi ed elementi decorativi; la soglia predefinita dello strumento, pensata per pagine di testo, è stata
-però abbassata di dieci volte, perché su una slide un diagramma significativo occupa spesso meno del 2\% della
-pagina e sarebbe stato scartato. In Docling la descrizione delle immagini fa parte dell'elaborazione dei PDF: le
-immagini di documenti Word e presentazioni vengono estratte ma non descritte, e le presentazioni con contenuto
-visivo rilevante conviene quindi indicizzarle esportate in PDF.
 
 \begin{figure}[H]
   \centering
@@ -427,14 +426,13 @@ famiglie Orlandini e Coccolonati'', una famiglia che nel diagramma non compare; 
 esse per chi legge il testo indicizzato: una domanda sui legami della famiglia Valori recupererebbe questa
 descrizione, e il modello delle risposte, che si attiene fedelmente al contesto ricevuto, riporterebbe l'errore
 citandone anche la fonte. Per questo il testo generato a partire dalle immagini va considerato meno affidabile di quello estratto
-direttamente dai documenti, e la sua accuratezza è valutata separatamente, con domande dedicate alle immagini, nel
-Capitolo~\ref{cap:validazione}.
+direttamente dai documenti, e la sua accuratezza richiede una verifica specifica, con domande dedicate alle immagini.
 
 \paragraph{La taglia del modello multimodale.} La qualità delle descrizioni dipende in misura decisiva dalla taglia
 del modello che le produce. Per verificarlo, la stessa immagine della Figura~\ref{fig:descrizione-immagine} è stata
 descritta anche da SmolVLM-256M, un modello multimodale da 256 milioni di parametri, circa trenta volte più piccolo
 di quello adottato e abbastanza leggero da poter essere eseguito senza GPU dedicata: è il tipo di modello che si
-sceglierebbe per non sottrarre risorse al resto del sistema, ed è quello provato inizialmente nel prototipo. La
+sceglierebbe per non sottrarre risorse al resto del sistema. La
 Tabella~\ref{tab:taglia-vlm} riporta le descrizioni ottenute.
 
 \begin{table}[H]
@@ -465,8 +463,7 @@ posizione centrale della famiglia Medici, che è proprio ciò che una domanda su
 errori di dettaglio visti sopra mostrano che la taglia maggiore riduce il problema senza eliminarlo, ma la
 differenza tra le due taglie non è trascurabile: è la differenza tra una descrizione utile, da verificare, e una
 inutilizzabile. È questa la ragione per cui il prototipo dedica alle descrizioni un modello multimodale di taglia
-media, su una GPU propria, anziché un modello minimo; la penalità sulle ripetizioni è mantenuta anche con il modello
-più grande, come ulteriore protezione contro i cicli di ripetizione.
+media, su una GPU propria, anziché un modello minimo.
 
 \paragraph{Normalizzazione.} La ricostruzione della struttura di un PDF è un'operazione statistica e non è
 perfetta. Alcuni dei suoi errori sono occasionali, ma altri si ripetono in modo sistematico e, poiché la
@@ -507,7 +504,7 @@ rappresentazione vettoriale del frammento sia nel testo valutato dal modello di 
 introdotta alcuna sovrapposizione tra frammenti consecutivi. Quando si taglia ogni tot parole è utile ripetere
 l'ultima parte di un frammento all'inizio del successivo, perché il taglio può cadere a metà di una frase; qui
 invece il taglio cade sempre alla fine di una sezione, di un paragrafo o di una tabella, e il contesto più ampio di
-un frammento è comunque recuperabile attraverso la sua sezione di appartenenza, come descritto più avanti.
+un frammento è comunque recuperabile attraverso la sua sezione di appartenenza.
 
 Tre ulteriori interventi affrontano problemi ricorrenti nei contenuti amministrativi e didattici.
 

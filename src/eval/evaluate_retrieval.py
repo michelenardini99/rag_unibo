@@ -195,7 +195,7 @@ def evaluate_retrieval(config: RetrievalConfig, dataset: list[dict], client: Qdr
         if config.random_baseline:
             chunks = _random_chunks(client, collection_name, docstore, pool_ids)
         else:
-            sub_queries = decompose_question(llm, query)
+            sub_queries, reply = decompose_question(llm, query)
             # As in app.py: the course named in the message, else the one the
             # conversation is about (the session's `default_corso`, here the
             # case's "corso"); search the university-wide pages plus that course's.
@@ -205,11 +205,12 @@ def evaluate_retrieval(config: RetrievalConfig, dataset: list[dict], client: Qdr
                 use_reranker=config.use_reranker, mode=config.mode, fallback_mode=config.fallback_mode,
                 strip_course=config.strip_course,
             )
-            chunks = retrieve_decomposed(sub_queries, client, collection_name, embed_model, reranker, docstore,
-                                         **retrieval_kwargs)
+            # As in app.py: a question judged a greeting or off-topic isn't searched.
+            chunks = [] if reply else retrieve_decomposed(sub_queries, client, collection_name, embed_model,
+                                                          reranker, docstore, **retrieval_kwargs)
             # As in app.py: retry with a HyDE query when nothing clears the
             # threshold, only with a course (with none the app asks for it).
-            if not chunks and corso:
+            if not chunks and corso and not reply:
                 hyde = hyde_query(llm, query)
                 chunks = retrieve_decomposed([hyde], client, collection_name, embed_model, reranker, docstore,
                                              **retrieval_kwargs)

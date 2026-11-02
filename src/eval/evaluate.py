@@ -86,7 +86,7 @@ def _run_case(case: dict, llm: OpenAILike, embed: BGEM3FlagModel, client: Qdrant
     history = [tuple(turn) for turn in case.get("history", [])]
 
     search_query = condense_question(llm, history, query)
-    sub_queries = decompose_question(llm, search_query)
+    sub_queries, reply = decompose_question(llm, search_query)
     # As in app.py: the course named by the student, else the one the
     # conversation is about (the session's default_corso, here the case's
     # "corso"); search the university-wide pages plus that course's.
@@ -106,17 +106,22 @@ def _run_case(case: dict, llm: OpenAILike, embed: BGEM3FlagModel, client: Qdrant
         with retrieval_lock:
             return retrieve_decomposed(queries, client, collection_name, embed, reranker, docstore, **retrieval_kwargs)
 
-    chunks = retrieve_locked(sub_queries)
-    if not chunks and priority_corso:
-        # As in app.py: retry with a HyDE query, only with a course.
-        chunks = retrieve_locked([hyde_query(llm, search_query)])
     t0 = time.perf_counter()
-    # search_query (condensed), not the raw query: it's already a
-    # self-contained question consistent with what was actually
-    # retrieved, so the model isn't left resolving "e per il 2026/27?"
-    # against history on its own during generation.
-    response = generate_response(llm, question_for_answer(search_query, sub_queries), chunks, history or None,
-                                 corso=priority_corso)
+    if reply:
+        # As in app.py: judged not a question, answered without searching.
+        chunks, response = [], reply
+    else:
+        chunks = retrieve_locked(sub_queries)
+        if not chunks and priority_corso:
+            # As in app.py: retry with a HyDE query, only with a course.
+            chunks = retrieve_locked([hyde_query(llm, search_query)])
+        t0 = time.perf_counter()
+        # search_query (condensed), not the raw query: it's already a
+        # self-contained question consistent with what was actually
+        # retrieved, so the model isn't left resolving "e per il 2026/27?"
+        # against history on its own during generation.
+        response = generate_response(llm, question_for_answer(search_query, sub_queries), chunks, history or None,
+                                     corso=priority_corso)
     t1 = time.perf_counter()
 
     row = {

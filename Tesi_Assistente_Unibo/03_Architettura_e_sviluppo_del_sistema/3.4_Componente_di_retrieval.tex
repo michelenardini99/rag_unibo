@@ -1,6 +1,6 @@
 \section{Componente di retrieval}\label{sec:retrieval}
 
-A ogni domanda, il componente Retrieving deve individuare, tra le decine di migliaia di frammenti indicizzati
+A ogni domanda, il componente Retrieving deve individuare, tra i circa 2.500 frammenti indicizzati nel prototipo
 (Sezione~\ref{sec:chunking}), i pochi davvero pertinenti da passare al modello generativo. Non è un singolo passo,
 ma un imbuto a più stadi, via via più costosi e più precisi (Figura~\ref{fig:imbuto-retrieval}): prima la domanda
 viene analizzata e, se necessario, riformulata; poi una ricerca ibrida seleziona un primo insieme ampio di
@@ -23,10 +23,11 @@ il loro contesto quando serve e filtrati per pertinenza. Questa sezione ne descr
     \node[sub] at (0,-0.9) {condensazione, scomposizione, corso};
     \node[sub] at (3.3,-0.9) {denso + sparso, RRF, $\sim$20 candidati};
     \node[sub] at (6.6,-0.9) {cross-encoder, priorità al corso};
-    \node[sub] at (9.9,-0.9) {sezioni intere, soglia, top-5};
+    \node[sub] at (9.9,-0.9) {sezioni intere, soglia, i più pertinenti};
   \end{tikzpicture}
-  \caption{I quattro stadi del recupero, ciascuno descritto in questa sezione. Un quinto meccanismo, HyDE
-  (Sezione~\ref{sec:hyde-retrieval}), interviene solo quando la ricerca ibrida non restituisce nulla.}
+  \caption{I quattro stadi del recupero, ciascuno descritto in questa sezione. Un quinto meccanismo, HyDE,
+  interviene solo quando il corso è noto e la ricerca ibrida non restituisce
+  nulla.}
   \label{fig:imbuto-retrieval}
 \end{figure}
 
@@ -42,15 +43,15 @@ dai primi posti quando l'altra richiesta, nello stesso testo, pesa quanto lei. E
 nella Sezione~\ref{sec:rag}; nella pratica di questo sistema, la scomposizione richiede un'attenzione che la sola
 teoria non rende evidente: quando una richiesta della domanda originale dipende implicitamente da quella
 precedente, la domanda scomposta
-deve ripetere esplicitamente a quale contesto fa riferimento: senza quel riferimento esplicito, la domanda porebbe risultare
-ambigua quanto quella originale.
+deve ripetere esplicitamente a quale contesto fa riferimento: senza quel riferimento esplicito, la domanda potrebbe risultare
+ambigua quanto quella originale. La stessa chiamata riconosce anche i messaggi che non sono domande
+sull'università, come i saluti, che non vengono cercati e ricevono direttamente una risposta.
 
-Il terzo passo, specifico di questo dominio, individua il corso di laurea nominato esplicitamente nella domanda
-(Sezione~\ref{sec:corso-priorita}).
+Il terzo passo, specifico di questo dominio, individua il corso di laurea nominato esplicitamente nella domanda.
 
 Ad esempio, su una cronologia in cui lo studente ha già chiesto ``Entro quando scade il pagamento della
 prima rata per gli studenti iscritti a una laurea triennale?'', la nuova domanda ``E per chi è iscritto alla magistrale, e quanto costa la mora se pago in ritardo?'' --- un follow-up che è anche una domanda composta --- viene
-prima condensata dal modello linguistico in produzione in ``E entro quando scade il
+prima condensata dal modello linguistico in produzione in ``Ed entro quando scade il
 pagamento della prima rata per gli studenti di laurea magistrale, e quanto costa la mora se pago
 in ritardo?'', e poi scomposta nelle due domande autonome
 \begin{quote}
@@ -64,21 +65,18 @@ cercate e fuse separatamente nello stadio successivo.
 
 Alla domanda, già normalizzata (Sezione~\ref{sec:analisi-domanda}), si applica lo stesso modello di embedding usato
 in indicizzazione (Sezione~\ref{sec:embedding}), e Qdrant esegue due ricerche in parallelo, una per la
-rappresentazione densa e una per quella sparsa, fondendole con Reciprocal Rank Fusion (Sezione~\ref{sec:rag}). Un
-solo filtro è
-applicato in ogni ricerca indipendentemente dal corso di laurea: solo i frammenti con stato \emph{vigente} vengono
-considerati. Quando il corso di laurea dello studente è noto, un secondo filtro restringe la ricerca ai soli
+rappresentazione densa e una per quella sparsa, fondendole con Reciprocal Rank Fusion (Sezione~\ref{sec:rag}). Quando il corso di laurea dello studente è noto, un filtro restringe la ricerca ai soli
 frammenti di ateneo e a quelli di quel corso --- gli altri corsi, pur presenti nell'indice, non vengono nemmeno
 candidati in questa fase. È una scelta deliberata, non solo un'ottimizzazione: più corsi pubblicano pagine quasi
 omonime su argomenti analoghi, con contenuto diverso (ciascuno ha una propria \emph{Prova Pratica Valutativa}, una
 propria pagina \emph{Tasse ed esenzioni}), e lasciarle tutte in gara rischierebbe di citare, nella stessa risposta,
 requisiti o importi di corsi diversi. Quando il corso non è ancora noto, la ricerca resta invece ristretta alle sole
-pagine di ateneo, finché la domanda --- o la pagina trovata --- non permette di risolverlo (Sezione~\ref{sec:corso-priorita}).
+pagine di ateneo, finché la domanda --- o la pagina trovata --- non permette di risolverlo.
 Il risultato di questa fase è un insieme di circa venti candidati, troppi per essere affidabili singolarmente ma
 abbastanza pochi da poter essere valutati uno a uno nello stadio successivo.
 
 Per la seconda delle due domande scomposte nell'esempio della Sezione~\ref{sec:analisi-domanda} --- ``Quanto costa
-la mora se pago in ritardo per la prima rata della laurea magistrale?'' --- ristretta al corso di Psicologia
+la mora se pago in ritardo la prima rata della laurea magistrale?'' --- ristretta al corso di Psicologia
 Scolastica e di Comunità, la ricerca ibrida restituisce effettivamente venti candidati: il punteggio di fusione
 decresce da 0,700 del primo a 0,159 dell'ottavo, un calo che mostra perché affidarsi al solo primo risultato della
 ricerca ibrida sarebbe rischioso, ma anche perché valutare uno a uno con un modello più accurato solo una ventina di
@@ -105,7 +103,7 @@ tenere testa ad altri corsi --- non ce ne sono --- ma a preferire, quando entram
 versione specifica del corso di un argomento rispetto alla versione generica di ateneo sullo stesso argomento.
 
 Resta il caso in cui il recupero, ristretto al corso noto e alle pagine di ateneo, non trovi nulla sopra la soglia
-nemmeno dopo il tentativo con HyDE (Sezione~\ref{sec:hyde-retrieval}): può darsi che la domanda riguardi un altro
+nemmeno dopo un secondo tentativo con HyDE: può darsi che la domanda riguardi un altro
 corso. In questo caso il sistema non prova a cercare da solo tra gli altri
 corsi, ma lo chiede esplicitamente allo studente, offrendogli l'elenco dei corsi indicizzati; se lo studente ne
 indica uno diverso, la ricerca riparte ristretta al nuovo corso.
@@ -129,19 +127,19 @@ isolati e lessicalmente vicini tra loro. Solo a questo punto, sui nodi --- framm
 ottenuti, viene applicata una soglia minima di punteggio, 0,3 sui punteggi del riordinamento normalizzati tra 0 e
 1: chi non la supera viene scartato, perché un contesto
 debolmente pertinente, passato comunque al modello, aumenta il rischio di una risposta costruita su un frammento
-sbagliato ma presente, invece di un'astensione corretta (Sezione~\ref{sec:generazione}) --- coerente con il vincolo
+sbagliato ma presente, invece di un'astensione corretta --- coerente con il vincolo
 di precisione fattuale che guida l'intero sistema (Capitolo~\ref{cap:architettura}). Se nessun nodo raggiunge quella
 soglia, un meccanismo di ripiego ne accetta comunque alcuni con una soglia più permissiva, 0,12, piuttosto che
 restituire un contesto vuoto: un contesto vuoto forza il rifiuto anche nei casi in cui un frammento scartato dalla
 soglia principale fosse in realtà quello giusto, solo formulato in un lessico che il riordinamento premia meno di
 quanto meriterebbe. Questo non vuol dire accettare il rischio di una risposta sbagliata al posto di un'astensione:
 il modello generativo resta comunque istruito a dichiarare esplicitamente quando il contesto ricevuto non contiene
-la risposta, invece di inventarla (Sezione~\ref{sec:generazione}), ed è questo secondo controllo --- più accurato
+la risposta, invece di inventarla, ed è questo secondo controllo --- più accurato
 perché legge il testo del frammento invece del solo punteggio --- a decidere se un candidato del ripiego risponde
 davvero o va scartato. Il ripiego allarga quindi l'insieme dei candidati sottoposti a quel controllo, senza
 sostituirlo: la soglia più permissiva decide solo cosa il modello generativo può vedere, non cosa deve usare. Dei
-nodi che superano la soglia, al più cinque vengono infine passati al modello generativo, scelti
-per punteggio decrescente.
+nodi che superano la soglia, solo i più pertinenti vengono infine passati al modello generativo, in ordine di
+punteggio decrescente.
 
 \subsection{Recupero di riserva con HyDE}\label{sec:hyde-retrieval}
 
@@ -151,8 +149,8 @@ nel linguaggio amministrativo che una vera pagina d'ateneo userebbe, viene accod
 calcolarne l'embedding. Il caso tipico che questo risolve è un disallineamento di vocabolario tra lo studente e la
 pagina che gli risponderebbe: una domanda sul ``test d'ingresso'' cercata contro una pagina che parla di ``prova di
 ammissione'' ottiene comunque un punteggio alto nella ricerca densa, che coglie la vicinanza di significato, ma un
-punteggio quasi nullo dal cross-encoder, 0,02, contro lo 0,99 ottenuto dalla stessa pagina quando la query usa il
-suo stesso lessico, sotto la soglia soglia, nonostante
+punteggio quasi nullo dal cross-encoder, contro lo 0,99 ottenuto dalla stessa pagina quando la query usa il
+suo stesso lessico: resta sotto soglia, nonostante
 il frammento giusto fosse stato trovato. Il paragrafo ipotetico, scritto con il lessico amministrativo atteso,
 porta nella query proprio quella terminologia, mentre la domanda originale resta anch'essa nella query cercata, così
 che il riordinamento continui a valutare la pertinenza rispetto a quanto è stato effettivamente chiesto. Al modello

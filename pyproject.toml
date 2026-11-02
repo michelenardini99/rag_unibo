@@ -23,3 +23,5 @@ select = ["E", "F", "I", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
+filterwarnings = ["ignore:Importing .* from 'ragas.metrics' is deprecated:DeprecationWarning"]
