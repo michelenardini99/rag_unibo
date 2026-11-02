@@ -1,0 +1,24 @@
+\section{RAG (Retrieval-Augmented Generation)} \label{sec:rag}
+
+Il \emph{Retrieval-Augmented Generation} è il paradigma che Lewis et al. \cite{lewis2020retrieval} propongono per superare i due limiti discussi nella Sezione~\ref{sec:problema}: invece di affidarsi esclusivamente alla conoscenza codificata nei parametri del modello, il sistema recupera prima, da una base documentale esterna e aggiornabile, i frammenti (in inglese \emph{chunk}) di testo più pertinenti alla domanda ricevuta, e li fornisce al modello linguistico come contesto su cui basare la risposta. Il principio di fondo è separare nettamente \emph{cosa il sistema sa}, cioè l'insieme dei documenti indicizzati, che può essere aggiornato in qualunque momento senza bisogno di un nuovo addestramento, da \emph{come il sistema si esprime}, compito che resta demandato interamente al modello linguistico. Gao et al. \cite{gao2023ragsurvey}, nella loro rassegna sul tema, inquadrano questo principio come la risposta più diretta proprio ai limiti di conoscenza statica e di verificabilità discussi in precedenza: un'affermazione generata dal modello può essere ricondotta a un frammento di testo specifico, citabile e verificabile, invece che
+derivare implicitamente e in modo opaco dai suoi parametri. La figura \ref{fig:rag-pipeline} mostra quella che è una pipeline generica di un sistema RAG.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\textwidth]{assets/rag_pipeline.png}
+  \caption{Schema generale di una pipeline RAG (1). Nella fase di \emph{data ingestion} (2), i documenti
+  e gli altri file della collezione (2.a) vengono pre-elaborati (2.b) e indicizzati in un archivio per il
+  recupero (3.a). Al momento della domanda, il prompt dell'utente viene eventualmente pre-elaborato (1.a) e
+  passato al \emph{retriever} (3), che recupera i documenti più pertinenti (3.b), li riordina facoltativamente
+  tramite un \emph{re-ranker} (3.c) e costruisce la richiesta da inviare al modello (3.d). Il
+  \emph{generator} (4) produce la risposta tramite un LLM (4.a), che può essere post-elaborata (1.b) prima di
+  essere restituita all'utente. I riquadri tratteggiati indicano componenti opzionali.}
+  \label{fig:rag-pipeline}
+\end{figure}
+
+\input{02_Stato_dell_arte/2.3_RAG/2.3.1_Embedding_e_ricerca_per_similarità}
+\input{02_Stato_dell_arte/2.3_RAG/2.3.2_Ricerca_ibrida_e_fusione_dei_risultati}
+\input{02_Stato_dell_arte/2.3_RAG/2.3.3_Reranking}
+\input{02_Stato_dell_arte/2.3_RAG/2.3.4_Trasformazione_della_query}
+\input{02_Stato_dell_arte/2.3_RAG/2.3.5_Chunking_e_fusione_gerarchica}
+\input{02_Stato_dell_arte/2.3_RAG/2.3.6_Posizione_del_contesto_nel_prompt}

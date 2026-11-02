@@ -1,0 +1,29 @@
+\subsection{Reranking}
+
+Il risultato della ricerca ibrida è però, tipicamente, solo una prima scrematura. Per restare efficienti su un
+indice di grandi dimensioni, entrambe le sue componenti valutano ciascun frammento senza che un modello lo legga
+mai insieme alla domanda. BM25 si limita a contare le parole in comune; nella componente densa, l'embedding di
+ciascun frammento viene calcolato una volta per tutte, in fase di indicizzazione e quindi prima ancora di conoscere
+la domanda, e al momento della ricerca viene soltanto confrontato con l'embedding della domanda tramite la
+similarità coseno (Sottosezione~\ref{subsec:embedding}). Il vettore di un frammento deve perciò riassumerne l'intero
+contenuto senza sapere quale aspetto interesserà a chi interroga il sistema: un frammento sulle tasse universitarie
+è rappresentato sempre dallo stesso vettore, sia che la domanda riguardi la scadenza della seconda rata, sia che
+riguardi l'importo previsto per una specifica fascia di reddito. Questa compressione comporta inevitabilmente una
+perdita di dettaglio, e un frammento solo genericamente pertinente può finire in cima ai risultati davanti a quello
+che contiene davvero la risposta. Un secondo stadio, il \emph{reranking}, corregge questo limite impiegando un
+\emph{cross-encoder}: un modello che riceve domanda e documento candidato concatenati in un unico input e ne stima
+direttamente la pertinenza reciproca, a un costo computazionale più alto ma applicato solo al pool già ristretto dei
+migliori candidati della prima fase. Nogueira e Cho \cite{nogueira2019bert} sono tra i primi a mostrare, adattando
+BERT a questo compito, che un cross-encoder di questo tipo migliora in modo sostanziale la qualità del ranking finale
+rispetto alla sola similarità vettoriale.
+
+Il cross-encoder rappresenta un estremo: domanda e documento vengono elaborati insieme, e ogni token dell'una
+può essere messo in relazione con ogni token dell'altro in tutti gli strati della rete, al prezzo di dover
+ripetere l'intero calcolo per ogni coppia. Esistono però soluzioni intermedie, che ottengono un confronto più dettagliato di
+quello tra due singoli vettori senza sostenere il costo di un cross-encoder. Khattab e Zaharia \cite{khattab2020colbert} propongono
+con ColBERT un'alternativa intermedia, la \emph{late interaction}: invece di comprimere ogni testo in un unico
+vettore, ogni token di domanda e documento mantiene il proprio embedding, e la similarità complessiva si ottiene
+aggregando le similarità massime tra i singoli token delle due sequenze --- un calcolo più ricco della sola
+similarità tra due vettori aggregati, ma più leggero di un cross-encoder pieno, perché gli embedding dei documenti
+possono comunque essere pre-calcolati e indicizzati in anticipo, mentre un cross-encoder richiede di rielaborare
+congiuntamente domanda e documento a ogni confronto.

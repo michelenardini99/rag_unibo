@@ -18,7 +18,7 @@ from docling.datamodel.pipeline_options import (
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.utils.utils import create_file_hash
 from docling_core.types.doc import ImageRefMode
-from ingestion.picture_descriptions import picture_descriptions_options
+from ingestion.picture_descriptions import check_vision_server, picture_descriptions_options
 from ingestion.normalize import normalize_document
 from config import settings
 
@@ -38,10 +38,8 @@ def pipeline_options(device: int) -> PdfPipelineOptions:
         table_structure_options=TableStructureOptions(do_cell_matching=True),
         do_ocr=True,
         do_table_structure=True,
-        # Captioning calls settings.generation_model over the API; skip it
-        # when that deployment isn't vision-capable (see generation_model_vision
-        # in prompt.py) — it would just 400 on every image otherwise.
-        do_picture_description=settings.generation_model_vision,
+        # Described by the vision model's own server, see picture_descriptions.py.
+        do_picture_description=settings.picture_description,
         generate_picture_images=True,
         picture_description_options=picture_descriptions_options,
         enable_remote_services=True
@@ -329,6 +327,11 @@ if __name__ == "__main__":
     parser.add_argument("--source", type = Path, default=settings.data_raw_dir, help="Cartella sorgente dei documenti da convertire (PDF, DOCX, PPTX, HTML). Se non specificata, usa la cartella predefinita in config.py")
     parser.add_argument("--destination", type = Path, default=settings.data_converted_dir, help="Cartella di destinazione dei documenti convertiti (Markdown + JSON). Se non specificata, usa la cartella predefinita in config.py")
     args = parser.parse_args()
+
+    if settings.picture_description:
+        print(f"Descrizione delle immagini con {check_vision_server()} ({settings.vision_base_url})")
+    else:
+        print("Descrizione delle immagini disattivata (PICTURE_DESCRIPTION=false)")
 
     result = convert_corpus(
         args.source,

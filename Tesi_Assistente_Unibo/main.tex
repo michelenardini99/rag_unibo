@@ -1,0 +1,110 @@
+\documentclass[12pt,a4paper]{report}
+
+% ===== Font: Times New Roman (+ font matematico coerente) =====
+\usepackage{mathptmx}
+
+% ===== Lingua (rinomina "Chapter"->"Capitolo", "Contents"->"Indice", "Bibliography"->"Bibliografia") =====
+% Sul server manca texlive-lang-italian (italian.ldf): babel carica l'italiano dal suo file .ini.
+% Installato il pacchetto, si può tornare a \usepackage[italian]{babel}.
+\usepackage{babel}
+\babelprovide[import, main]{italian}
+
+% ===== Margini: 2,5 cm su tutti i lati =====
+\usepackage[left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}
+
+% ===== Interlinea 1,5 =====
+\usepackage{setspace}
+\setstretch{1.5}
+
+% ===== Immagini =====
+\usepackage{graphicx}
+\usepackage{float} % posiziona figure/tabelle esattamente dove sono nel sorgente (placement [H])
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{X}{>{\raggedright\arraybackslash}X}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usetikzlibrary{arrows.meta, positioning, fit, backgrounds, calc, shapes.geometric, shapes.callouts}
+
+% ===== Codice sorgente: monospace 10pt con syntax highlighting =====
+\usepackage{xcolor}
+\usepackage{listings}
+\lstset{
+    basicstyle=\ttfamily\fontsize{10}{12}\selectfont,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{teal},
+    breaklines=true,
+    showstringspaces=false,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    captionpos=b,
+}
+
+% ===== Collegamenti ipertestuali (indice, riferimenti, citazioni) =====
+\usepackage{hyperref}
+
+\title{[Titolo provvisorio della tesi]}
+\author{[Nome Cognome]}
+\date{[Anno Accademico]}
+
+\begin{document}
+
+% ===== Frontespizio =====
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    {\large Università di Bologna}\\[0.3cm]
+    {\large Ingegneria e scienze informatiche}\\[2cm]
+
+    {\Huge \bfseries Assistente Universitario}\\[3cm]
+
+    \begin{minipage}{0.45\textwidth}
+        \raggedright
+        \large Relatore:\\
+        Matteo Ferrara
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \raggedleft
+        \large Candidato:\\
+        Michele Nardini
+    \end{minipage}
+
+    \vfill
+    {\large Anno Accademico [2025/2026]}
+\end{titlepage}
+
+% ===== Numerazione pagine: frontespizio escluso, indice in numeri romani =====
+\pagenumbering{roman}
+\tableofcontents
+
+% ===== Numerazione araba a partire dall'Introduzione =====
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+% ===== Capitoli =====
+\input{01_Introduzione/Introduzione}
+
+\input{02_Stato_dell_arte/Stato_dell_arte}
+
+\input{03_Architettura_e_sviluppo_del_sistema/Architettura_e_sviluppo}
+
+\input{04_Validazione_del_sistema/Validazione_del_sistema}
+
+\input{05_Conclusioni_e_sviluppi_futuri/Conclusioni}
+
+% ===== Bibliografia (stile IEEE) =====
+\bibliographystyle{ieeetr}
+\bibliography{bibliografia}
+
+\end{document}

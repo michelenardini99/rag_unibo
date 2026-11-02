@@ -1,0 +1,24 @@
+\subsection{Trasformazione della query}
+
+Finora si è assunto implicitamente che la domanda usata per il recupero sia esattamente il testo digitato
+dall'utente. Questo non è sempre il caso migliore: una domanda formulata in modo colloquiale o ellittico (che, ad esempio, fa
+riferimento allo scambio precedente in una conversazione) può essere lessicalmente distante dal testo
+del documento che contiene effettivamente la risposta, anche quando quel documento è topicamente pertinente. La
+letteratura ha esplorato diverse strategie per colmare questa distanza riscrivendo la domanda prima di usarla per il
+recupero, invece di cambiare il modo in cui i documenti vengono rappresentati. Gao et al. \cite{gao2022hyde}, con
+HyDE (\emph{Hypothetical Document Embeddings}), propongono di chiedere a un LLM di generare un documento ipotetico
+che risponderebbe alla domanda --- un testo che può contenere imprecisioni o essere parzialmente inventato --- e di
+usare l'embedding di \emph{questo} documento, anziché quello della domanda originale, per la ricerca per similarità:
+un documento ipotetico, per quanto impreciso nei dettagli, tende a essere lessicalmente e stilisticamente più vicino
+ai documenti reali pertinenti di quanto non lo sia la domanda originale, spesso formulata in modo molto più
+sintetico.
+
+Un problema distinto, riguarda le domande che esprimono più di una richiesta
+informativa: un singolo
+passaggio di recupero sulla domanda combinata rischia di restituire chunk pertinenti a una sola delle due richieste,
+perché il reranking valuta ogni candidato contro l'intera domanda invece che contro le sue parti. Ammann et al.
+\cite{ammann2025decomposition} affrontano esplicitamente questo caso con la \emph{decomposizione della domanda}: un
+LLM scompone la domanda originale in una o più sotto-domande autonome, il recupero viene eseguito separatamente per
+ciascuna, e i risultati vengono fusi e riordinati con un cross-encoder standard --- un approccio che gli autori
+mostrano migliorare il recupero su benchmark di question answering multi-hop (cioè un insieme standard di domande con risposte note usato per confrontare sistemi diversi) in cui la risposta richiede di combinare informazioni contenute in documenti diversi, senza richiedere alcun addestramento
+aggiuntivo o indicizzazione specializzata.

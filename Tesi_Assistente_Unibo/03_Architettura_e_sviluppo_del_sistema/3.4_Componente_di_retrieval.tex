@@ -1,0 +1,204 @@
+\section{Componente di retrieval}\label{sec:retrieval}
+
+A ogni domanda, il componente Retrieving deve individuare, tra le decine di migliaia di frammenti indicizzati
+(Sezione~\ref{sec:chunking}), i pochi davvero pertinenti da passare al modello generativo. Non è un singolo passo,
+ma un imbuto a più stadi, via via più costosi e più precisi (Figura~\ref{fig:imbuto-retrieval}): prima la domanda
+viene analizzata e, se necessario, riformulata; poi una ricerca ibrida seleziona un primo insieme ampio di
+candidati; un modello di riordinamento li valuta uno a uno contro la domanda; infine i frammenti vengono fusi con
+il loro contesto quando serve e filtrati per pertinenza. Questa sezione ne descrive l'adattamento concreto al dominio universitario.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+      stg/.style={draw, thick, rounded corners=3pt, fill=blue!7, align=center, text width=2.3cm,
+                  minimum height=1.1cm, font=\scriptsize\bfseries},
+      sub/.style={font=\scriptsize, align=center, text=black!70, text width=2.5cm, anchor=north},
+      arr/.style={-{Stealth[length=2mm]}, thick, black!70},
+    ]
+    \node[stg] (q) at (0,0) {Analisi della domanda};
+    \node[stg] (hs) at (3.3,0) {Ricerca ibrida};
+    \node[stg] (rr) at (6.6,0) {Riordinamento};
+    \node[stg] (am) at (9.9,0) {Fusione e soglia};
+    \foreach \a/\b in {q/hs, hs/rr, rr/am} \draw[arr] (\a) -- (\b);
+    \node[sub] at (0,-0.9) {condensazione, scomposizione, corso};
+    \node[sub] at (3.3,-0.9) {denso + sparso, RRF, $\sim$20 candidati};
+    \node[sub] at (6.6,-0.9) {cross-encoder, priorità al corso};
+    \node[sub] at (9.9,-0.9) {sezioni intere, soglia, top-5};
+  \end{tikzpicture}
+  \caption{I quattro stadi del recupero, ciascuno descritto in questa sezione. Un quinto meccanismo, HyDE
+  (Sezione~\ref{sec:hyde-retrieval}), interviene solo quando la ricerca ibrida non restituisce nulla.}
+  \label{fig:imbuto-retrieval}
+\end{figure}
+
+\subsection{Analisi della domanda}\label{sec:analisi-domanda}
+
+Prima di essere cercata, la domanda viene normalizzata in tre passi indipendenti. Il primo, la
+\emph{condensazione}, riformula una domanda di follow-up in una domanda autonoma alla luce della cronologia della
+conversazione, così che il recupero non debba mai cercare un
+riferimento implicito. Il secondo, la \emph{scomposizione}, divide una domanda che unisce più richieste distinte in
+altrettante domande autonome, cercate e poi fuse separatamente, perché il riordinamento valuta la pertinenza di un
+frammento rispetto alla domanda intera, e un frammento pertinente a una sola delle due richieste rischia di uscire
+dai primi posti quando l'altra richiesta, nello stesso testo, pesa quanto lei. Entrambe le tecniche sono discusse
+nella Sezione~\ref{sec:rag}; nella pratica di questo sistema, la scomposizione richiede un'attenzione che la sola
+teoria non rende evidente: quando una richiesta della domanda originale dipende implicitamente da quella
+precedente, la domanda scomposta
+deve ripetere esplicitamente a quale contesto fa riferimento: senza quel riferimento esplicito, la domanda porebbe risultare
+ambigua quanto quella originale.
+
+Il terzo passo, specifico di questo dominio, individua il corso di laurea nominato esplicitamente nella domanda
+(Sezione~\ref{sec:corso-priorita}).
+
+Ad esempio, su una cronologia in cui lo studente ha già chiesto ``Entro quando scade il pagamento della
+prima rata per gli studenti iscritti a una laurea triennale?'', la nuova domanda ``E per chi è iscritto alla magistrale, e quanto costa la mora se pago in ritardo?'' --- un follow-up che è anche una domanda composta --- viene
+prima condensata dal modello linguistico in produzione in ``E entro quando scade il
+pagamento della prima rata per gli studenti di laurea magistrale, e quanto costa la mora se pago
+in ritardo?'', e poi scomposta nelle due domande autonome
+\begin{quote}
+  \small
+  Entro quando scade il pagamento della prima rata per gli studenti di laurea magistrale?\\
+  Quanto costa la mora se pago in ritardo la prima rata della laurea magistrale?
+\end{quote}
+cercate e fuse separatamente nello stadio successivo.
+
+\subsection{Ricerca ibrida}\label{sec:ricerca-ibrida}
+
+Alla domanda, già normalizzata (Sezione~\ref{sec:analisi-domanda}), si applica lo stesso modello di embedding usato
+in indicizzazione (Sezione~\ref{sec:embedding}), e Qdrant esegue due ricerche in parallelo, una per la
+rappresentazione densa e una per quella sparsa, fondendole con Reciprocal Rank Fusion (Sezione~\ref{sec:rag}). Un
+solo filtro è
+applicato in ogni ricerca indipendentemente dal corso di laurea: solo i frammenti con stato \emph{vigente} vengono
+considerati. Quando il corso di laurea dello studente è noto, un secondo filtro restringe la ricerca ai soli
+frammenti di ateneo e a quelli di quel corso --- gli altri corsi, pur presenti nell'indice, non vengono nemmeno
+candidati in questa fase. È una scelta deliberata, non solo un'ottimizzazione: più corsi pubblicano pagine quasi
+omonime su argomenti analoghi, con contenuto diverso (ciascuno ha una propria \emph{Prova Pratica Valutativa}, una
+propria pagina \emph{Tasse ed esenzioni}), e lasciarle tutte in gara rischierebbe di citare, nella stessa risposta,
+requisiti o importi di corsi diversi. Quando il corso non è ancora noto, la ricerca resta invece ristretta alle sole
+pagine di ateneo, finché la domanda --- o la pagina trovata --- non permette di risolverlo (Sezione~\ref{sec:corso-priorita}).
+Il risultato di questa fase è un insieme di circa venti candidati, troppi per essere affidabili singolarmente ma
+abbastanza pochi da poter essere valutati uno a uno nello stadio successivo.
+
+Per la seconda delle due domande scomposte nell'esempio della Sezione~\ref{sec:analisi-domanda} --- ``Quanto costa
+la mora se pago in ritardo per la prima rata della laurea magistrale?'' --- ristretta al corso di Psicologia
+Scolastica e di Comunità, la ricerca ibrida restituisce effettivamente venti candidati: il punteggio di fusione
+decresce da 0,700 del primo a 0,159 dell'ottavo, un calo che mostra perché affidarsi al solo primo risultato della
+ricerca ibrida sarebbe rischioso, ma anche perché valutare uno a uno con un modello più accurato solo una ventina di
+candidati, invece di migliaia, resta praticabile a ogni domanda.
+
+\subsection{Riordinamento e corso di laurea}\label{sec:corso-priorita}
+
+I candidati della ricerca ibrida vengono valutati da un cross-encoder, \texttt{bge-reranker-v2-m3}
+(Sezione~\ref{sec:rag}), che riceve la domanda e ciascun candidato insieme e ne stima la pertinenza reciproca --- più
+accurato della sola similarità vettoriale, perché può cogliere corrispondenze specifiche tra i due testi che la
+ricerca ibrida, confrontando rappresentazioni calcolate separatamente, non vede. Il candidato non è giudicato sul
+solo testo del frammento, ma sul percorso delle sue intestazioni (Sezione~\ref{sec:chunking}) seguito dal testo,
+esattamente come già avviene per l'embedding (Sezione~\ref{sec:embedding}): un frammento che è solo una tabella o un
+elenco puntato, senza contesto, è spesso incomprensibile al cross-encoder da solo --- per la domanda ``Sotto quale
+ISEE si ha l'esenzione?'', il punteggio del frammento ``l'indicatore \dots{} è pari o inferiore a 27.000 €'', che da
+solo non dice a cosa si riferisca quella soglia, passa da 0,733 a 0,860 quando gli viene anteposta l'intestazione
+della sua sezione. Se il corso di laurea è noto, prima
+del riordinamento il suo nome viene rimosso dal testo della domanda: la ricerca è già ristretta a quel corso
+(Sezione~\ref{sec:ricerca-ibrida}), e lasciarlo nella domanda farebbe sì che il cross-encoder, un modello sensibile
+alla sovrapposizione lessicale, premiasse ogni frammento che nomina quel corso indipendentemente dal contenuto. Un
+secondo meccanismo, un bonus fisso di 0,1 al punteggio dei frammenti del corso noto, interviene dopo il riordinamento: a
+quel punto, con la ricerca già ristretta al solo corso noto e alle pagine di ateneo, il bonus non serve più a
+tenere testa ad altri corsi --- non ce ne sono --- ma a preferire, quando entrambe compaiono tra i candidati, la
+versione specifica del corso di un argomento rispetto alla versione generica di ateneo sullo stesso argomento.
+
+Resta il caso in cui il recupero, ristretto al corso noto e alle pagine di ateneo, non trovi nulla sopra la soglia
+nemmeno dopo il tentativo con HyDE (Sezione~\ref{sec:hyde-retrieval}): può darsi che la domanda riguardi un altro
+corso. In questo caso il sistema non prova a cercare da solo tra gli altri
+corsi, ma lo chiede esplicitamente allo studente, offrendogli l'elenco dei corsi indicizzati; se lo studente ne
+indica uno diverso, la ricerca riparte ristretta al nuovo corso.
+
+Allo studente viene chiesto di indicare il proprio corso anche quando non è ancora noto affatto, ma per una ragione
+diversa dalla precedente. In questo caso la ricerca usata per rispondere resta sempre ristretta alle sole pagine di
+ateneo (Sezione~\ref{sec:ricerca-ibrida}): non è mai lei a cercare tra i corsi. Se non trova nulla sopra soglia,
+allo studente viene chiesto il corso direttamente, come nel caso precedente. Se invece trova qualcosa, il sistema
+lancia un'ulteriore ricerca, questa volta senza alcuna restrizione --- su tutto il corpus, corsi compresi --- usata
+solo per un confronto e mai per rispondere: se tra i suoi risultati una pagina di un corso specifico ottiene un
+punteggio più alto del miglior risultato trovato tra le sole pagine di ateneo, è segno che la domanda dipende da un
+corso più di quanto le pagine generali possano dire, e anche in questo caso il sistema preferisce chiedere allo
+studente il proprio corso piuttosto che rispondere con un contenuto di ateneo che potrebbe non riguardarlo.
+
+\subsection{Fusione gerarchica e soglia di accettazione}
+
+I frammenti riordinati attraversano infine l'\emph{AutoMergingRetriever} (Sezione~\ref{sec:rag}): quando abbastanza
+fratelli della stessa sezione compaiono tra i candidati, vengono sostituiti dalla sezione intera che li contiene
+(Sezione~\ref{sec:chunking}), così che il modello generativo riceva un contesto completo invece di frammenti
+isolati e lessicalmente vicini tra loro. Solo a questo punto, sui nodi --- frammenti o sezioni fuse --- così
+ottenuti, viene applicata una soglia minima di punteggio, 0,3 sui punteggi del riordinamento normalizzati tra 0 e
+1: chi non la supera viene scartato, perché un contesto
+debolmente pertinente, passato comunque al modello, aumenta il rischio di una risposta costruita su un frammento
+sbagliato ma presente, invece di un'astensione corretta (Sezione~\ref{sec:generazione}) --- coerente con il vincolo
+di precisione fattuale che guida l'intero sistema (Capitolo~\ref{cap:architettura}). Se nessun nodo raggiunge quella
+soglia, un meccanismo di ripiego ne accetta comunque alcuni con una soglia più permissiva, 0,12, piuttosto che
+restituire un contesto vuoto: un contesto vuoto forza il rifiuto anche nei casi in cui un frammento scartato dalla
+soglia principale fosse in realtà quello giusto, solo formulato in un lessico che il riordinamento premia meno di
+quanto meriterebbe. Questo non vuol dire accettare il rischio di una risposta sbagliata al posto di un'astensione:
+il modello generativo resta comunque istruito a dichiarare esplicitamente quando il contesto ricevuto non contiene
+la risposta, invece di inventarla (Sezione~\ref{sec:generazione}), ed è questo secondo controllo --- più accurato
+perché legge il testo del frammento invece del solo punteggio --- a decidere se un candidato del ripiego risponde
+davvero o va scartato. Il ripiego allarga quindi l'insieme dei candidati sottoposti a quel controllo, senza
+sostituirlo: la soglia più permissiva decide solo cosa il modello generativo può vedere, non cosa deve usare. Dei
+nodi che superano la soglia, al più cinque vengono infine passati al modello generativo, scelti
+per punteggio decrescente.
+
+\subsection{Recupero di riserva con HyDE}\label{sec:hyde-retrieval}
+
+Quando il corso di laurea è noto ma la ricerca ibrida non restituisce alcun candidato sopra soglia, la domanda viene
+cercata una seconda volta con HyDE (Sezione~\ref{sec:rag}): un paragrafo ipotetico, scritto dal modello linguistico
+nel linguaggio amministrativo che una vera pagina d'ateneo userebbe, viene accodato alla domanda originale prima di
+calcolarne l'embedding. Il caso tipico che questo risolve è un disallineamento di vocabolario tra lo studente e la
+pagina che gli risponderebbe: una domanda sul ``test d'ingresso'' cercata contro una pagina che parla di ``prova di
+ammissione'' ottiene comunque un punteggio alto nella ricerca densa, che coglie la vicinanza di significato, ma un
+punteggio quasi nullo dal cross-encoder, 0,02, contro lo 0,99 ottenuto dalla stessa pagina quando la query usa il
+suo stesso lessico, sotto la soglia soglia, nonostante
+il frammento giusto fosse stato trovato. Il paragrafo ipotetico, scritto con il lessico amministrativo atteso,
+porta nella query proprio quella terminologia, mentre la domanda originale resta anch'essa nella query cercata, così
+che il riordinamento continui a valutare la pertinenza rispetto a quanto è stato effettivamente chiesto. Al modello
+non viene chiesto di essere accurato, solo verosimile nel linguaggio: le date che scrive non vengono mai mostrate
+allo studente e servono solo a orientare la ricerca verso il lessico giusto.
+
+La Figura~\ref{fig:hyde-esempio} ripercorre l'intero meccanismo su un caso reale: la domanda ``Quando si tiene il
+test d'ingresso?'', il paragrafo ipotetico generato dal modello in produzione per quella domanda, e un frammento
+realmente indicizzato --- la pagina del corso di Infermieristica sulla \emph{prova di ammissione} --- contro cui
+entrambe le query vengono valutate dal cross-encoder. Senza HyDE, la domanda originale ottiene un punteggio di
+0,03, ben sotto la soglia di accettazione; la query completata con il paragrafo ipotetico ottiene invece 0,94,
+abbondantemente sopra soglia, pur non avendo il modello azzeccato il termine ``ammissione'' usato dalla pagina: la
+sola maggiore ricchezza lessicale e informativa del paragrafo, nel linguaggio amministrativo atteso, è bastata a
+farlo riconoscere come pertinente.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+      box/.style={draw, thick, rounded corners=3pt, text width=6.2cm, font=\scriptsize, inner sep=5pt},
+      lbl/.style={font=\tiny, align=center, text width=2.6cm},
+      arr/.style={-{Stealth[length=2mm]}, thick},
+    ]
+    \node[box, fill=blue!7, align=center] (q) at (0,3.6)
+      {\textbf{Domanda originale}\\ ``Quando si tiene il test d'ingresso?''};
+    \node[box, fill=yellow!12, align=left] (hyde) at (0,1.15)
+      {\textbf{Paragrafo ipotetico generato dal modello (HyDE)}\\[2pt]
+       \itshape ``Il test d'ingresso \dots{} è previsto annualmente nel mese di luglio, con le sessioni che si
+       svolgono dal 15 luglio al 31 luglio. Per partecipare, gli studenti devono effettuare la prenotazione
+       online \dots{} entro il 10 luglio.''};
+    \node[box, fill=blue!7, align=center] (qf) at (0,-1.5)
+      {\textbf{Query con HyDE}\\ domanda originale + paragrafo ipotetico};
+    \node[box, fill=green!6, align=left, text width=4.6cm] (page) at (9.3,1.1)
+      {\textbf{Frammento indicizzato}\\ (corso di Infermieristica)\\[2pt]
+       ``\dots{} la prova di ammissione per l'a.a.\ 2026/27 si svolgerà il giorno 16 settembre 2026 \dots{}''};
+
+    \draw[arr, black!70] (q) -- (hyde);
+    \draw[arr, black!70] (hyde) -- (qf);
+
+    \draw[arr, red!60!black, dashed] (q.east) -- (page.north west)
+      node[lbl, midway, above, sloped] {senza HyDE: 0,03\\ sotto soglia (0,3)};
+    \draw[arr, green!45!black] (qf.east) -- (page.south west)
+      node[lbl, midway, below, sloped] {con HyDE: 0,94\\ sopra soglia};
+  \end{tikzpicture}
+  \caption{Esempio reale del recupero di riserva con HyDE: la domanda originale, cercata da sola contro il
+  frammento corretto, ottiene dal cross-encoder un punteggio troppo basso per superare la soglia; la stessa domanda,
+  completata con il paragrafo ipotetico generato dal modello, lo supera ampiamente. Punteggi calcolati eseguendo dal
+  vivo il reranker e il modello di HyDE in produzione contro un frammento reale dell'indice.}
+  \label{fig:hyde-esempio}
+\end{figure}

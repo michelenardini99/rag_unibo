@@ -23,25 +23,16 @@ from ragas.metrics import (
     answer_relevancy,
     context_precision,
     context_recall,
+    answer_correctness,
     answer_similarity,
 )
-from ragas.metrics._answer_correctness import AnswerCorrectness
 from ragas.run_config import RunConfig
 from retrieval.query_filters import course_tipo_laurea_map, extract_query_filters, known_values_for_fields
 from retrieval.retriever import retrieve_decomposed
 
 RETRIEVING_METRICS = [context_precision, context_recall]
 GENERATIVE_METRICS = [faithfulness, answer_relevancy]
-# Il default di RAGAS (weights=[0.75, 0.25], beta=1.0) pesa troppo la componente
-# fattuale F1: un singolo dettaglio secondario mancante nel riferimento (es. "chi
-# nomina la commissione" quando il nucleo della domanda e' "quanti membri") conta
-# come false negative a pieno peso e affonda il punteggio di risposte sostanzialmente
-# corrette (osservato su un campione di 15 casi a basso punteggio, vedi Capitolo 4).
-# weights=[0.5, 0.5] alza il peso della similarita' semantica; beta=0.5 pesa la
-# precision piu' della recall nell'F-beta fattuale, coerente con la priorita' del
-# progetto (un'affermazione inventata, FP, e' peggio di un dettaglio omesso, FN).
-answer_correctness_relaxed = AnswerCorrectness(weights=[0.5, 0.5], beta=0.5)
-END_TO_END_METRICS = [answer_correctness_relaxed, answer_similarity]
+END_TO_END_METRICS = [answer_correctness, answer_similarity]
 
 
 class BGEM3RagasEmbeddings(BaseRagasEmbeddings):
@@ -243,57 +234,98 @@ def results_to_json(dataset: list[dict], df, timings: list[dict]) -> dict:
     }
 
 
-def evaluate(
+# The judge's answers are short JSON (statements, verdicts): 2048 leaves the
+# prompt (question + retrieved contexts + ragas instructions) 6144 of the
+# 8192-token window; 4096 made the longest contexts fail ("maximum context
+# length"), dropping exactly the multi-part and synthesis cases from the means.
+JUDGE_MAX_TOKENS = 2048
+
+
+def generate(
     dataset: list[dict],
     llm: OpenAILike,
     embed: BGEM3FlagModel,
     client: QdrantClient,
     reranker: FlagReranker,
     docstore: SimpleDocumentStore,
+    output_path: Path,
+    model_id: str,
     collection_name: str = "ateneo_docs",
     retrieval_kwargs: dict | None = None,
-    output_path: Path = Path("datasets/eval/results.json"),
     max_workers: int = 8,
-    ragas_max_workers: int = 32,
-):
-    """Runs the full RAGAS evaluation for a dataset and writes results to disk.
+) -> None:
+    """Runs every test case through condense -> retrieve -> generate and
+    saves question, contexts, answer and timing, for `judge()` to score later.
+
+    Kept apart from judging so all models can be scored by the same judge
+    (vLLM serves one model at a time) and answers can be re-judged or read
+    without generating them again.
 
     Args:
         dataset (list[dict]): Test cases to evaluate.
-        llm (OpenAILike): Model used for condensation, generation, and as the
-            ragas judge.
-        embed (BGEM3FlagModel): Embedding model for retrieval and ragas similarity.
+        llm (OpenAILike): Model under evaluation (condensation and generation).
+        embed (BGEM3FlagModel): Embedding model for retrieval.
         client (QdrantClient): Qdrant client.
         reranker (FlagReranker): Cross-encoder reranker.
         docstore (SimpleDocumentStore): Docstore backing the retriever.
+        output_path (Path): Where to write the generations JSON.
+        model_id (str): Model served by vLLM, recorded in the output.
         collection_name (str): Qdrant collection to search.
         retrieval_kwargs (dict | None): Extra kwargs forwarded to `retrieve()`.
-        output_path (Path): Where to write the results JSON.
-        max_workers (int): Test cases run concurrently in the condense/
-            retrieve/generate pipeline, see `build_eval_dataset`.
-        ragas_max_workers (int): Concurrency for the ragas judge itself
-            (`RunConfig.max_workers`, default 16 in ragas) — these are pure
-            LLM/embedding calls against the same vLLM server, so they can
-            usually afford more concurrency than `max_workers`.
-
-    Returns:
-        The ragas EvaluationResult object.
+        max_workers (int): Test cases run concurrently, see `build_eval_dataset`.
     """
     rows, timings = build_eval_dataset(
         dataset, llm, embed, client, reranker, docstore, collection_name, retrieval_kwargs, max_workers=max_workers,
     )
+    cases = [
+        {"id": case["id"], **({"diagnostic_tag": case["diagnostic_tag"]} if "diagnostic_tag" in case else {}), **row}
+        for case, row in zip(dataset, rows)
+    ]
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps({"model": model_id, "cases": cases, "timing": timing_summary(timings)},
+                                      indent=2, ensure_ascii=False), encoding="utf-8")
+    t = timing_summary(timings)
+    print(f"Risposte salvate in {output_path} — generazione media: {t['generate_s']['mean']}, "
+          f"mediana: {t['generate_s']['median']}")
 
-    openai_client = openai.OpenAI(base_url=llm.api_base, api_key="EMPTY")
 
-    ragas_llm = llm_factory(llm.model, provider="openai", client=openai_client, max_tokens=4096, temperature=0-0)
+def judge(
+    generations_path: Path,
+    judge_base_url: str,
+    judge_model: str,
+    judge_model_id: str,
+    embed: BGEM3FlagModel,
+    output_path: Path,
+    ragas_max_workers: int = 32,
+):
+    """Scores the answers saved by `generate()` with ragas and writes the results.
+
+    Args:
+        generations_path (Path): Output of `generate()`.
+        judge_base_url (str): OpenAI-compatible endpoint serving the judge.
+        judge_model (str): Model name to request from that endpoint.
+        judge_model_id (str): The judge's actual model, recorded in the results.
+        embed (BGEM3FlagModel): Embedding model for ragas' similarity metrics.
+        output_path (Path): Where to write the results JSON.
+        ragas_max_workers (int): Concurrency for the ragas judge
+            (`RunConfig.max_workers`, default 16 in ragas): pure LLM/embedding
+            calls against the vLLM server, which batches them.
+
+    Returns:
+        The ragas EvaluationResult object.
+    """
+    generations = json.loads(generations_path.read_text(encoding="utf-8"))
+    cases = generations["cases"]
+    rows = [{k: c[k] for k in ("user_input", "retrieved_contexts", "response", "reference")} for c in cases]
+
+    openai_client = openai.OpenAI(base_url=judge_base_url, api_key="EMPTY")
+    ragas_llm = llm_factory(judge_model, provider="openai", client=openai_client, max_tokens=JUDGE_MAX_TOKENS,
+                            temperature=0.0)
     ragas_emb = BGEM3RagasEmbeddings(embed)
 
-    final_dataset = Dataset.from_list(rows)
-
     metrics = RETRIEVING_METRICS + GENERATIVE_METRICS + END_TO_END_METRICS
-
     res = ragas_evaluate(
-        dataset=final_dataset,
+        dataset=Dataset.from_list(rows),
         metrics=metrics,
         llm=ragas_llm,
         embeddings=ragas_emb,
@@ -302,13 +334,11 @@ def evaluate(
     )
     df = res.to_pandas()
 
+    results = {"model": generations["model"], "judge": judge_model_id,
+               **results_to_json(cases, df, generations["timing"]["per_case"])}
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(results_to_json(dataset, df, timings), indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"Risultati salvati in {output_path}")
-
+    output_path.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"Risultati salvati in {output_path} (modello {generations['model']}, giudice {judge_model_id})")
     for metric in metrics:
         print(f"{metric.name}: {df[metric.name].mean():.2f}")
-
-    t = timing_summary(timings)
-    print(f"  di cui generazione — media: {t['generate_s']['mean']}, mediana: {t['generate_s']['median']}")
     return res

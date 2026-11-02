@@ -1,10 +1,16 @@
+# Le porte sono pubblicate solo su 127.0.0.1: vLLM e Qdrant non hanno autenticazione e non devono
+# essere raggiungibili da altre macchine. Per l'interfaccia da remoto si usa un tunnel SSH
+# (o l'inoltro delle porte di VS Code), oppure APP_BIND=0.0.0.0 dietro un reverse proxy con login.
+#
+# Le immagini sono fissate per versione e digest: un `docker compose pull` non le cambia.
+
 services:
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.18.3@sha256:0bd98fa7977f1e75694779359ca4e212822e5a71334e28421182f72f209d5286
     restart: unless-stopped
     ports:
-      - "${QDRANT_HTTP_PORT:-6333}:6333"
-      - "${QDRANT_GRPC_PORT:-6334}:6334"
+      - "127.0.0.1:${QDRANT_HTTP_PORT:-6333}:6333"
+      - "127.0.0.1:${QDRANT_GRPC_PORT:-6334}:6334"
     volumes:
       - qdrant_storage:/qdrant/storage
     healthcheck:
@@ -14,7 +20,7 @@ services:
       retries: 10
 
   vllm:
-    image: vllm/vllm-openai:latest
+    image: vllm/vllm-openai:v0.26.0@sha256:ffb2d59b1c059a5bd8d781320c9f5189de8293693b7d95da54befddaa54abf52
     restart: unless-stopped
     ipc: host
     shm_size: "2gb"
@@ -23,7 +29,7 @@ services:
     volumes:
       - hf_cache:/root/.cache/huggingface
     ports:
-      - "${VLLM_PORT:-8000}:8000"
+      - "127.0.0.1:${VLLM_PORT:-8000}:8000"
     command: >
       --model ${VLLM_MODEL_ID:-Qwen/Qwen2.5-14B-Instruct-AWQ}
       --served-model-name generation-llm
@@ -32,12 +38,91 @@ services:
       --max-model-len ${VLLM_MAX_MODEL_LEN:-8192}
       --gpu-memory-utilization ${VLLM_GPU_MEMORY_UTILIZATION:-0.90}
       --port 8000
+    healthcheck:
+      # Healthy once the model is loaded: the first start downloads it, hence the long start period.
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30m
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
               device_ids: ["${VLLM_DEVICE_ID:-0}"]
+              capabilities: ["gpu"]
+
+  vllm-vision:
+    image: vllm/vllm-openai:v0.26.0@sha256:ffb2d59b1c059a5bd8d781320c9f5189de8293693b7d95da54befddaa54abf52
+    profiles: ["indexing"]
+    ipc: host
+    shm_size: "2gb"
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "127.0.0.1:${VISION_PORT:-8002}:8000"
+    command: >
+      --model ${VISION_MODEL_ID:-Qwen/Qwen2.5-VL-7B-Instruct-AWQ}
+      --served-model-name vision-llm
+      --quantization awq
+      --dtype ${VLLM_DTYPE:-float16}
+      --max-model-len ${VISION_MAX_MODEL_LEN:-8192}
+      --gpu-memory-utilization ${VISION_GPU_MEMORY_UTILIZATION:-0.90}
+      --limit-mm-per-prompt '{"image": 1}'
+      --port 8000
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30m
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${VISION_DEVICE_ID:-2}"]
+              capabilities: ["gpu"]
+
+  # Interfaccia Chainlit con la pipeline di risposta, embedding e reranker (vedi Dockerfile).
+  # Legge l'indice già costruito (datasets/chunked) e i modelli già scaricati (.cache/huggingface).
+  app:
+    build: .
+    image: rag_unibo-app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Inside the compose network the services are reached by name, not via localhost.
+      - QDRANT_URL=http://qdrant:6333
+      - VLLM_BASE_URL=http://vllm:8000/v1
+      # The container only sees the GPU reserved below, which it numbers 0.
+      - EMBEDDINGS_DEVICE_ID=0
+      - HF_HOME=/app/.cache/huggingface
+    volumes:
+      - ./datasets/chunked:/app/datasets/chunked:ro
+      - ./.cache/huggingface:/app/.cache/huggingface
+    ports:
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8001}:8001"
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      vllm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001')\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 3m
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${EMBEDDINGS_DEVICE_ID:-0}"]
               capabilities: ["gpu"]
 
 volumes:

@@ -1,0 +1,219 @@
+\section{Panoramica dell'architettura}\label{sec:panoramica}
+
+Il sistema si articola in due processi distinti: un processo di \emph{indicizzazione}, eseguito in anticipo e
+ripetuto solo quando i documenti cambiano, che trasforma la documentazione dell'ateneo in una base di conoscenza
+interrogabile; e un processo di \emph{risposta}, eseguito a ogni domanda dello studente, che interroga quella base e
+costruisce la risposta. I due processi condividono un unico punto di contatto, l'archivio in cui l'indicizzazione
+deposita i frammenti di testo e da cui la risposta li recupera: è questa separazione a rendere la conoscenza del
+sistema aggiornabile senza intervenire sul modello linguistico, secondo il principio del RAG discusso nella
+Sezione~\ref{sec:rag}. A questi due processi se ne affianca un terzo, la \emph{valutazione}, che misura la qualità
+del sistema su un insieme di domande di test.
+
+\subsection*{Componenti}
+
+Il sistema è composto da sette componenti, rappresentati nella Figura~\ref{fig:componenti} e corrispondenti ai
+moduli in cui è organizzato il codice.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+      comp/.style={draw, thick, rounded corners=3pt, align=center, minimum width=2.6cm, minimum height=0.95cm,
+                   font=\footnotesize\bfseries, fill=blue!7},
+      lab/.style={font=\scriptsize, align=left, text width=2.6cm, text=black!75},
+      labL/.style={lab, align=right},
+      arr/.style={-{Stealth[length=2mm]}, thick, black!70},
+      head/.style={font=\small\bfseries},
+      bubble/.style={draw, rectangle callout, rounded corners=2pt, fill=yellow!12, font=\scriptsize\itshape,
+                     align=left, inner sep=3pt},
+      card/.style={draw, rounded corners=2pt, fill=white, font=\scriptsize, align=left, inner sep=3pt},
+      % icona: pagina web
+      webpage/.pic={
+        \draw[rounded corners=1pt, fill=white] (-0.45,-0.35) rectangle (0.45,0.35);
+        \fill[blue!30, rounded corners=1pt] (-0.45,0.22) rectangle (0.45,0.35);
+        \foreach \x in {-0.38,-0.31,-0.24} \fill[white] (\x,0.285) circle (0.022);
+        \fill[blue!15] (-0.37,-0.05) rectangle (-0.05,0.14);
+        \foreach \y in {0.11,0.03,-0.05} \draw[gray!60, line width=0.7pt] (0.02,\y) -- (0.37,\y);
+        \foreach \y in {-0.16,-0.25} \draw[gray!60, line width=0.7pt] (-0.37,\y) -- (0.37,\y);
+      },
+      % icona: documento con angolo piegato e un'etichetta
+      doc/.pic={
+        \draw[fill=white] (-0.28,-0.37) -- (-0.28,0.37) -- (0.12,0.37) -- (0.28,0.21) -- (0.28,-0.37) -- cycle;
+        \draw (0.12,0.37) -- (0.12,0.21) -- (0.28,0.21);
+        \foreach \y in {0.22,0.12} \draw[gray!60, line width=0.6pt] (-0.19,\y) -- (0.05,\y);
+        \node[fill=#1, text=white, font=\tiny\bfseries, inner sep=1.2pt] at (0,-0.12) {\tikzpictext};
+      },
+      % icona: frammenti con metadati
+      chunks/.pic={
+        \foreach \y/\c in {0.26/orange!30, 0/green!25, -0.26/blue!20} {
+          \draw[fill=\c, rounded corners=1pt] (-0.45,\y-0.1) rectangle (0.3,\y+0.1);
+          \draw[gray!70, line width=0.5pt] (-0.38,\y) -- (0.2,\y);
+          \fill[black!55] (0.4,\y) circle (0.05);
+        }
+      },
+      % icona: studente
+      student/.pic={
+        \fill[black!55] (0,0.2) circle (0.14);
+        \fill[black!55] (-0.24,-0.33) -- (-0.24,-0.12) arc (180:0:0.24) -- (0.24,-0.33) -- cycle;
+      },
+      % icona: insieme di test
+      checklist/.pic={
+        \draw[fill=white, rounded corners=1pt] (-0.3,-0.37) rectangle (0.3,0.37);
+        \foreach \y in {0.2,0,-0.2} {
+          \draw[green!50!black, line width=0.8pt] (-0.22,\y) -- (-0.17,\y-0.05) -- (-0.08,\y+0.06);
+          \draw[gray!60, line width=0.6pt] (-0.02,\y) -- (0.22,\y);
+        }
+      },
+      % icona: metriche
+      bars/.pic={
+        \draw[black!60] (-0.35,-0.3) -- (0.35,-0.3);
+        \fill[blue!45] (-0.28,-0.3) rectangle (-0.12,0.05);
+        \fill[blue!60] (-0.08,-0.3) rectangle (0.08,0.28);
+        \fill[blue!35] (0.12,-0.3) rectangle (0.28,-0.05);
+      },
+    ]
+
+    % ================= Indicizzazione =================
+    \node[head] at (0.3,1.35) {Indicizzazione (offline)};
+    \pic at (-0.55,0.35) {webpage};
+    \pic[pic text=PDF] at (0.55,0.35) {doc=red!70};
+    \node[lab, align=center, text width=3.4cm, anchor=north] at (0,-0.15) {pagine del sito dell'ateneo e dei corsi,
+      materiali didattici};
+    \node[comp] (ing) at (0,-1.75) {Ingestion};
+    \node[comp] (chu) at (0,-4.0) {Chunking};
+    \node[comp] (emb) at (0,-6.25) {Embedding};
+    \node[cylinder, shape border rotate=90, draw, thick, aspect=0.25, minimum height=1.25cm,
+          minimum width=1.5cm, fill=gray!15, font=\scriptsize\bfseries] (qd) at (0.3,-8.85) {Database vettoriale};
+    \pic[pic text={\ }] at (-1.25,-8.75) {doc=white};
+    \node[lab, align=center, text width=1.4cm] at (-1.25,-9.35) {docstore};
+
+    \draw[arr] (0,-0.95) -- (ing);
+    \draw[arr] (ing) -- (chu);
+    \pic[pic text={\{ \}}] at (0.75,-2.88) {doc=blue!60};
+    \node[lab, right] at (1.05,-2.88) {documenti strutturati (JSON): titoli, sezioni, tabelle};
+    \draw[arr] (chu) -- (emb);
+    \pic at (0.75,-5.13) {chunks};
+    \node[lab, right] at (1.25,-5.13) {frammenti con metadati (corso, ambito, URL)};
+    \draw[arr] (emb.south) -- (emb.south |- qd.north);
+    \node[font=\ttfamily\scriptsize, fill=white, draw=black!25, inner sep=2pt] at (1.55,-7.25)
+      {[0.12, -0.37, \dots]};
+    \node[lab, right] at (0.15,-7.7) {vettori densi e sparsi};
+    \draw[arr] (chu.west) -| (-1.85,-6.0) |- (-1.25,-7.95) -- (-1.25,-8.33);
+
+    % ================= Risposta =================
+    \node[head] at (9.4,1.35) {Risposta a una domanda (online)};
+    \pic at (9.4,0.35) {student};
+    \node[bubble, callout absolute pointer={(9.1,0.4)}] at (6.9,0.55) {le lezioni sono\\obbligatorie?};
+    \node[comp] (ui) at (9.4,-1.75) {UI};
+    \draw[arr, {Stealth[length=2mm]}-{Stealth[length=2mm]}] (9.4,-0.05) -- (ui);
+    \node[comp] (ret) at (9.4,-8.85) {Retrieving};
+    \node[comp] (gen) at (9.4,-11.2) {Generation};
+
+    \draw[arr] (ui) -- (ret);
+    \node[card, anchor=east] at (9.15,-4.6) {\textbf{domanda:} \emph{le lezioni sono obbligatorie?}\\
+      \textbf{corso:} Infermieristica\\ \textbf{cronologia:} turni precedenti};
+
+    \draw[arr] (qd.east) -- node[above, font=\scriptsize] {frammenti candidati} (ret.west);
+
+    \draw[arr] (ret) -- (gen);
+    \node[card, anchor=east, text width=4.1cm] at (9.15,-10.03) {\textbf{[1]} \emph{Frequenza delle lezioni}:
+      \emph{``La frequenza ai corsi è obbligatoria per il 66\% delle ore\dots''}};
+
+    \draw[arr] (gen.east) -- ++(0.55,0) |- (ui.east);
+    \node[bubble, callout absolute pointer={(10.72,-5.4)}, anchor=west, text width=2.45cm] at (11.05,-5.4)
+      {Sì, la frequenza è obbligatoria per il 66\% delle ore di lezione.\\[2pt]
+       \upshape\textbf{Fonti:} Frequenza delle lezioni};
+
+    % ================= vLLM =================
+    \node[draw, thick, rounded corners=3pt, fill=violet!12, align=center, minimum width=2.0cm,
+          minimum height=1.3cm, font=\footnotesize] (vllm) at (12.45,-9.4)
+      {\textbf{vLLM}\\[1pt]{\scriptsize modello linguistico}\\[-1pt]{\scriptsize su GPU}};
+    \foreach \x/\t in {11.85/1, 12.45/2, 13.05/3} {
+      \node[draw, rounded corners=1pt, fill=white, font=\tiny, minimum width=0.42cm, minimum height=0.32cm,
+            inner sep=1pt] (req\t) at (\x,-8.05) {\t};
+      \draw[-{Stealth[length=1.5mm]}, violet!70!black] (req\t.south) -- (\x,-8.72);
+    }
+    \node[font=\scriptsize, text=violet!60!black, align=center, text width=1.9cm] at (12.5,-7.45)
+      {richieste concorrenti};
+    \draw[{Stealth[length=2mm]}-{Stealth[length=2mm]}, thick, violet!70!black] (ret.east) -- (ret.east -| vllm.west);
+    \draw[{Stealth[length=2mm]}-{Stealth[length=2mm]}, thick, violet!70!black]
+      (gen.south) -- ++(0,-0.75) -| (vllm.south);
+
+    % ================= Valutazione =================
+    \node[head] at (0.3,-10.25) {Valutazione};
+    \node[comp, fill=gray!8] (eva) at (0,-11.2) {Evaluation};
+    \pic at (-0.95,-12.6) {checklist};
+    \node[lab, align=center, text width=2.2cm] at (-0.95,-13.55) {domande con risposte e fonti attese};
+    \pic at (0.95,-12.6) {bars};
+    \node[lab, align=center, text width=2.2cm] at (0.95,-13.3) {metriche (JSON)};
+    \draw[arr] (-0.95,-12.2) -- (-0.95,-11.68);
+    \draw[arr] (0.95,-11.68) -- (0.95,-12.2);
+    \draw[arr, dashed, {Stealth[length=2mm]}-{Stealth[length=2mm]}] (eva) --
+      node[above, font=\scriptsize] {domande di test} node[below, font=\scriptsize] {risposte e frammenti} (gen);
+  \end{tikzpicture}
+  \caption{Componenti del sistema e dati che si scambiano, seguendo una domanda di esempio. A sinistra
+  l'indicizzazione trasforma pagine web e documenti in frammenti e vettori, salvati nel database vettoriale e nel docstore; a
+  destra la domanda dello studente attraversa interfaccia, recupero e generazione, fino alla risposta con la fonte
+  citata. In basso la valutazione sottopone alla stessa pipeline le domande di test e ne misura la qualità.
+  L'Embedding opera anche al momento della domanda, per rappresentarla nello stesso spazio vettoriale dei
+  frammenti. In viola le chiamate al modello linguistico, servito da vLLM: le inviano il Retrieving (analisi della
+  domanda, HyDE) e la Generation; vLLM elabora insieme le richieste che arrivano contemporaneamente, anche da
+  domande di studenti diversi. Per descrivere le immagini, in fase di indicizzazione l'Ingestion usa una seconda
+  istanza di vLLM con un modello multimodale, attiva solo durante la conversione.}
+  \label{fig:componenti}
+\end{figure}
+
+\paragraph{Ingestion.} Acquisisce i documenti e li porta in un formato strutturato comune. Le pagine web dei corsi
+di laurea e di ateneo vengono scaricate da un crawler dedicato; queste e gli altri documenti (PDF, presentazioni)
+vengono poi convertiti con Docling in una rappresentazione che conserva titoli, sezioni e tabelle, e corretti dalle
+imprecisioni ricorrenti della conversione.
+
+\paragraph{Chunking.} Suddivide ogni documento convertito in frammenti che rispettano la struttura delle sezioni e
+associa a ciascuno i metadati necessari al recupero, tra cui il corso di laurea a cui appartiene o l'indicazione che
+si tratta di una pagina di ateneo. Conserva inoltre il legame tra i frammenti e la sezione da cui provengono, usato
+dalla fusione gerarchica in fase di recupero.
+
+\paragraph{Embedding.} Calcola la rappresentazione vettoriale di ogni frammento, densa e sparsa, e la salva nel
+database vettoriale insieme ai metadati; lo stesso modello calcola, al momento della domanda, la rappresentazione
+della domanda stessa.
+
+\paragraph{Retrieving.} A ogni domanda individua i frammenti pertinenti: analizza la domanda (ne ricostruisce il
+senso rispetto alla conversazione, la scompone se contiene più richieste, riconosce il corso di laurea), cerca i
+candidati tra le pagine di ateneo e quelle del corso, li riordina in base alla pertinenza e scarta quelli
+insufficienti.
+
+\paragraph{Generation.} Costruisce il prompt con la domanda e i frammenti recuperati, interroga il modello
+linguistico e restituisce la risposta con le fonti citate. Quando il recupero non produce frammenti pertinenti, il
+modello non viene interpellato per rispondere.
+
+\paragraph{UI.} È l'interfaccia di chat con cui lo studente interagisce e il punto in cui il percorso di una domanda
+viene coordinato: mantiene la cronologia della conversazione e il corso dello studente, decide quando chiedere
+all'utente di indicare il corso e mostra la risposta man mano che viene generata.
+
+\paragraph{Evaluation.} Esegue lo stesso percorso di recupero e generazione su un insieme di domande di test con
+risposta nota e ne misura la qualità, separatamente per il recupero e per la risposta finale. Non fa parte del
+sistema in esercizio, ma è lo strumento con cui sono state verificate le scelte descritte in questo capitolo
+(Capitolo~\ref{cap:validazione}).
+
+\medskip
+\noindent La Tabella~\ref{tab:componenti} riassume, per ciascun componente, le tecnologie adottate e il momento in
+cui opera;
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{} L{2.2cm} >{\raggedright\arraybackslash}X L{3.4cm} @{}}
+    \toprule
+    \textbf{Componente} & \textbf{Tecnologie} & \textbf{Quando opera} \\
+    \midrule
+    Ingestion & crawler dedicato, Docling & indicizzazione \\
+    Chunking & Docling, LlamaIndex & indicizzazione \\
+    Embedding & BGE-M3, Qdrant & indicizzazione e a ogni domanda \\
+    Retrieving & Qdrant, bge-reranker-v2-m3, LlamaIndex, modello linguistico & a ogni domanda \\
+    Generation & modello linguistico (Qwen2.5-14B-Instruct) servito da vLLM & a ogni domanda \\
+    UI & Chainlit & a ogni domanda \\
+    Evaluation & RAGAS e metriche di recupero dedicate & solo in valutazione \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Componenti del sistema, tecnologie adottate e momento in cui operano.}
+  \label{tab:componenti}
+\end{table}

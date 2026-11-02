@@ -1,0 +1,1418 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2025/dev/Debian) (preloaded format=pdflatex 2025.12.4)  2 NOV 2026 15:16
+entering extended mode
+ restricted \write18 enabled.
+ file:line:error style messages enabled.
+ %&-line parsing enabled.
+**/home/mnardini/rag_unibo/Tesi_Assistente_Unibo/main
+(/home/mnardini/rag_unibo/Tesi_Assistente_Unibo/main.tex
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+(/usr/share/texlive/texmf-dist/tex/latex/base/report.cls
+Document Class: report 2024/06/29 v1.4n Standard LaTeX document class
+(/usr/share/texlive/texmf-dist/tex/latex/base/size12.clo
+File: size12.clo 2024/06/29 v1.4n Standard LaTeX file (size option)
+)
+\c@part=\count196
+\c@chapter=\count197
+\c@section=\count198
+\c@subsection=\count199
+\c@subsubsection=\count266
+\c@paragraph=\count267
+\c@subparagraph=\count268
+\c@figure=\count269
+\c@table=\count270
+\abovecaptionskip=\skip49
+\belowcaptionskip=\skip50
+\bibindent=\dimen141
+) (/usr/share/texlive/texmf-dist/tex/latex/psnfss/mathptmx.sty
+Package: mathptmx 2020/03/25 PSNFSS-v9.3 Times w/ Math, improved (SPQR, WaS) 
+LaTeX Font Info:    Redeclaring symbol font `operators' on input line 28.
+LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
+(Font)                  OT1/cmr/m/n --> OT1/ztmcm/m/n on input line 28.
+LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
+(Font)                  OT1/cmr/bx/n --> OT1/ztmcm/m/n on input line 28.
+LaTeX Font Info:    Redeclaring symbol font `letters' on input line 29.
+LaTeX Font Info:    Overwriting symbol font `letters' in version `normal'
+(Font)                  OML/cmm/m/it --> OML/ztmcm/m/it on input line 29.
+LaTeX Font Info:    Overwriting symbol font `letters' in version `bold'
+(Font)                  OML/cmm/b/it --> OML/ztmcm/m/it on input line 29.
+LaTeX Font Info:    Redeclaring symbol font `symbols' on input line 30.
+LaTeX Font Info:    Overwriting symbol font `symbols' in version `normal'
+(Font)                  OMS/cmsy/m/n --> OMS/ztmcm/m/n on input line 30.
+LaTeX Font Info:    Overwriting symbol font `symbols' in version `bold'
+(Font)                  OMS/cmsy/b/n --> OMS/ztmcm/m/n on input line 30.
+LaTeX Font Info:    Redeclaring symbol font `largesymbols' on input line 31.
+LaTeX Font Info:    Overwriting symbol font `largesymbols' in version `normal'
+(Font)                  OMX/cmex/m/n --> OMX/ztmcm/m/n on input line 31.
+LaTeX Font Info:    Overwriting symbol font `largesymbols' in version `bold'
+(Font)                  OMX/cmex/m/n --> OMX/ztmcm/m/n on input line 31.
+\symbold=\mathgroup4
+\symitalic=\mathgroup5
+LaTeX Font Info:    Redeclaring math alphabet \mathbf on input line 34.
+LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `normal'
+(Font)                  OT1/cmr/bx/n --> OT1/ptm/bx/n on input line 34.
+LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `bold'
+(Font)                  OT1/cmr/bx/n --> OT1/ptm/bx/n on input line 34.
+LaTeX Font Info:    Redeclaring math alphabet \mathit on input line 35.
+LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
+(Font)                  OT1/cmr/m/it --> OT1/ptm/m/it on input line 35.
+LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
+(Font)                  OT1/cmr/bx/it --> OT1/ptm/m/it on input line 35.
+LaTeX Info: Redefining \hbar on input line 50.
+) (/usr/share/texlive/texmf-dist/tex/generic/babel/babel.sty
+Package: babel 2025/02/14 v25.4 The multilingual framework for pdfLaTeX, LuaLaTeX and XeLaTeX
+\babel@savecnt=\count271
+\U@D=\dimen142
+\l@unhyphenated=\language3
+ (/usr/share/texlive/texmf-dist/tex/generic/babel/txtbabel.def)
+\bbl@readstream=\read2
+\bbl@dirlevel=\count272
+Package babel Info: You haven't specified a language as a class or package
+(babel)             option. I'll load 'nil'. Reported on input line 4188.
+ (/usr/share/texlive/texmf-dist/tex/generic/babel/nil.ldf
+Language: nil 2025/02/14 v25.4 Nil language
+\l@nil=\language4
+)) (/usr/share/texlive/texmf-dist/tex/generic/babel/locale/it/babel-italian.tex)
+Package babel Info: Importing data for italian
+(babel)             from babel-it.ini. Reported on input line 10.
+Package babel Info: Hyphen rules for 'italian' set to \l@nil
+(babel)             (\language4). Reported on input line 10.
+ (/usr/share/texlive/texmf-dist/tex/latex/geometry/geometry.sty
+Package: geometry 2020/01/02 v5.9 Page Geometry
+ (/usr/share/texlive/texmf-dist/tex/latex/graphics/keyval.sty
+Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
+\KV@toks@=\toks17
+) (/usr/share/texlive/texmf-dist/tex/generic/iftex/ifvtex.sty
+Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
+ (/usr/share/texlive/texmf-dist/tex/generic/iftex/iftex.sty
+Package: iftex 2024/12/12 v1.0g TeX engine tests
+))
+\Gm@cnth=\count273
+\Gm@cntv=\count274
+\c@Gm@tempcnt=\count275
+\Gm@bindingoffset=\dimen143
+\Gm@wd@mp=\dimen144
+\Gm@odd@mp=\dimen145
+\Gm@even@mp=\dimen146
+\Gm@layoutwidth=\dimen147
+\Gm@layoutheight=\dimen148
+\Gm@layouthoffset=\dimen149
+\Gm@layoutvoffset=\dimen150
+\Gm@dimlist=\toks18
+) (/usr/share/texlive/texmf-dist/tex/latex/setspace/setspace.sty
+Package: setspace 2022/12/04 v6.7b set line spacing
+) (/usr/share/texlive/texmf-dist/tex/latex/graphics/graphicx.sty
+Package: graphicx 2021/09/16 v1.2d Enhanced LaTeX Graphics (DPC,SPQR)
+ (/usr/share/texlive/texmf-dist/tex/latex/graphics/graphics.sty
+Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
+ (/usr/share/texlive/texmf-dist/tex/latex/graphics/trig.sty
+Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
+) (/usr/share/texlive/texmf-dist/tex/latex/graphics-cfg/graphics.cfg
+File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
+)
+Package graphics Info: Driver file: pdftex.def on input line 106.
+ (/usr/share/texlive/texmf-dist/tex/latex/graphics-def/pdftex.def
+File: pdftex.def 2024/04/13 v1.2c Graphics/color driver for pdftex
+))
+\Gin@req@height=\dimen151
+\Gin@req@width=\dimen152
+) (/usr/share/texlive/texmf-dist/tex/latex/float/float.sty
+Package: float 2001/11/08 v1.3d Float enhancements (AL)
+\c@float@type=\count276
+\float@exts=\toks19
+\float@box=\box52
+\@float@everytoks=\toks20
+\@floatcapt=\box53
+) (/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsmath.sty
+Package: amsmath 2024/11/05 v2.17t AMS math features
+\@mathmargin=\skip51
+
+For additional information on amsmath, use the `?' option.
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amstext.sty
+Package: amstext 2021/08/26 v2.01 AMS text
+ (/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsgen.sty
+File: amsgen.sty 1999/11/30 v2.0 generic functions
+\@emptytoks=\toks21
+\ex@=\dimen153
+)) (/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsbsy.sty
+Package: amsbsy 1999/11/29 v1.2d Bold Symbols
+\pmbraise@=\dimen154
+) (/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsopn.sty
+Package: amsopn 2022/04/08 v2.04 operator names
+)
+\inf@bad=\count277
+LaTeX Info: Redefining \frac on input line 233.
+\uproot@=\count278
+\leftroot@=\count279
+LaTeX Info: Redefining \overline on input line 398.
+LaTeX Info: Redefining \colon on input line 409.
+\classnum@=\count280
+\DOTSCASE@=\count281
+LaTeX Info: Redefining \ldots on input line 495.
+LaTeX Info: Redefining \dots on input line 498.
+LaTeX Info: Redefining \cdots on input line 619.
+\Mathstrutbox@=\box54
+\strutbox@=\box55
+LaTeX Info: Redefining \big on input line 721.
+LaTeX Info: Redefining \Big on input line 722.
+LaTeX Info: Redefining \bigg on input line 723.
+LaTeX Info: Redefining \Bigg on input line 724.
+\big@size=\dimen155
+LaTeX Font Info:    Redeclaring font encoding OML on input line 742.
+LaTeX Font Info:    Redeclaring font encoding OMS on input line 743.
+\macc@depth=\count282
+LaTeX Info: Redefining \bmod on input line 904.
+LaTeX Info: Redefining \pmod on input line 909.
+LaTeX Info: Redefining \smash on input line 939.
+LaTeX Info: Redefining \relbar on input line 969.
+LaTeX Info: Redefining \Relbar on input line 970.
+\c@MaxMatrixCols=\count283
+\dotsspace@=\muskip17
+\c@parentequation=\count284
+\dspbrk@lvl=\count285
+\tag@help=\toks22
+\row@=\count286
+\column@=\count287
+\maxfields@=\count288
+\andhelp@=\toks23
+\eqnshift@=\dimen156
+\alignsep@=\dimen157
+\tagshift@=\dimen158
+\tagwidth@=\dimen159
+\totwidth@=\dimen160
+\lineht@=\dimen161
+\@envbody=\toks24
+\multlinegap=\skip52
+\multlinetaggap=\skip53
+\mathdisplay@stack=\toks25
+LaTeX Info: Redefining \[ on input line 2953.
+LaTeX Info: Redefining \] on input line 2954.
+) (/usr/share/texlive/texmf-dist/tex/latex/booktabs/booktabs.sty
+Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
+\heavyrulewidth=\dimen162
+\lightrulewidth=\dimen163
+\cmidrulewidth=\dimen164
+\belowrulesep=\dimen165
+\belowbottomsep=\dimen166
+\aboverulesep=\dimen167
+\abovetopsep=\dimen168
+\cmidrulesep=\dimen169
+\cmidrulekern=\dimen170
+\defaultaddspace=\dimen171
+\@cmidla=\count289
+\@cmidlb=\count290
+\@aboverulesep=\dimen172
+\@belowrulesep=\dimen173
+\@thisruleclass=\count291
+\@lastruleclass=\count292
+\@thisrulewidth=\dimen174
+) (/usr/share/texlive/texmf-dist/tex/latex/pgf/frontendlayer/tikz.sty (/usr/share/texlive/texmf-dist/tex/latex/pgf/basiclayer/pgf.sty (/usr/share/texlive/texmf-dist/tex/latex/pgf/utilities/pgfrcs.sty (/usr/share/texlive/texmf-dist/tex/generic/pgf/utilities/pgfutil-common.tex
+\pgfutil@everybye=\toks26
+\pgfutil@tempdima=\dimen175
+\pgfutil@tempdimb=\dimen176
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/utilities/pgfutil-latex.def
+\pgfutil@abb=\box56
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/utilities/pgfrcs.code.tex (/usr/share/texlive/texmf-dist/tex/generic/pgf/pgf.revision.tex)
+Package: pgfrcs 2023-01-15 v3.1.10 (3.1.10)
+))
+Package: pgf 2023-01-15 v3.1.10 (3.1.10)
+ (/usr/share/texlive/texmf-dist/tex/latex/pgf/basiclayer/pgfcore.sty (/usr/share/texlive/texmf-dist/tex/latex/pgf/systemlayer/pgfsys.sty (/usr/share/texlive/texmf-dist/tex/generic/pgf/systemlayer/pgfsys.code.tex
+Package: pgfsys 2023-01-15 v3.1.10 (3.1.10)
+ (/usr/share/texlive/texmf-dist/tex/generic/pgf/utilities/pgfkeys.code.tex
+\pgfkeys@pathtoks=\toks27
+\pgfkeys@temptoks=\toks28
+ (/usr/share/texlive/texmf-dist/tex/generic/pgf/utilities/pgfkeyslibraryfiltered.code.tex
+\pgfkeys@tmptoks=\toks29
+))
+\pgf@x=\dimen177
+\pgf@y=\dimen178
+\pgf@xa=\dimen179
+\pgf@ya=\dimen180
+\pgf@xb=\dimen181
+\pgf@yb=\dimen182
+\pgf@xc=\dimen183
+\pgf@yc=\dimen184
+\pgf@xd=\dimen185
+\pgf@yd=\dimen186
+\w@pgf@writea=\write3
+\r@pgf@reada=\read3
+\c@pgf@counta=\count293
+\c@pgf@countb=\count294
+\c@pgf@countc=\count295
+\c@pgf@countd=\count296
+\t@pgf@toka=\toks30
+\t@pgf@tokb=\toks31
+\t@pgf@tokc=\toks32
+\pgf@sys@id@count=\count297
+ (/usr/share/texlive/texmf-dist/tex/generic/pgf/systemlayer/pgf.cfg
+File: pgf.cfg 2023-01-15 v3.1.10 (3.1.10)
+)
+Driver file for pgf: pgfsys-pdftex.def
+ (/usr/share/texlive/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-pdftex.def
+File: pgfsys-pdftex.def 2023-01-15 v3.1.10 (3.1.10)
+ (/usr/share/texlive/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-common-pdf.def
+File: pgfsys-common-pdf.def 2023-01-15 v3.1.10 (3.1.10)
+))) (/usr/share/texlive/texmf-dist/tex/generic/pgf/systemlayer/pgfsyssoftpath.code.tex
+File: pgfsyssoftpath.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgfsyssoftpath@smallbuffer@items=\count298
+\pgfsyssoftpath@bigbuffer@items=\count299
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/systemlayer/pgfsysprotocol.code.tex
+File: pgfsysprotocol.code.tex 2023-01-15 v3.1.10 (3.1.10)
+)) (/usr/share/texlive/texmf-dist/tex/latex/xcolor/xcolor.sty
+Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
+ (/usr/share/texlive/texmf-dist/tex/latex/graphics-cfg/color.cfg
+File: color.cfg 2016/01/02 v1.6 sample color configuration
+)
+Package xcolor Info: Driver file: pdftex.def on input line 274.
+ (/usr/share/texlive/texmf-dist/tex/latex/graphics/mathcolor.ltx)
+Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1349.
+Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1353.
+Package xcolor Info: Model `RGB' extended on input line 1365.
+Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1367.
+Package xcolor Info: Model `Hsb' substituted by `hsb' on input line 1368.
+Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1369.
+Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
+Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
+Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcore.code.tex
+Package: pgfcore 2023-01-15 v3.1.10 (3.1.10)
+ (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmath.code.tex (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathutil.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathparser.code.tex
+\pgfmath@dimen=\dimen187
+\pgfmath@count=\count300
+\pgfmath@box=\box57
+\pgfmath@toks=\toks33
+\pgfmath@stack@operand=\toks34
+\pgfmath@stack@operation=\toks35
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.basic.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.trigonometric.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.random.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.comparison.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.base.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.round.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.misc.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.integerarithmetics.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathcalc.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfloat.code.tex
+\c@pgfmathroundto@lastzeros=\count301
+)) (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfint.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepoints.code.tex
+File: pgfcorepoints.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgf@picminx=\dimen188
+\pgf@picmaxx=\dimen189
+\pgf@picminy=\dimen190
+\pgf@picmaxy=\dimen191
+\pgf@pathminx=\dimen192
+\pgf@pathmaxx=\dimen193
+\pgf@pathminy=\dimen194
+\pgf@pathmaxy=\dimen195
+\pgf@xx=\dimen196
+\pgf@xy=\dimen197
+\pgf@yx=\dimen198
+\pgf@yy=\dimen199
+\pgf@zx=\dimen256
+\pgf@zy=\dimen257
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathconstruct.code.tex
+File: pgfcorepathconstruct.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgf@path@lastx=\dimen258
+\pgf@path@lasty=\dimen259
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathusage.code.tex
+File: pgfcorepathusage.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgf@shorten@end@additional=\dimen260
+\pgf@shorten@start@additional=\dimen261
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorescopes.code.tex
+File: pgfcorescopes.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgfpic=\box58
+\pgf@hbox=\box59
+\pgf@layerbox@main=\box60
+\pgf@picture@serial@count=\count302
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcoregraphicstate.code.tex
+File: pgfcoregraphicstate.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgflinewidth=\dimen262
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretransformations.code.tex
+File: pgfcoretransformations.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgf@pt@x=\dimen263
+\pgf@pt@y=\dimen264
+\pgf@pt@temp=\dimen265
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorequick.code.tex
+File: pgfcorequick.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreobjects.code.tex
+File: pgfcoreobjects.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathprocessing.code.tex
+File: pgfcorepathprocessing.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorearrows.code.tex
+File: pgfcorearrows.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgfarrowsep=\dimen266
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreshade.code.tex
+File: pgfcoreshade.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgf@max=\dimen267
+\pgf@sys@shading@range@num=\count303
+\pgf@shadingcount=\count304
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreimage.code.tex
+File: pgfcoreimage.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreexternal.code.tex
+File: pgfcoreexternal.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgfexternal@startupbox=\box61
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorelayers.code.tex
+File: pgfcorelayers.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretransparency.code.tex
+File: pgfcoretransparency.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepatterns.code.tex
+File: pgfcorepatterns.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorerdf.code.tex
+File: pgfcorerdf.code.tex 2023-01-15 v3.1.10 (3.1.10)
+))) (/usr/share/texlive/texmf-dist/tex/generic/pgf/modules/pgfmoduleshapes.code.tex
+File: pgfmoduleshapes.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgfnodeparttextbox=\box62
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/modules/pgfmoduleplot.code.tex
+File: pgfmoduleplot.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (/usr/share/texlive/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-version-0-65.sty
+Package: pgfcomp-version-0-65 2023-01-15 v3.1.10 (3.1.10)
+\pgf@nodesepstart=\dimen268
+\pgf@nodesepend=\dimen269
+) (/usr/share/texlive/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-version-1-18.sty
+Package: pgfcomp-version-1-18 2023-01-15 v3.1.10 (3.1.10)
+)) (/usr/share/texlive/texmf-dist/tex/latex/pgf/utilities/pgffor.sty (/usr/share/texlive/texmf-dist/tex/latex/pgf/utilities/pgfkeys.sty (/usr/share/texlive/texmf-dist/tex/generic/pgf/utilities/pgfkeys.code.tex)) (/usr/share/texlive/texmf-dist/tex/latex/pgf/math/pgfmath.sty (/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmath.code.tex)) (/usr/share/texlive/texmf-dist/tex/generic/pgf/utilities/pgffor.code.tex
+Package: pgffor 2023-01-15 v3.1.10 (3.1.10)
+\pgffor@iter=\dimen270
+\pgffor@skip=\dimen271
+\pgffor@stack=\toks36
+\pgffor@toks=\toks37
+)) (/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/tikz.code.tex
+Package: tikz 2023-01-15 v3.1.10 (3.1.10)
+ (/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/pgflibraryplothandlers.code.tex
+File: pgflibraryplothandlers.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgf@plot@mark@count=\count305
+\pgfplotmarksize=\dimen272
+)
+\tikz@lastx=\dimen273
+\tikz@lasty=\dimen274
+\tikz@lastxsaved=\dimen275
+\tikz@lastysaved=\dimen276
+\tikz@lastmovetox=\dimen277
+\tikz@lastmovetoy=\dimen278
+\tikzleveldistance=\dimen279
+\tikzsiblingdistance=\dimen280
+\tikz@figbox=\box63
+\tikz@figbox@bg=\box64
+\tikz@tempbox=\box65
+\tikz@tempbox@bg=\box66
+\tikztreelevel=\count306
+\tikznumberofchildren=\count307
+\tikznumberofcurrentchild=\count308
+\tikz@fig@count=\count309
+ (/usr/share/texlive/texmf-dist/tex/generic/pgf/modules/pgfmodulematrix.code.tex
+File: pgfmodulematrix.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgfmatrixcurrentrow=\count310
+\pgfmatrixcurrentcolumn=\count311
+\pgf@matrix@numberofcolumns=\count312
+)
+\tikz@expandcount=\count313
+ (/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarytopaths.code.tex
+File: tikzlibrarytopaths.code.tex 2023-01-15 v3.1.10 (3.1.10)
+))) (/usr/share/texlive/texmf-dist/tex/latex/tools/tabularx.sty
+Package: tabularx 2023/12/11 v2.12a `tabularx' package (DPC)
+ (/usr/share/texlive/texmf-dist/tex/latex/tools/array.sty
+Package: array 2024/10/17 v2.6g Tabular extension package (FMi)
+\col@sep=\dimen281
+\ar@mcellbox=\box67
+\extrarowheight=\dimen282
+\NC@list=\toks38
+\extratabsurround=\skip54
+\backup@length=\skip55
+\ar@cellbox=\box68
+)
+\TX@col@width=\dimen283
+\TX@old@table=\dimen284
+\TX@old@col=\dimen285
+\TX@target=\dimen286
+\TX@delta=\dimen287
+\TX@cols=\count314
+\TX@ftn=\toks39
+) (/usr/share/texlive/texmf-dist/tex/latex/pgfplots/pgfplots.sty (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/pgfplots.revision.tex)
+Package: pgfplots 2021/05/15 v1.18.1 Data Visualization (1.18.1)
+ (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/pgfplots.code.tex (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/pgfplotscore.code.tex
+\t@pgfplots@toka=\toks40
+\t@pgfplots@tokb=\toks41
+\t@pgfplots@tokc=\toks42
+\pgfplots@tmpa=\dimen288
+\c@pgfplots@coordindex=\count315
+\c@pgfplots@scanlineindex=\count316
+ (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/sys/pgfplotssysgeneric.code.tex)) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/libs/pgfplotslibrary.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/oldpgfcompatib/pgfplotsoldpgfsupp_loader.code.tex (/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/pgflibraryfpu.code.tex)
+Package pgfplots: loading complementary utilities for your pgf version...
+\t@pgf@toka=\toks43
+\t@pgf@tokb=\toks44
+\t@pgf@tokc=\toks45
+(/usr/share/texlive/texmf-dist/tex/generic/pgfplots/oldpgfcompatib/pgfplotsoldpgfsupp_pgfutil-common-lists.tex)) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/util/pgfplotsutil.code.tex (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/liststructure/pgfplotsliststructure.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/liststructure/pgfplotsliststructureext.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/liststructure/pgfplotsarray.code.tex
+\c@pgfplotsarray@tmp=\count317
+) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/liststructure/pgfplotsmatrix.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/numtable/pgfplotstableshared.code.tex
+\c@pgfplotstable@counta=\count318
+\t@pgfplotstable@a=\toks46
+) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/liststructure/pgfplotsdeque.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/util/pgfplotsbinary.code.tex (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/util/pgfplotsbinary.data.code.tex)) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/util/pgfplotsutil.verb.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/libs/pgflibrarypgfplots.surfshading.code.tex
+\c@pgfplotslibrarysurf@no=\count319
+ (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/sys/pgflibrarypgfplots.surfshading.pgfsys-pdftex.def))) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/util/pgfplotscolormap.code.tex (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/util/pgfplotscolor.code.tex)) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/pgfplotsstackedplots.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/pgfplotsplothandlers.code.tex (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/pgfplotsmeshplothandler.code.tex (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/pgfplotsmeshplotimage.code.tex))) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/pgfplots.scaling.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/pgfplotscoordprocessing.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/pgfplots.errorbars.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/pgfplots.markers.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/pgfplotsticks.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/pgfplots.paths.code.tex) (/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarydecorations.code.tex (/usr/share/texlive/texmf-dist/tex/generic/pgf/modules/pgfmoduledecorations.code.tex
+\pgfdecoratedcompleteddistance=\dimen289
+\pgfdecoratedremainingdistance=\dimen290
+\pgfdecoratedinputsegmentcompleteddistance=\dimen291
+\pgfdecoratedinputsegmentremainingdistance=\dimen292
+\pgf@decorate@distancetomove=\dimen293
+\pgf@decorate@repeatstate=\count320
+\pgfdecorationsegmentamplitude=\dimen294
+\pgfdecorationsegmentlength=\dimen295
+)
+\tikz@lib@dec@box=\box69
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarydecorations.pathmorphing.code.tex (/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/decorations/pgflibrarydecorations.pathmorphing.code.tex)) (/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarydecorations.pathreplacing.code.tex (/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/decorations/pgflibrarydecorations.pathreplacing.code.tex)) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/libs/tikzlibrarypgfplots.contourlua.code.tex)
+\pgfplots@numplots=\count321
+\pgfplots@xmin@reg=\dimen296
+\pgfplots@xmax@reg=\dimen297
+\pgfplots@ymin@reg=\dimen298
+\pgfplots@ymax@reg=\dimen299
+\pgfplots@zmin@reg=\dimen300
+\pgfplots@zmax@reg=\dimen301
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibraryplotmarks.code.tex
+File: tikzlibraryplotmarks.code.tex 2023-01-15 v3.1.10 (3.1.10)
+ (/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/pgflibraryplotmarks.code.tex
+File: pgflibraryplotmarks.code.tex 2023-01-15 v3.1.10 (3.1.10)
+))) (/usr/share/texlive/texmf-dist/tex/generic/pgfplots/libs/tikzlibrarypgfplots.groupplots.code.tex
+\pgfplots@group@current@plot=\count322
+\pgfplots@group@current@row=\count323
+\pgfplots@group@current@column=\count324
+ (/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarycalc.code.tex
+File: tikzlibrarycalc.code.tex 2023-01-15 v3.1.10 (3.1.10)
+))
+
+Package array Warning: Column X is already defined on input line 32.
+
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/pgflibraryarrows.meta.code.tex
+File: pgflibraryarrows.meta.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgfarrowinset=\dimen302
+\pgfarrowlength=\dimen303
+\pgfarrowwidth=\dimen304
+\pgfarrowlinewidth=\dimen305
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarypositioning.code.tex
+File: tikzlibrarypositioning.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibraryfit.code.tex
+File: tikzlibraryfit.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarybackgrounds.code.tex
+File: tikzlibrarybackgrounds.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgf@layerbox@background=\box70
+\pgf@layerboxsaved@background=\box71
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibraryshapes.geometric.code.tex
+File: tikzlibraryshapes.geometric.code.tex 2023-01-15 v3.1.10 (3.1.10)
+ (/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/shapes/pgflibraryshapes.geometric.code.tex
+File: pgflibraryshapes.geometric.code.tex 2023-01-15 v3.1.10 (3.1.10)
+)) (/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibraryshapes.callouts.code.tex (/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/shapes/pgflibraryshapes.callouts.code.tex (/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/shapes/pgflibraryshapes.symbols.code.tex
+File: pgflibraryshapes.symbols.code.tex 2023-01-15 v3.1.10 (3.1.10)
+))) (/usr/share/texlive/texmf-dist/tex/latex/listings/listings.sty
+\lst@mode=\count325
+\lst@gtempboxa=\box72
+\lst@token=\toks47
+\lst@length=\count326
+\lst@currlwidth=\dimen306
+\lst@column=\count327
+\lst@pos=\count328
+\lst@lostspace=\dimen307
+\lst@width=\dimen308
+\lst@newlines=\count329
+\lst@lineno=\count330
+\lst@maxwidth=\dimen309
+ (/usr/share/texlive/texmf-dist/tex/latex/listings/lstpatch.sty
+File: lstpatch.sty 2024/09/23 1.10c (Carsten Heinz)
+) (/usr/share/texlive/texmf-dist/tex/latex/listings/lstmisc.sty
+File: lstmisc.sty 2024/09/23 1.10c (Carsten Heinz)
+\c@lstnumber=\count331
+\lst@skipnumbers=\count332
+\lst@framebox=\box73
+) (/usr/share/texlive/texmf-dist/tex/latex/listings/listings.cfg
+File: listings.cfg 2024/09/23 1.10c listings configuration
+))
+Package: listings 2024/09/23 1.10c (Carsten Heinz)
+ (/usr/share/texlive/texmf-dist/tex/latex/hyperref/hyperref.sty
+Package: hyperref 2024-11-05 v7.01l Hypertext links for LaTeX
+ (/usr/share/texlive/texmf-dist/tex/latex/kvsetkeys/kvsetkeys.sty
+Package: kvsetkeys 2022-10-05 v1.19 Key value parser (HO)
+) (/usr/share/texlive/texmf-dist/tex/generic/kvdefinekeys/kvdefinekeys.sty
+Package: kvdefinekeys 2019-12-19 v1.6 Define keys (HO)
+) (/usr/share/texlive/texmf-dist/tex/generic/pdfescape/pdfescape.sty
+Package: pdfescape 2019/12/09 v1.15 Implements pdfTeX's escape features (HO)
+ (/usr/share/texlive/texmf-dist/tex/generic/ltxcmds/ltxcmds.sty
+Package: ltxcmds 2023-12-04 v1.26 LaTeX kernel commands for general use (HO)
+) (/usr/share/texlive/texmf-dist/tex/generic/pdftexcmds/pdftexcmds.sty
+Package: pdftexcmds 2020-06-27 v0.33 Utility functions of pdfTeX for LuaTeX (HO)
+ (/usr/share/texlive/texmf-dist/tex/generic/infwarerr/infwarerr.sty
+Package: infwarerr 2019/12/03 v1.5 Providing info/warning/error messages (HO)
+)
+Package pdftexcmds Info: \pdf@primitive is available.
+Package pdftexcmds Info: \pdf@ifprimitive is available.
+Package pdftexcmds Info: \pdfdraftmode found.
+)) (/usr/share/texlive/texmf-dist/tex/latex/hycolor/hycolor.sty
+Package: hycolor 2020-01-27 v1.10 Color options for hyperref/bookmark (HO)
+) (/usr/share/texlive/texmf-dist/tex/latex/hyperref/nameref.sty
+Package: nameref 2023-11-26 v2.56 Cross-referencing by name of section
+ (/usr/share/texlive/texmf-dist/tex/latex/refcount/refcount.sty
+Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
+) (/usr/share/texlive/texmf-dist/tex/generic/gettitlestring/gettitlestring.sty
+Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
+ (/usr/share/texlive/texmf-dist/tex/latex/kvoptions/kvoptions.sty
+Package: kvoptions 2022-06-15 v3.15 Key value format for package options (HO)
+))
+\c@section@level=\count333
+) (/usr/share/texlive/texmf-dist/tex/latex/etoolbox/etoolbox.sty
+Package: etoolbox 2025/02/11 v2.5l e-TeX tools for LaTeX (JAW)
+\etb@tempcnta=\count334
+) (/usr/share/texlive/texmf-dist/tex/generic/stringenc/stringenc.sty
+Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO)
+)
+\@linkdim=\dimen310
+\Hy@linkcounter=\count335
+\Hy@pagecounter=\count336
+ (/usr/share/texlive/texmf-dist/tex/latex/hyperref/pd1enc.def
+File: pd1enc.def 2024-11-05 v7.01l Hyperref: PDFDocEncoding definition (HO)
+Now handling font encoding PD1 ...
+... no UTF-8 mapping file for font encoding PD1
+) (/usr/share/texlive/texmf-dist/tex/generic/intcalc/intcalc.sty
+Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
+)
+\Hy@SavedSpaceFactor=\count337
+ (/usr/share/texlive/texmf-dist/tex/latex/hyperref/puenc.def
+File: puenc.def 2024-11-05 v7.01l Hyperref: PDF Unicode definition (HO)
+Now handling font encoding PU ...
+... no UTF-8 mapping file for font encoding PU
+)
+Package hyperref Info: Hyper figures OFF on input line 4157.
+Package hyperref Info: Link nesting OFF on input line 4162.
+Package hyperref Info: Hyper index ON on input line 4165.
+Package hyperref Info: Plain pages OFF on input line 4172.
+Package hyperref Info: Backreferencing OFF on input line 4177.
+Package hyperref Info: Implicit mode ON; LaTeX internals redefined.
+Package hyperref Info: Bookmarks ON on input line 4424.
+\c@Hy@tempcnt=\count338
+ (/usr/share/texlive/texmf-dist/tex/latex/url/url.sty
+\Urlmuskip=\muskip18
+Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
+)
+LaTeX Info: Redefining \url on input line 4763.
+\XeTeXLinkMargin=\dimen311
+ (/usr/share/texlive/texmf-dist/tex/generic/bitset/bitset.sty
+Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
+ (/usr/share/texlive/texmf-dist/tex/generic/bigintcalc/bigintcalc.sty
+Package: bigintcalc 2019/12/15 v1.5 Expandable calculations on big integers (HO)
+))
+\Fld@menulength=\count339
+\Field@Width=\dimen312
+\Fld@charsize=\dimen313
+Package hyperref Info: Hyper figures OFF on input line 6042.
+Package hyperref Info: Link nesting OFF on input line 6047.
+Package hyperref Info: Hyper index ON on input line 6050.
+Package hyperref Info: backreferencing OFF on input line 6057.
+Package hyperref Info: Link coloring OFF on input line 6062.
+Package hyperref Info: Link coloring with OCG OFF on input line 6067.
+Package hyperref Info: PDF/A mode OFF on input line 6072.
+ (/usr/share/texlive/texmf-dist/tex/latex/base/atbegshi-ltx.sty
+Package: atbegshi-ltx 2021/01/10 v1.0c Emulation of the original atbegshi
+package with kernel methods
+)
+\Hy@abspage=\count340
+\c@Item=\count341
+\c@Hfootnote=\count342
+)
+Package hyperref Info: Driver (autodetected): hpdftex.
+ (/usr/share/texlive/texmf-dist/tex/latex/hyperref/hpdftex.def
+File: hpdftex.def 2024-11-05 v7.01l Hyperref driver for pdfTeX
+ (/usr/share/texlive/texmf-dist/tex/latex/base/atveryend-ltx.sty
+Package: atveryend-ltx 2020/08/19 v1.0a Emulation of the original atveryend package
+with kernel methods
+)
+\Fld@listcount=\count343
+\c@bookmark@seq@number=\count344
+ (/usr/share/texlive/texmf-dist/tex/latex/rerunfilecheck/rerunfilecheck.sty
+Package: rerunfilecheck 2022-07-10 v1.10 Rerun checks for auxiliary files (HO)
+ (/usr/share/texlive/texmf-dist/tex/generic/uniquecounter/uniquecounter.sty
+Package: uniquecounter 2019/12/15 v1.4 Provide unlimited unique counter (HO)
+)
+Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 285.
+)
+\Hy@SectionHShift=\skip56
+)
+LaTeX Font Info:    Trying to load font information for OT1+ptm on input line 60.
+ (/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1ptm.fd
+File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
+) (/usr/share/texlive/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
+File: l3backend-pdftex.def 2024-05-08 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count345
+\l__pdf_internal_box=\box74
+) (./main.aux)
+\openout1 = `main.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+*geometry* verbose mode - [ preamble ] result:
+* driver: pdftex
+* paper: a4paper
+* layout: <same size as paper>
+* layoutoffset:(h,v)=(0.0pt,0.0pt)
+* modes: 
+* h-part:(L,W,R)=(72.26999pt, 452.9679pt, 72.26999pt)
+* v-part:(T,H,B)=(72.26999pt, 700.50687pt, 72.26999pt)
+* \paperwidth=597.50787pt
+* \paperheight=845.04684pt
+* \textwidth=452.9679pt
+* \textheight=700.50687pt
+* \oddsidemargin=0.0pt
+* \evensidemargin=0.0pt
+* \topmargin=-37.0pt
+* \headheight=12.0pt
+* \headsep=25.0pt
+* \topskip=12.0pt
+* \footskip=30.0pt
+* \marginparwidth=35.0pt
+* \marginparsep=10.0pt
+* \columnsep=10.0pt
+* \skip\footins=10.8pt plus 4.0pt minus 2.0pt
+* \hoffset=0.0pt
+* \voffset=0.0pt
+* \mag=1000
+* \@twocolumnfalse
+* \@twosidefalse
+* \@mparswitchfalse
+* \@reversemarginfalse
+* (1in=72.27pt=25.4mm, 1cm=28.453pt)
+
+(/usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count346
+\scratchdimen=\dimen314
+\scratchbox=\box75
+\nofMPsegments=\count347
+\nofMParguments=\count348
+\everyMPshowfont=\toks48
+\MPscratchCnt=\count349
+\MPscratchDim=\dimen315
+\MPnumerator=\count350
+\makeMPintoPDFobject=\count351
+\everyMPtoPDFconversion=\toks49
+) (/usr/share/texlive/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
+Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
+Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 485.
+ (/usr/share/texlive/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
+File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Live
+))
+Package pgfplots notification 'compat/show suggested version=true': document has been generated with the most recent feature set (\pgfplotsset{compat=1.18}).
+
+\c@lstlisting=\count352
+Package hyperref Info: Link coloring OFF on input line 60.
+(./main.out) (./main.out)
+\@outlinefile=\write4
+\openout4 = `main.out'.
+
+LaTeX Font Info:    Trying to load font information for OT1+ztmcm on input line 75.
+ (/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1ztmcm.fd
+File: ot1ztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OT1/ztmcm.
+)
+LaTeX Font Info:    Trying to load font information for OML+ztmcm on input line 75.
+ (/usr/share/texlive/texmf-dist/tex/latex/psnfss/omlztmcm.fd
+File: omlztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OML/ztmcm.
+)
+LaTeX Font Info:    Trying to load font information for OMS+ztmcm on input line 75.
+ (/usr/share/texlive/texmf-dist/tex/latex/psnfss/omsztmcm.fd
+File: omsztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMS/ztmcm.
+)
+LaTeX Font Info:    Trying to load font information for OMX+ztmcm on input line 75.
+ (/usr/share/texlive/texmf-dist/tex/latex/psnfss/omxztmcm.fd
+File: omxztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMX/ztmcm.
+)
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 75.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <9> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 75.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 75.
+
+
+[1
+
+{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}] (./main.toc
+
+[1
+
+])
+\tf@toc=\write5
+\openout5 = `main.toc'.
+
+ (./01_Introduzione/Introduzione.tex
+
+
+pdfTeX warning (ext4): destination with the same identifier (name{page.1}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.1 \chapter
+            {Introduzione} [1]
+\bbl@ensure@italian {Capitolo} 1.
+
+
+[2
+
+]
+Overfull \hbox (11.1018pt too wide) in paragraph at lines 28--38
+\OT1/ptm/m/n/12 nella letteratura esistente, introduce i concetti alla base dei modelli linguistici di grandi dimensioni
+ []
+
+
+Overfull \hbox (5.66667pt too wide) in paragraph at lines 28--38
+\OT1/ptm/m/n/12 insieme alle soluzioni adottate per risolverle. Il Capitolo []4[] presenta la metodologia di valutazione
+ []
+
+) (./02_Stato_dell_arte/Stato_dell_arte.tex
+
+[3]
+\bbl@ensure@italian {Capitolo} 2.
+(./02_Stato_dell_arte/2.1_Problema_da_affrontare.tex
+
+[4
+
+]
+Overfull \hbox (11.41425pt too wide) in paragraph at lines 9--11
+\OT1/ptm/m/n/12 allineamento che premiano risposte sicure pi[]u che corrette, e alla natura intrinsecamente stocastica
+ []
+
+
+Overfull \hbox (22.94728pt too wide) in paragraph at lines 12--13
+\OT1/ptm/m/n/12 dei large language model in ambito educativo, osservano come l'assenza di garanzie sull'accuratezza
+ []
+
+
+
+[5])
+Overfull \hbox (3.04799pt too wide) in paragraph at lines 19--6
+[]\OT1/ptm/m/n/12 Questo principio ha gi[]a trovato applicazione in sistemi conversazionali rivolti specificamente
+ []
+
+(./02_Stato_dell_arte/2.2_LLM/2.2_LLM.tex (./02_Stato_dell_arte/2.2_LLM/2.2.1_Descrizione_sintetica_LLM.tex
+Overfull \hbox (22.04597pt too wide) in paragraph at lines 3--5
+\OT1/ptm/m/n/12 collo di bottiglia sequenziale delle reti ricorrenti. Soprattutto, la self-attention rende l'addestramento
+ []
+
+
+Overfull \hbox (2.6424pt too wide) in paragraph at lines 3--5
+\OT1/ptm/m/n/12 alle dimensioni che oggi li caratterizzano, sia in termini di parametri sia di dati di addestramento. 
+ []
+
+
+
+[6]
+Overfull \hbox (9.88014pt too wide) in paragraph at lines 11--12
+\OT1/ptm/m/it/12 contesto\OT1/ptm/m/n/12 , ovvero il numero massimo di token che il modello pu[]o elaborare in un'unica interazione,
+ []
+
+<assets/tokenizer.jpg, id=310, 1044.90375pt x 521.95pt>
+File: assets/tokenizer.jpg Graphic file (type jpg)
+<use assets/tokenizer.jpg>
+Package pdftex.def Info: assets/tokenizer.jpg  used on input line 15.
+(pdftex.def)             Requested size: 448.4407pt x 224.00404pt.
+
+
+[7 <./assets/tokenizer.jpg>]
+Overfull \hbox (17.12611pt too wide) in paragraph at lines 35--38
+\OT1/ptm/m/n/12 linguistica e una parte significativa della conoscenza fattuale del modello, codificata implicitamente
+ []
+
+
+
+[8]
+Overfull \hbox (18.45569pt too wide) in paragraph at lines 39--40
+[]\OT1/ptm/m/n/12 La terza fase, l'\OT1/ptm/m/it/12 allineamento\OT1/ptm/m/n/12 , adatta ulteriormente il comportamento del modello alle preferenze
+ []
+
+
+Overfull \hbox (2.45128pt too wide) in paragraph at lines 39--40
+\OT1/ptm/m/n/12 umane, tipicamente tramite \OT1/ptm/m/it/12 reinforcement learning from human feedback \OT1/ptm/m/n/12 (RLHF). Come mostra
+ []
+
+
+Overfull \hbox (3.30232pt too wide) in paragraph at lines 39--40
+\OT1/ptm/m/n/12 comportamentale: un modello InstructGPT da 1,3 miliardi di parametri, sottoposto a instruction-
+ []
+
+
+Overfull \hbox (15.63937pt too wide) in paragraph at lines 41--42
+\OT1/ptm/m/n/12 riguarda la conoscenza codificata nei parametri e non il comportamento del modello: la conoscenza
+ []
+
+<assets/A-basic-flow-diagram-depicting-various-stages-of-LLMs-from-pre-training-to.png, id=333, 853.1875pt x 529.98pt>
+File: assets/A-basic-flow-diagram-depicting-various-stages-of-LLMs-from-pre-training-to.png Graphic file (type png)
+<use assets/A-basic-flow-diagram-depicting-various-stages-of-LLMs-from-pre-training-to.png>
+Package pdftex.def Info: assets/A-basic-flow-diagram-depicting-various-stages-of-LLMs-from-pre-training-to.png  used on input line 45.
+(pdftex.def)             Requested size: 407.66833pt x 253.23917pt.
+
+
+[9]
+Overfull \hbox (13.64687pt too wide) in paragraph at lines 56--57
+\OT1/ptm/m/n/12 e la potenza di calcolo complessivamente impiegata. Il risultato []e una relazione sorprendentemente
+ []
+
+
+
+[10 <./assets/A-basic-flow-diagram-depicting-various-stages-of-LLMs-from-pre-training-to.png>]
+<assets/scale_law.png, id=348, 1009.7725pt x 340.27126pt>
+File: assets/scale_law.png Graphic file (type png)
+<use assets/scale_law.png>
+Package pdftex.def Info: assets/scale_law.png  used on input line 62.
+(pdftex.def)             Requested size: 407.66833pt x 137.37296pt.
+)
+Overfull \hbox (3.94771pt too wide) in paragraph at lines 78--4
+[]\OT1/ptm/m/n/12 Ai fini di questo lavoro []e rilevante, infine, la distinzione tra modelli \OT1/ptm/m/it/12 closed-weight\OT1/ptm/m/n/12 , accessibili
+ []
+
+
+
+[11 <./assets/scale_law.png>] (./02_Stato_dell_arte/2.2_LLM/2.2.2_LLM_valutati.tex
+Overfull \hbox (36.1946pt too wide) in paragraph at lines 3--16
+\OT1/ptm/m/n/12 sono serviti nella variante \OT1/ptm/m/it/12 AWQ \OT1/ptm/m/n/12 (\OT1/ptm/m/it/12 Activation-aware Weight Quantization\OT1/ptm/m/n/12 ), uno schema di quantizzazione
+ []
+
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 20.
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/ts1ptm.fd
+File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
+)
+
+[12]
+Overfull \hbox (4.67046pt too wide) in paragraph at lines 33--38
+[]\OT1/ptm/b/n/12 Meta-Llama-3.1-8B-Instruct\OT1/ptm/m/n/12 , appartenente alla famiglia Llama 3 di Meta [[]], composta
+ []
+
+
+Overfull \hbox (22.40622pt too wide) in paragraph at lines 40--46
+\OT1/ptm/m/n/12 mentre il confronto sistematico in termini di qualit[]a della risposta generata, latenza e comportamento
+ []
+
+))
+
+[13] (./02_Stato_dell_arte/2.3_RAG/2.3_RAG.tex
+Overfull \hbox (7.10664pt too wide) in paragraph at lines 3--5
+\OT1/ptm/m/n/12 superare i due limiti discussi nella Sezione []2.1[]: invece di affidarsi esclusivamente alla conoscenza
+ []
+
+<assets/rag_pipeline.png, id=384, 473.77pt x 424.58624pt>
+File: assets/rag_pipeline.png Graphic file (type png)
+<use assets/rag_pipeline.png>
+Package pdftex.def Info: assets/rag_pipeline.png  used on input line 8.
+(pdftex.def)             Requested size: 271.7835pt x 243.57802pt.
+
+
+[14] (./02_Stato_dell_arte/2.3_RAG/2.3.1_Embedding_e_ricerca_per_similarità.tex
+
+[15 <./assets/rag_pipeline.png>]
+Overfull \hbox (15.44739pt too wide) in paragraph at lines 15--23
+\OT1/ptm/m/n/12 di entit[]a nominate come persone e luoghi, l'individuazione della risposta a una domanda all'interno
+ []
+
+
+Overfull \hbox (7.2398pt too wide) in paragraph at lines 24--31
+\OT1/ptm/m/n/12 concatenati in un'unica sequenza e restituisce un punteggio per la coppia, secondo un'architettura
+ []
+
+
+
+[16]
+Overfull \hbox (2.36388pt too wide) in paragraph at lines 43--49
+[]\OT1/ptm/m/n/12 Sentence-BERT []e pensato per misurare la somiglianza tra frasi; nel recupero, invece, occorre
+ []
+
+) (./02_Stato_dell_arte/2.3_RAG/2.3.2_Ricerca_ibrida_e_fusione_dei_risultati.tex
+Overfull \hbox (13.22595pt too wide) in paragraph at lines 62--1
+\OT1/ptm/m/n/12 scala di molti corpora documentali reali. I database vettoriali si affidano a una ricerca approssimata
+ []
+
+
+
+[17]) (./02_Stato_dell_arte/2.3_RAG/2.3.3_Reranking.tex
+
+[18]) (./02_Stato_dell_arte/2.3_RAG/2.3.4_Trasformazione_della_query.tex
+Overfull \hbox (3.53137pt too wide) in paragraph at lines 20--1
+\OT1/ptm/m/n/12 indicizzati in anticipo, mentre un cross-encoder richiede di rielaborare congiuntamente domanda
+ []
+
+
+Overfull \hbox (4.44313pt too wide) in paragraph at lines 3--15
+\OT1/ptm/m/n/12 effettivamente la risposta, anche quando quel documento []e topicamente pertinente. La letteratura
+ []
+
+
+
+[19]) (./02_Stato_dell_arte/2.3_RAG/2.3.5_Chunking_e_fusione_gerarchica.tex
+Overfull \hbox (1.23962pt too wide) in paragraph at lines 3--8
+\OT1/ptm/m/n/12 Un ultimo problema, trasversale a tutti gli stadi precedenti, []e quello del \OT1/ptm/m/it/12 chunking\OT1/ptm/m/n/12 : un documento
+ []
+
+
+Overfull \hbox (1.47963pt too wide) in paragraph at lines 3--8
+\OT1/ptm/m/n/12 blocco, sia per limiti di lunghezza degli input dei modelli di embedding sia perch[]e un frammento
+ []
+
+
+Overfull \hbox (8.75214pt too wide) in paragraph at lines 9--12
+\OT1/ptm/m/n/12 eventualmente con una sovrapposizione tra blocchi consecutivi per non spezzare un'informazione
+ []
+
+
+
+[20]) (./02_Stato_dell_arte/2.3_RAG/2.3.6_Posizione_del_contesto_nel_prompt.tex
+Overfull \hbox (21.63644pt too wide) in paragraph at lines 13--1
+[]\OT1/ptm/m/n/12 Una soluzione a questo problema []e la \OT1/ptm/m/it/12 fusione gerarchica \OT1/ptm/m/n/12 dei frammenti. In fase di indicizzazione
+ []
+
+<assets/U-curve-diagram.png, id=442, 627.34375pt x 581.17125pt>
+File: assets/U-curve-diagram.png Graphic file (type png)
+<use assets/U-curve-diagram.png>
+Package pdftex.def Info: assets/U-curve-diagram.png  used on input line 12.
+(pdftex.def)             Requested size: 226.48395pt x 209.81564pt.
+
+
+[21])) (./02_Stato_dell_arte/2.4_Sistemi_LLM_RAG.tex
+Overfull \hbox (5.57176pt too wide) in paragraph at lines 3--12
+\OT1/ptm/m/n/12 di rispondere a qualunque domanda per cui esista un documento pertinente nella base indicizzata,
+ []
+
+
+
+[22 <./assets/U-curve-diagram.png>]
+Overfull \hbox (16.49983pt too wide) in paragraph at lines 21--37
+[]\OT1/ptm/m/n/12 Tre sistemi recenti sono particolarmente vicini, per dominio e impostazione, a quello sviluppato
+ []
+
+
+Overfull \hbox (29.23462pt too wide) in paragraph at lines 38--50
+\OT1/ptm/m/n/12 complementare a quella dei sistemi accademici, perch[]e si concentra sui problemi di ingegnerizzazione
+ []
+
+
+Overfull \hbox (0.2547pt too wide) in paragraph at lines 38--50
+\OT1/ptm/m/n/12 RAG distinte, in ambito di ricerca, educativo e biomedico, e ne ricavano sette punti di fallimento
+ []
+
+
+
+[23])) (./03_Architettura_e_sviluppo_del_sistema/Architettura_e_sviluppo.tex
+
+[24]
+\bbl@ensure@italian {Capitolo} 3.
+
+Overfull \hbox (7.63504pt too wide) in paragraph at lines 3--7
+\OT1/ptm/m/n/12 adattate e combinate nel sistema sviluppato, con un livello di dettaglio sufficiente a comprenderne
+ []
+
+(./03_Architettura_e_sviluppo_del_sistema/3.1_Panoramica_dell_architettura.tex
+
+[25
+
+]
+LaTeX Font Info:    Trying to load font information for OMS+ptm on input line 91.
+ (/usr/share/texlive/texmf-dist/tex/latex/psnfss/omsptm.fd
+File: omsptm.fd 
+)
+LaTeX Font Info:    Font shape `OMS/ptm/b/n' in size <6> not available
+(Font)              Font shape `OMS/cmsy/b/n' tried instead on input line 91.
+
+
+[26]
+Overfull \vbox (4.29057pt too high) has occurred while \output is active []
+
+
+
+[27]
+Overfull \hbox (0.59088pt too wide) in paragraph at lines 179--183
+\OT1/ptm/m/n/12 ricostruisce il senso rispetto alla conversazione, la scompone se contiene pi[]u richieste, riconosce
+ []
+
+
+
+[28]) (./03_Architettura_e_sviluppo_del_sistema/3.2_Ingestione_e_preparazione_dei_dati.tex
+
+[29]
+
+[30]
+Overfull \hbox (12.74739pt too wide) in paragraph at lines 95--102
+\OT1/ptm/m/n/12 del corso, mentre le slide di un insegnamento vanno in una sottocartella dedicata all'insegnamento,
+ []
+
+
+Overfull \hbox (7.45534pt too wide) in paragraph at lines 116--123
+\OT1/ptm/m/n/12 apparentemente complete a cui mancano proprio le informazioni di dettaglio --- contatti, passaggi
+ []
+
+
+
+[31]
+Underfull \hbox (badness 1337) in paragraph at lines 148--149
+[][]\OT1/ptm/b/n/8 -- \OT1/ptm/m/n/8 Come immatricolarti: accedi a 
+ []
+
+
+Underfull \hbox (badness 1231) in paragraph at lines 152--153
+[]\OT1/ptm/b/n/8 -- \OT1/ptm/m/n/8 Quando sostenerla: la prova di 
+ []
+
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <5> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 193.
+LaTeX Font Info:    Font shape `OMS/ptm/b/n' in size <8> not available
+(Font)              Font shape `OMS/cmsy/b/n' tried instead on input line 206.
+
+
+[32]
+Overfull \hbox (20.34415pt too wide) in paragraph at lines 249--259
+\OT1/ptm/m/n/12 PowerPoint, fogli di calcolo, pagine HTML, Markdown e immagini --- in un'unica rappresentazione
+ []
+
+
+
+[33]
+Overfull \hbox (10.45424pt too wide) in paragraph at lines 260--268
+\OT1/ptm/m/n/12 ricostruisce righe e colonne delle tabelle. La correttezza delle tabelle []e particolarmente importante
+ []
+
+
+Overfull \hbox (4.98476pt too wide) in paragraph at lines 352--356
+ [][] 
+ []
+
+
+
+[34]
+Overfull \hbox (2.49924pt too wide) in paragraph at lines 360--364
+ []\OT1/ptm/b/n/12 Descrizione delle immagini.[] \OT1/ptm/m/n/12 Documenti come slide e dispense contengono spesso diagrammi
+ []
+
+
+Overfull \hbox (25.71854pt too wide) in paragraph at lines 360--364
+\OT1/ptm/m/n/12 capace di interpretare immagini, e la descrizione viene inserita nel documento al posto dell'immagine
+ []
+
+
+
+[35]
+Overfull \hbox (60.91365pt too wide) in paragraph at lines 376--380
+\OT1/ptm/m/n/12 interpretare le immagini []e quindi necessario una volta per documento, al momento dell'indicizzazione,
+ []
+
+
+Overfull \hbox (7.06815pt too wide) in paragraph at lines 389--397
+[]\OT1/ptm/m/n/12 Il modello riceve un'istruzione che chiede di riportare gli elementi principali di un diagramma
+ []
+
+<assets/famiglie_fiorentine.png, id=568, 353.32pt x 410.53375pt>
+File: assets/famiglie_fiorentine.png Graphic file (type png)
+<use assets/famiglie_fiorentine.png>
+Package pdftex.def Info: assets/famiglie_fiorentine.png  used on input line 402.
+(pdftex.def)             Requested size: 190.24568pt x 221.05223pt.
+
+Underfull \hbox (badness 2181) in paragraph at lines 406--411
+[]\OT1/ptm/m/it/10 ``L'immagine mostra una struttura blocchi economiche-
+ []
+
+
+Underfull \hbox (badness 1325) in paragraph at lines 406--411
+\OT1/ptm/m/it/10 diagramma rappresenta una rete complessa che collega
+ []
+
+
+Underfull \hbox (badness 1043) in paragraph at lines 406--411
+\OT1/ptm/m/it/10 le relazioni matrimoniali e economiche tra esse. [...]
+ []
+
+
+Underfull \hbox (badness 2970) in paragraph at lines 406--411
+\OT1/ptm/m/it/10 numerose frecce verso altre famiglie, simbolizzando il
+ []
+
+
+
+[36]
+Overfull \hbox (11.67946pt too wide) in paragraph at lines 420--432
+\OT1/ptm/m/n/12 una famiglia che nel diagramma non compare; trasforma Altoviti in ``Aldoviti''. Sono affermazioni
+ []
+
+
+Overfull \hbox (9.03856pt too wide) in paragraph at lines 420--432
+\OT1/ptm/m/n/12 descrizione, e il modello delle risposte, che si attiene fedelmente al contesto ricevuto, riporterebbe
+ []
+
+
+
+[37 <./assets/famiglie_fiorentine.png (PNG copy)>]
+
+[38]
+Overfull \hbox (18.71002pt too wide) in paragraph at lines 480--483
+[]\OT1/ptm/b/n/12 elementi ripetuti di pagina\OT1/ptm/m/n/12 : intestazioni e pi[]e di pagina che lo strumento non ha riconosciuto
+ []
+
+
+Overfull \hbox (7.9958pt too wide) in paragraph at lines 502--511
+\OT1/ptm/m/n/12 esempio \OT1/ptm/m/it/12 Prova finale: modalit[]a e scadenze $\OML/ztmcm/m/it/12 >$ \OT1/ptm/m/it/12 SCADENZE\OT1/ptm/m/n/12 . Il percorso []e essenziale per frammenti
+ []
+
+
+
+[39]
+Overfull \hbox (2.53146pt too wide) in paragraph at lines 512--513
+[]\OT1/ptm/m/n/12 Tre ulteriori interventi affrontano problemi ricorrenti nei contenuti amministrativi e didattici. 
+ []
+
+
+Overfull \hbox (6.20677pt too wide) in paragraph at lines 523--526
+[]\OT1/ptm/b/n/12 Frammenti troppo brevi. \OT1/ptm/m/n/12 Un frammento di poche parole, tipicamente la frase introduttiva
+ []
+
+
+Overfull \hbox (4.77711pt too wide) in paragraph at lines 526--529
+[]\OT1/ptm/b/n/12 Collegamenti. \OT1/ptm/m/n/12 I collegamenti ipertestuali vengono ridotti al solo testo visibile, eliminando
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 539--539
+[]\OT1/cmtt/m/n/8 | **SCADENZA PRESENTAZIONE DOMANDA DI LAUREA** | **SCADENZA DOMANDA DI LAUREA TARDIVA** | **APPELLO DI
+ []
+
+
+Overfull \hbox (16.54031pt too wide) in paragraph at lines 552--558
+\OT1/ptm/m/n/12 Le sezioni non vengono indicizzate, ma servono al recupero per la fusione gerarchica (Sezione []2.3[]):
+ []
+
+
+
+[40]
+Underfull \hbox (badness 1028) in paragraph at lines 573--573
+[]\OT1/ptm/m/n/8 validit[]a della 
+ []
+
+
+
+[41])
+Overfull \hbox (16.37202pt too wide) in paragraph at lines 628--24
+ []\OT1/ptm/b/n/12 Aggiornamento incrementale.[] \OT1/ptm/m/n/12 Pagine e documenti dell'ateneo cambiano nel tempo, ad esempio
+ []
+
+
+Overfull \hbox (14.60794pt too wide) in paragraph at lines 628--24
+\OT1/ptm/m/n/12 a ogni nuovo anno accademico, e ripetere l'intera preparazione a ogni modifica sarebbe inutilmente
+ []
+
+
+Overfull \hbox (16.21495pt too wide) in paragraph at lines 628--24
+\OT1/ptm/m/n/12 vengono prima eliminati sia dall'archivio sia dal database vettoriale, cos[]^^P che la versione aggiornata
+ []
+
+
+
+[42] (./03_Architettura_e_sviluppo_del_sistema/3.3_Embedding.tex
+Overfull \hbox (14.46368pt too wide) in paragraph at lines 3--8
+\OT1/ptm/m/n/12 Tra l'indicizzazione e il recupero si colloca un componente condiviso dai due processi (Figura []3.1[]):
+ []
+
+
+Overfull \hbox (22.40706pt too wide) in paragraph at lines 3--8
+\OT1/ptm/m/n/12 l'Embedding trasforma ogni frammento, al momento dell'indicizzazione, nella sua rappresentazione
+ []
+
+
+Overfull \hbox (6.3876pt too wide) in paragraph at lines 3--8
+\OT1/ptm/m/n/12 del recupero, cos[]^^P che domanda e frammenti siano confrontabili nello stesso spazio (Sezione []2.3[]).
+ []
+
+
+
+[43]
+Overfull \hbox (1.5396pt too wide) in paragraph at lines 58--66
+\OT1/ptm/m/n/12 semanticamente vicino a una domanda, un compito che spetta al filtro, non alla rappresentazione
+ []
+
+
+Overfull \hbox (37.47849pt too wide) in paragraph at lines 69--79
+\OT1/ptm/m/n/12 vettore nominato, \OT1/ptm/m/it/12 colbert\OT1/ptm/m/n/12 , multivettore con confronto per massima similarit[]a, ospita la rappresentazione
+ []
+
+
+Overfull \hbox (4.91116pt too wide) in paragraph at lines 69--79
+\OT1/ptm/m/n/12 per token usata dalla sola modalit[]a di recupero con late interaction. La seconda []e l'indicizzazione
+ []
+
+
+Overfull \hbox (20.55939pt too wide) in paragraph at lines 69--79
+\OT1/ptm/m/n/12 dei campi del payload --- stato, corso, ambito, tipo di laurea, sezione, insegnamento e l'identificativo
+ []
+
+
+
+[44]
+Overfull \hbox (2.71017pt too wide) in paragraph at lines 83--88
+\OT1/ptm/m/it/12 Change Laboratory \OT1/ptm/m/n/12 della Tabella []3.4[] e della Tabella []3.5[]: ogni vettore nominato (\OT1/cmtt/m/n/12 dense\OT1/ptm/m/n/12 , \OT1/cmtt/m/n/12 sparse\OT1/ptm/m/n/12 ,
+ []
+
+Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on input line 90.
+
+
+[45]
+Overfull \hbox (0.77153pt too wide) in paragraph at lines 116--130
+\OT1/ptm/m/n/12 schema Hierarchical Navigable Small World (HNSW), introdotto in astratto nella Sezione []2.3.1[].
+ []
+
+)
+
+[46] (./03_Architettura_e_sviluppo_del_sistema/3.4_Componente_di_retrieval.tex
+Overfull \hbox (12.09886pt too wide) in paragraph at lines 3--9
+\OT1/ptm/m/n/12 A ogni domanda, il componente Retrieving deve individuare, tra le decine di migliaia di frammenti
+ []
+
+
+
+[47]
+Overfull \hbox (12.91202pt too wide) in paragraph at lines 48--50
+[]\OT1/ptm/m/n/12 Il terzo passo, specifico di questo dominio, individua il corso di laurea nominato esplicitamente
+ []
+
+
+Overfull \hbox (31.02415pt too wide) in paragraph at lines 65--79
+\OT1/ptm/m/n/12 rappresentazione densa e una per quella sparsa, fondendole con Reciprocal Rank Fusion (Sezione []2.3[]).
+ []
+
+
+Overfull \hbox (0.24327pt too wide) in paragraph at lines 65--79
+\OT1/ptm/m/n/12 Un solo filtro []e applicato in ogni ricerca indipendentemente dal corso di laurea: solo i frammenti
+ []
+
+
+
+[48]
+Overfull \hbox (22.3826pt too wide) in paragraph at lines 89--106
+\OT1/ptm/m/n/12 specifiche tra i due testi che la ricerca ibrida, confrontando rappresentazioni calcolate separatamente,
+ []
+
+
+
+[49]
+Overfull \hbox (20.52267pt too wide) in paragraph at lines 125--145
+\OT1/ptm/m/n/12 I frammenti riordinati attraversano infine l'\OT1/ptm/m/it/12 AutoMergingRetriever \OT1/ptm/m/n/12 (Sezione []2.3[]): quando abbastanza
+ []
+
+
+Overfull \hbox (22.3593pt too wide) in paragraph at lines 125--145
+\OT1/ptm/m/n/12 (Sezione []3.5[]) --- coerente con il vincolo di precisione fattuale che guida l'intero sistema (Capitolo []3[]).
+ []
+
+
+
+[50]
+
+[51]
+Overfull \hbox (14.80005pt too wide) in paragraph at lines 162--170
+\OT1/ptm/m/n/12 Senza HyDE, la domanda originale ottiene un punteggio di 0,03, ben sotto la soglia di accettazione;
+ []
+
+) (./03_Architettura_e_sviluppo_del_sistema/3.5_Componente_di_generazione.tex
+
+[52]
+
+[53]
+
+[54]
+
+[55]
+
+[56]
+
+[57]
+Overfull \hbox (15.0519pt too wide) in paragraph at lines 205--207
+\OT1/ptm/m/n/12 Non tutti i messaggi richiedono, o permettono, una risposta generata dai documenti. La Figura []3.14[]
+ []
+
+
+Overfull \hbox (4.51645pt too wide) in paragraph at lines 244--250
+\OT1/ptm/m/n/12 recupero. Trattato come una domanda, un semplice ``buongiorno'' veniva cercato tra i documenti,
+ []
+
+
+
+[58]
+Overfull \hbox (15.41212pt too wide) in paragraph at lines 251--258
+ []\OT1/ptm/b/n/12 Nessun frammento pertinente.[] \OT1/ptm/m/n/12 Quando il recupero non trova frammenti sopra soglia, nemmeno
+ []
+
+)
+Overfull \hbox (5.47513pt too wide) in paragraph at lines 268--30
+\OT1/ptm/m/n/12 frammenti pertinenti all'argomento, ma nessuno contiene l'informazione richiesta: una domanda
+ []
+
+
+
+[59] (./03_Architettura_e_sviluppo_del_sistema/3.6_Architettura_software_e_infrastruttura.tex) (./03_Architettura_e_sviluppo_del_sistema/3.7_Scelte_progettuali_e_trade-off.tex)) (./04_Validazione_del_sistema/Validazione_del_sistema.tex
+
+[60]
+\bbl@ensure@italian {Capitolo} 4.
+(./04_Validazione_del_sistema/4.1_Benchmark_di_test.tex) (./04_Validazione_del_sistema/4.2_Indicatori_di_accuratezza.tex) (./04_Validazione_del_sistema/4.3_Esperimenti_effettuati.tex) (./04_Validazione_del_sistema/4.4_Risultati/4.4_Risultati.tex (./04_Validazione_del_sistema/4.4_Risultati/Risultati.tex) (./04_Validazione_del_sistema/4.4_Risultati/Esempi_casi_errati.tex))) (./05_Conclusioni_e_sviluppi_futuri/Conclusioni.tex
+
+[61
+
+]
+\bbl@ensure@italian {Capitolo} 5.
+) (./main.bbl
+
+[62
+
+]
+
+[63
+
+]
+Underfull \hbox (badness 1769) in paragraph at lines 37--39
+[]\OT1/ptm/m/n/12 Mistral AI, ``Mistral NeMo.'' []$\OT1/cmtt/m/n/12 https : / / mistral . ai / news / mistral-[]nemo/$[]\OT1/ptm/m/n/12 , 2024.
+ []
+
+
+
+[64]
+Underfull \hbox (badness 3179) in paragraph at lines 65--66
+\OT1/ptm/m/n/12 condorcet and individual rank learning methods,'' in \OT1/ptm/m/it/12 Proceedings of the 32nd
+ []
+
+
+Underfull \hbox (badness 5939) in paragraph at lines 68--69
+[]\OT1/ptm/m/n/12 R. Nogueira and K. Cho, ``Passage re-ranking with BERT,'' \OT1/ptm/m/it/12 arXiv preprint
+ []
+
+
+
+[65]
+
+[66])
+
+[67] (./main.aux)
+ ***********
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+ ***********
+Package rerunfilecheck Info: File `main.out' has not changed.
+(rerunfilecheck)             Checksum: 4A3BD5FADB79332C34A85E1941E91059;9568.
+ ) 
+Here is how much of TeX's memory you used:
+ 36646 strings out of 475178
+ 844445 string characters out of 5766539
+ 1445871 words of memory out of 5000000
+ 58690 multiletter control sequences out of 15000+600000
+ 620069 words of font info for 155 fonts, out of 8000000 for 9000
+ 14 hyphenation exceptions out of 8191
+ 84i,11n,91p,1538b,1990s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmbsy6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmbsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt8.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/symbol/usyr.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on main.pdf (69 pages, 555990 bytes).
+PDF statistics:
+ 942 PDF objects out of 1000 (max. 8388607)
+ 822 compressed objects within 9 object streams
+ 229 named destinations out of 1000 (max. 500000)
+ 435 words of extra memory for PDF output out of 10000 (max. 10000000)
+

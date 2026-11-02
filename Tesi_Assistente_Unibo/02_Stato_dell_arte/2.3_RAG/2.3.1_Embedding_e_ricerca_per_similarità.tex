@@ -1,0 +1,67 @@
+\subsection{Embedding e ricerca per similarità}\label{subsec:embedding}
+
+Il primo problema che un sistema RAG deve risolvere è, dato un testo, come rappresentarlo in una forma che permetta
+di confrontarne il significato con quello di una domanda. La soluzione standard è l'\emph{embedding}: una rete neurale
+proietta ogni porzione di testo (un documento, o più spesso un suo frammento) in un vettore di numeri reali di
+dimensione fissa, costruito in modo che frammenti dal significato simile vengano proiettati in punti vicini dello
+spazio vettoriale. La vicinanza tra due vettori $\mathbf{u}$ e $\mathbf{v}$ si misura tipicamente con la
+\emph{similarità coseno}, ovvero il coseno dell'angolo compreso tra i due vettori:
+\begin{equation}
+  \cos(\mathbf{u}, \mathbf{v}) = \frac{\mathbf{u} \cdot \mathbf{v}}{\lVert \mathbf{u} \rVert \, \lVert \mathbf{v} \rVert},
+  \label{eq:coseno}
+\end{equation}
+che vale 1 per vettori con la stessa direzione e diminuisce man mano che le loro direzioni divergono.
+
+Il punto di partenza per costruire modelli di embedding è in genere Bidirectional Encoder Representations
+from Transformers (\emph{BERT}), proposto da Devlin et al.\ \cite{devlin2019bert}. A differenza dei LLM generativi descritti in precedenza, BERT utilizza solo la parte \emph{encoder} del Transformer: ogni token osserva
+l'intera sequenza in entrambe le direzioni, e il modello produce per ciascun token un vettore che ne rappresenta il
+significato nel contesto, senza generare testo. BERT viene pre-addestrato su grandi quantità di testo a ricostruire
+parole mascherate casualmente all'interno delle frasi, e poi specializzato tramite \emph{fine-tuning} su compiti di
+comprensione del linguaggio: la classificazione di un testo (per esempio l'analisi del sentiment), il riconoscimento
+di entità nominate come persone e luoghi, l'individuazione della risposta a una domanda all'interno di un passaggio
+dato, e la classificazione di coppie di frasi, per esempio per stabilire se due frasi sono parafrasi l'una dell'altra.
+
+Nessuno di questi compiti, tuttavia, richiede di produrre un singolo vettore che rappresenti un'intera frase, e BERT
+non è addestrato a farlo. Per confrontare due testi, BERT li riceve concatenati in un'unica sequenza e restituisce un
+punteggio per la coppia, secondo un'architettura detta \emph{cross-encoder}. Reimers e Gurevych \cite{reimers2019sbert}
+osservano che questo approccio è impraticabile per il recupero: ogni coppia richiede un passaggio completo attraverso
+la rete, e trovare la coppia più simile in una collezione di 10.000 frasi richiede circa 50 milioni di passaggi, pari a
+circa 65 ore di calcolo. D'altra parte, ricavare un vettore per ciascuna frase da BERT così com'è, per esempio facendo
+la media dei vettori dei suoi token, produce embedding di bassa qualità.
+
+La loro soluzione, Sentence-BERT (SBERT), affina BERT proprio per produrre embedding di frase confrontabili tramite la
+similarità coseno. Durante l'addestramento, i due testi di ogni coppia non vengono concatenati, ma attraversano
+separatamente la stessa rete, con gli stessi pesi; i due vettori risultanti vengono confrontati, e l'errore commesso
+nel valutare la relazione tra i due testi (per esempio, se si tratta di parafrasi) viene usato per aggiornare i pesi.
+Questa configurazione è detta \emph{siamese}, perché equivale a due copie gemelle della stessa rete. La condivisione dei
+pesi garantisce che entrambi i testi vengano trasformati dalla stessa funzione, e quindi proiettati nello stesso
+spazio, mentre l'addestramento fa sì che in questo spazio la similarità coseno rifletta la somiglianza di significato.
+Una volta addestrata, la rete può calcolare l'embedding di ogni frammento una sola volta e indipendentemente dagli altri,
+e il confronto con una domanda si riduce a una similarità coseno tra vettori già pronti: il tempo necessario a trovare
+la coppia più simile tra 10.000 frasi scende così da circa 65 ore a circa 5 secondi.
+
+Sentence-BERT è pensato per misurare la somiglianza tra frasi; nel recupero, invece, occorre confrontare una domanda
+breve con passaggi di testo più lunghi che ne contengono la risposta. Karpukhin et al.\ \cite{karpukhin2020dpr}
+applicano lo stesso principio a questo compito con il \emph{Dense Passage Retriever} (DPR), composto da due encoder
+basati su BERT, uno per le domande e uno per i passaggi, addestrati su coppie domanda-passaggio in modo che l'embedding
+di una domanda risulti vicino a quello del passaggio che contiene la risposta. Gli autori mostrano come DPR superi nettamente i metodi lessicali classici come BM25, che assegna un punteggio a ciascun documento in base alle parole che ha in
+comune con la domanda, pesate secondo la loro frequenza nel documento e la loro rarità nella collezione.
+
+Il vantaggio deriva dal fatto che un retriever basato su embedding confronta significati e non parole: una domanda come
+``quando si paga la seconda rata?'' può essere associata a un passaggio che parla di ``scadenza del secondo versamento'',
+pur avendo con esso quasi nessuna parola in comune. Per questo i retriever basati su embedding vengono detti
+\emph{densi}, in contrapposizione alle rappresentazioni \emph{sparse} dei metodi lessicali come BM25, che descrivono un
+testo con un vettore grande quanto l'intero vocabolario e composto quasi interamente da zeri. I metodi lessicali
+restano comunque competitivi quando conta la corrispondenza esatta di un termine, come nel caso di codici o nomi propri.
+
+Una domanda e un documento vengono quindi confrontati non piu sulla
+base delle parole esatte che condividono, ma sulla distanza tra i rispettivi vettori nello spazio
+degli embedding, calcolato in modo efficiente anche su milioni di candidati tramite strutture
+dati specializzate (indici vettoriali) mantenute da un database vettoriale dedicato.
+
+Un confronto esaustivo di un vettore query con ogni singolo vettore indicizzato (ricerca
+esatta) diventa proibitivo già a poche centinaia di migliaia di frammenti, ben al di sotto della  scala di molti corpora documentali reali. I database vettoriali si affidano a una ricerca approssimata del vicino piu prossimo, che rinuncia alla garanzia di trovare sempre il risultato esatto in cambio di un tempo di
+ricerca molto piu basso. Malkov e Yashunin \cite{malkov2018hnsw} propongono uno degli schemi più diffusi a
+questo scopo, Hierarchical Navigable Small World (HNSW): un grafo multilivello in cui ogni
+nodo rappresenta un vettore indicizzato, organizzato in strati via via piu densi, in cui la ricerca parte dallo strato piu rado (pochi nodi, collegamenti a lungo raggio) e scende progressivamente verso strati piu fitti, restringendo il raggio di ricerca a ogni passo; un meccanismo che ottiene un tempo di ricerca che cresce in modo logaritmico con il numero $N$ di vettori
+indicizzati, $O(\log N)$, invece che linearmente, $O(N)$, come nella ricerca esatta.

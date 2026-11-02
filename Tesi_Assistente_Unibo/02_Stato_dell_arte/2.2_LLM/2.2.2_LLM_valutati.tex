@@ -1,0 +1,87 @@
+\subsection{LLM valutati}
+
+Il sistema sviluppato in questo lavoro è stato valutato con quattro LLM open-weight, scelti tra
+quelli eseguibili sull'hardware a disposizione. Per tre di essi questo è possibile solo ricorrendo a una
+quantizzazione. La \emph{quantizzazione} riduce la precisione numerica con cui sono memorizzati i pesi di un modello,
+per esempio da 16 a 4 bit per peso: la memoria occupata si riduce di circa quattro volte, al prezzo di una possibile
+perdita di qualità delle risposte. I tre modelli quantizzati sono serviti nella variante \emph{AWQ}
+(\emph{Activation-aware Weight Quantization}), uno
+schema di quantizzazione post-addestramento a 4 bit proposto da Lin et al.\ \cite{lin2024awq}. Gli autori osservano
+che una piccola frazione dei pesi di un modello, quelli associati ai canali di attivazione di ampiezza maggiore,
+contribuisce in modo sproporzionato all'errore di quantizzazione. AWQ individua questi pesi salienti a partire dalle
+statistiche di attivazione, anziché dalla sola magnitudine dei pesi, e li protegge applicando un fattore di scala
+per canale prima della quantizzazione: in questo modo la perdita di qualità si riduce drasticamente rispetto a uno
+schema uniforme, senza richiedere un nuovo addestramento né una fase di backpropagation. Il quarto modello,
+Llama-3.1-8B, è invece eseguito nella versione originale non quantizzata, con pesi in formato BF16 (numeri a 16 bit, la precisione con cui il modello è distribuito).
+
+I quattro modelli confrontati sono:
+
+\begin{itemize}
+  \item \textbf{Qwen2.5-14B-Instruct-AWQ} e \textbf{Qwen2.5-7B-Instruct-AWQ}, due taglie della famiglia Qwen2.5
+    sviluppata da Alibaba Cloud \cite{qwen2024technical}, che differiscono di un fattore 2 nel numero di parametri
+    (14 contro 7 miliardi). Gli autori riportano un corpus di pre-training di 18 mila miliardi di token, più del
+    doppio dei 7 mila miliardi della generazione precedente (Qwen2), con particolare attenzione a codice e
+    matematica, e un supporto multilingue esteso a oltre 29 lingue, italiano compreso. Entrambe le varianti posseggono una finestra di contesto
+    di 128k token;
+  \item \textbf{Mistral-Nemo-12B-AWQ}, sviluppato congiuntamente da Mistral AI e NVIDIA
+    \cite{mistralai2024nemo}, un modello da 12 miliardi di parametri con una finestra di contesto di 128k token.
+    Introduce un nuovo tokenizer, Tekken, che secondo gli autori rappresenta il testo con circa il 30\% di token in
+    meno rispetto al tokenizer dei precedenti modelli Mistral su codice sorgente e su diverse lingue europee, tra
+    cui l'italiano, e risulta più efficiente del tokenizer di Llama~3 per circa l'85\% delle lingue. Il modello è
+    stato inoltre addestrato con \emph{quantization awareness}, una procedura pensata per consentire l'inferenza in
+    FP8, cioè con pesi a 8 bit;
+  \item \textbf{Meta-Llama-3.1-8B-Instruct}, appartenente alla famiglia Llama~3 di Meta \cite{grattafiori2024llama3},
+    composta da tre taglie dense (8, 70 e 405 miliardi di parametri) addestrate su oltre 15 mila miliardi di token,
+    con una finestra di contesto di 128k token. Gli autori dichiarano un supporto ufficiale per otto lingue,
+    italiano compreso, e un addestramento specifico per l'uso di strumenti esterni (\emph{tool calling}), una
+    capacità agentica non rilevante per l'uso puramente conversazionale che ne fa questo sistema.
+\end{itemize}
+
+Tutti e quattro i modelli condividono la stessa architettura di fondo, il Transformer decoder-only auto-regressivo, e differiscono principalmente per numero di parametri, dati e
+procedura di addestramento e tokenizer, oltre che per il formato dei pesi: Llama-3.1-8B è l'unico eseguito senza
+quantizzazione, e di questa differenza occorre tenere conto nell'interpretare il confronto, perché una parte del
+divario di qualità o di latenza rispetto agli altri modelli può dipendere dal formato più che dal modello in sé.
+La Tabella~\ref{tab:llm_comparison} ne riassume le caratteristiche principali, mentre il confronto sistematico in termini di qualità della risposta generata, latenza e comportamento sulle diverse
+categorie del dataset di test è presentato nel Capitolo~\ref{cap:validazione}.
+
+\begin{table}[H]
+    \centering
+    \footnotesize
+    \setlength{\tabcolsep}{4pt}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabularx}{\textwidth}{@{} L{3.4cm} C{1.2cm} C{1.6cm} C{1.4cm} C{1.4cm} >{\raggedright\arraybackslash}X @{}}
+        \toprule
+        \textbf{Modello} & \textbf{Param.} & \textbf{Contesto} & \textbf{Formato} & \textbf{VRAM (pesi)} & \textbf{Caratteristiche principali} \\
+        \midrule
+        \textbf{Qwen2.5-14B-Instruct-AWQ}
+            & 14,7 mld
+            & 128k
+            & AWQ 4 bit
+            & $\sim$9--10 GB
+            & Pre-training su 18 mila miliardi di token; oltre 29 lingue, italiano compreso. \\
+        \midrule
+        \textbf{Qwen2.5-7B-Instruct-AWQ}
+            & 7,6 mld
+            & 128k
+            & AWQ 4 bit
+            & $\sim$5--6 GB
+            & Stessa famiglia del 14B con circa metà dei parametri: minore latenza e occupazione di memoria. \\
+        \midrule
+        \textbf{Mistral-Nemo-12B-AWQ}
+            & 12,2 mld
+            & 128k
+            & AWQ 4 bit
+            & $\sim$8--9 GB
+            & Tokenizer Tekken, più compatto sull'italiano rispetto ai precedenti tokenizer Mistral. \\
+        \midrule
+        \textbf{Meta-Llama-3.1-8B-Instruct}
+            & 8,0 mld
+            & 128k
+            & BF16 \newline
+            & $\sim$16 GB
+            & Pre-training su oltre 15 mila miliardi di token; otto lingue supportate, italiano compreso. \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Caratteristiche dei quattro modelli generativi valutati.}
+    \label{tab:llm_comparison}
+\end{table}

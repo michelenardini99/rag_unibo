@@ -1,0 +1,109 @@
+\begin{thebibliography}{10}
+
+\bibitem{zhao2023survey}
+W.~X. Zhao, K.~Zhou, J.~Li, T.~Tang, X.~Wang, Y.~Hou, Y.~Min, B.~Zhang, J.~Zhang, Z.~Dong, Y.~Du, C.~Yang, Y.~Chen, Z.~Chen, J.~Jiang, R.~Ren, Y.~Li, X.~Tang, Z.~Liu, P.~Liu, J.-Y. Nie, and J.-R. Wen, ``A survey of large language models,'' {\em arXiv preprint arXiv:2303.18223}, 2023.
+
+\bibitem{huang2023survey}
+L.~Huang, W.~Yu, W.~Ma, W.~Zhong, Z.~Feng, H.~Wang, Q.~Chen, W.~Peng, X.~Feng, B.~Qin, and T.~Liu, ``A survey on hallucination in large language models: Principles, taxonomy, challenges, and open questions,'' {\em arXiv preprint arXiv:2311.05232}, 2023.
+
+\bibitem{kasneci2023chatgpt}
+E.~Kasneci, K.~Se{\ss}ler, S.~K{\"u}chemann, M.~Bannert, D.~Dementieva, F.~Fischer, U.~Gasser, G.~Groh, S.~G{\"u}nnemann, E.~H{\"u}llermeier, S.~Krusche, G.~Kutyniok, T.~Michaeli, C.~Nerdel, J.~Pfeffer, O.~Poquet, M.~Sailer, A.~Schmidt, T.~Seidel, M.~Stadler, J.~Weller, J.~Kuhn, and G.~Kasneci, ``{ChatGPT} for good? on opportunities and challenges of large language models for education,'' {\em Learning and Individual Differences}, vol.~103, p.~102274, 2023.
+
+\bibitem{ovadia2024finetuning}
+O.~Ovadia, M.~Brief, M.~Mishaeli, and O.~Elisha, ``Fine-tuning or retrieval? comparing knowledge injection in {LLM}s,'' in {\em Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing (EMNLP)}, 2024.
+
+\bibitem{vaswani2017attention}
+A.~Vaswani, N.~Shazeer, N.~Parmar, J.~Uszkoreit, L.~Jones, A.~N. Gomez, {\L}.~Kaiser, and I.~Polosukhin, ``Attention is all you need,'' in {\em Advances in Neural Information Processing Systems (NeurIPS)}, 2017.
+
+\bibitem{petrov2023unfairness}
+A.~Petrov, E.~La~Malfa, P.~Torr, and A.~Bibi, ``Language model tokenizers introduce unfairness between languages,'' in {\em Advances in Neural Information Processing Systems}, vol.~36, 2023.
+
+\bibitem{ouyang2022instructgpt}
+L.~Ouyang, J.~Wu, X.~Jiang, D.~Almeida, C.~Wainwright, P.~Mishkin, C.~Zhang, S.~Agarwal, K.~Slama, A.~Ray, J.~Schulman, J.~Hilton, F.~Kelton, L.~Miller, M.~Simens, A.~Askell, P.~Welinder, P.~Christiano, J.~Leike, and R.~Lowe, ``Training language models to follow instructions with human feedback,'' {\em Advances in Neural Information Processing Systems (NeurIPS)}, vol.~35, 2022.
+
+\bibitem{kaplan2020scaling}
+J.~Kaplan, S.~McCandlish, T.~Henighan, T.~B. Brown, B.~Chess, R.~Child, S.~Gray, A.~Radford, J.~Wu, and D.~Amodei, ``Scaling laws for neural language models,'' {\em arXiv preprint arXiv:2001.08361}, 2020.
+
+\bibitem{brown2020gpt3}
+T.~B. Brown, B.~Mann, N.~Ryder, M.~Subbiah, J.~Kaplan, P.~Dhariwal, A.~Neelakantan, P.~Shyam, G.~Sastry, A.~Askell, S.~Agarwal, A.~Herbert-Voss, G.~Krueger, T.~Henighan, R.~Child, A.~Ramesh, D.~M. Ziegler, J.~Wu, C.~Winter, C.~Hesse, M.~Chen, E.~Sigler, M.~Litwin, S.~Gray, B.~Chess, J.~Clark, C.~Berner, S.~McCandlish, A.~Radford, I.~Sutskever, and D.~Amodei, ``Language models are few-shot learners,'' {\em Advances in Neural Information Processing Systems (NeurIPS)}, vol.~33, 2020.
+
+\bibitem{lin2024awq}
+J.~Lin, J.~Tang, H.~Tang, S.~Yang, W.-M. Chen, W.-C. Wang, G.~Xiao, X.~Dang, C.~Gan, and S.~Han, ``{AWQ}: Activation-aware weight quantization for {LLM} compression and acceleration,'' in {\em Proceedings of Machine Learning and Systems (MLSys)}, 2024.
+
+\bibitem{qwen2024technical}
+A.~Yang {\em et~al.}, ``Qwen2.5 technical report,'' {\em arXiv preprint arXiv:2412.15115}, 2024.
+
+\bibitem{mistralai2024nemo}
+{Mistral AI}, ``Mistral {NeMo}.'' \url{https://mistral.ai/news/mistral-nemo/}, 2024.
+\newblock Annuncio ufficiale, consultato nel 2026.
+
+\bibitem{grattafiori2024llama3}
+A.~Grattafiori {\em et~al.}, ``The llama 3 herd of models,'' {\em arXiv preprint arXiv:2407.21783}, 2024.
+
+\bibitem{lewis2020retrieval}
+P.~Lewis, E.~Perez, A.~Piktus, F.~Petroni, V.~Karpukhin, N.~Goyal, H.~K{\"u}ttler, M.~Lewis, W.-t. Yih, T.~Rockt{\"a}schel, S.~Riedel, and D.~Kiela, ``Retrieval-augmented generation for knowledge-intensive {NLP} tasks,'' in {\em Advances in Neural Information Processing Systems (NeurIPS)}, 2020.
+
+\bibitem{gao2023ragsurvey}
+Y.~Gao, Y.~Xiong, X.~Gao, K.~Jia, J.~Pan, Y.~Bi, Y.~Dai, J.~Sun, M.~Wang, and H.~Wang, ``Retrieval-augmented generation for large language models: A survey,'' {\em arXiv preprint arXiv:2312.10997}, 2023.
+
+\bibitem{devlin2019bert}
+J.~Devlin, M.-W. Chang, K.~Lee, and K.~Toutanova, ``{BERT}: Pre-training of deep bidirectional transformers for language understanding,'' in {\em Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (NAACL-HLT)}, pp.~4171--4186, 2019.
+
+\bibitem{reimers2019sbert}
+N.~Reimers and I.~Gurevych, ``Sentence-{BERT}: Sentence embeddings using siamese {BERT}-networks,'' in {\em Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)}, pp.~3982--3992, 2019.
+
+\bibitem{karpukhin2020dpr}
+V.~Karpukhin, B.~O{\u{g}}uz, S.~Min, P.~Lewis, L.~Wu, S.~Edunov, D.~Chen, and W.-t. Yih, ``Dense passage retrieval for open-domain question answering,'' in {\em Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)}, pp.~6769--6781, 2020.
+
+\bibitem{malkov2018hnsw}
+Y.~A. Malkov and D.~A. Yashunin, ``Efficient and robust approximate nearest neighbor search using hierarchical navigable small world graphs,'' {\em IEEE Transactions on Pattern Analysis and Machine Intelligence}, 2018.
+
+\bibitem{robertson2009bm25}
+S.~Robertson and H.~Zaragoza, ``The probabilistic relevance framework: {BM25} and beyond,'' {\em Foundations and Trends in Information Retrieval}, vol.~3, no.~4, pp.~333--389, 2009.
+
+\bibitem{cormack2009rrf}
+G.~V. Cormack, C.~L.~A. Clarke, and S.~B{\"u}ttcher, ``Reciprocal rank fusion outperforms condorcet and individual rank learning methods,'' in {\em Proceedings of the 32nd International ACM SIGIR Conference on Research and Development in Information Retrieval}, pp.~758--759, 2009.
+
+\bibitem{nogueira2019bert}
+R.~Nogueira and K.~Cho, ``Passage re-ranking with {BERT},'' {\em arXiv preprint arXiv:1901.04085}, 2019.
+
+\bibitem{khattab2020colbert}
+O.~Khattab and M.~Zaharia, ``{ColBERT}: Efficient and effective passage search via contextualized late interaction over {BERT},'' in {\em Proceedings of the 43rd International ACM SIGIR Conference on Research and Development in Information Retrieval}, pp.~39--48, 2020.
+
+\bibitem{gao2022hyde}
+L.~Gao, X.~Ma, J.~Lin, and J.~Callan, ``Precise zero-shot dense retrieval without relevance labels,'' in {\em Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (ACL)}, 2023.
+
+\bibitem{ammann2025decomposition}
+P.~Ammann, J.~Golde, and A.~Akbik, ``Question decomposition for retrieval-augmented generation,'' {\em arXiv preprint arXiv:2507.00355}, 2025.
+
+\bibitem{liu2023lostmiddle}
+N.~F. Liu, K.~Lin, J.~Hewitt, A.~Paranjape, M.~Bevilacqua, F.~Petroni, and P.~Liang, ``Lost in the middle: How language models use long contexts,'' {\em Transactions of the Association for Computational Linguistics (TACL)}, 2023.
+
+\bibitem{peyton2025review}
+K.~Peyton, S.~Unnikrishnan, and B.~Mulligan, ``A review of university chatbots for student support: {FAQ}s and beyond,'' {\em Discover Education}, vol.~4, no.~1, pp.~1--22, 2025.
+
+\bibitem{siragusa2024unipagpt}
+I.~Siragusa and R.~Pirrone, ``Unipa-{GPT}: Large language models for university-oriented {QA} in italian,'' {\em IJCoL}, vol.~10, no.~2, 2024.
+
+\bibitem{trienes2025marcel}
+J.~Trienes, A.~Derzhanskaia, R.~Schwarzkopf, M.~M{\"u}hling, J.~Schl{\"o}tterer, and C.~Seifert, ``Marcel: A lightweight and open-source conversational agent for university student support,'' in {\em Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing: System Demonstrations (EMNLP)}, 2025.
+
+\bibitem{vlahek2024chatbot}
+D.~Vlahek, ``Retrieval augmented generation in large language models: Development of {AI} chatbot for student support,'' in {\em CEUR Workshop Proceedings}, vol.~3938, pp.~12--23, 2024.
+
+\bibitem{barnett2024sevenfailures}
+S.~Barnett, S.~Kurniawan, S.~Thudumu, Z.~Brannelly, and M.~Abdelrazek, ``Seven failure points when engineering a retrieval augmented generation system,'' in {\em Proceedings of the IEEE/ACM 3rd International Conference on AI Engineering -- Software Engineering for AI (CAIN)}, pp.~194--199, 2024.
+
+\bibitem{bourdin2025easirag}
+M.~Bourdin, A.~Neumann, T.~Paviot, R.~Pellerin, and S.~Lamouri, ``An agile method for implementing retrieval augmented generation tools in industrial {SME}s,'' {\em arXiv preprint arXiv:2508.21024}, 2025.
+
+\bibitem{docling2024}
+C.~Auer, M.~Lysak, A.~Nassar, M.~Dolfi, N.~Livathinos, P.~Vagenas, C.~Berrospi~Ramis, M.~Omenetti, {\em et~al.}, ``Docling technical report,'' {\em arXiv preprint arXiv:2408.09869}, 2024.
+
+\bibitem{chen2024bgem3}
+J.~Chen, S.~Xiao, P.~Zhang, K.~Luo, D.~Lian, and Z.~Liu, ``{M3-Embedding}: Multi-linguality, multi-functionality, multi-granularity text embeddings through self-knowledge distillation,'' {\em arXiv preprint arXiv:2402.03216}, 2024.
+
+\bibitem{kwon2023vllm}
+W.~Kwon, Z.~Li, S.~Zhuang, Y.~Sheng, L.~Zheng, C.~H. Yu, J.~E. Gonzalez, H.~Zhang, and I.~Stoica, ``Efficient memory management for large language model serving with {PagedAttention},'' in {\em Proceedings of the 29th Symposium on Operating Systems Principles (SOSP)}, 2023.
+
+\end{thebibliography}

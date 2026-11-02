@@ -1,0 +1,275 @@
+\section{Componente di generazione (LLM)}\label{sec:generazione}
+
+Il componente Generation riceve la domanda e i frammenti selezionati dal recupero e produce la risposta mostrata allo
+studente, con l'elenco delle fonti da cui è tratta. È l'unico punto del sistema in cui il testo viene scritto anziché
+cercato, e quindi l'unico in cui un'informazione può essere inventata: le scelte descritte in questa sezione ---
+il modello, le istruzioni che riceve, il modo in cui cita le fonti, il comportamento quando non ha elementi per
+rispondere --- sono orientate a ridurre questo rischio e a renderlo verificabile, coerentemente con il vincolo di
+precisione fattuale introdotto all'inizio del capitolo.
+
+\subsection{Scelta del modello}\label{sec:scelta-modello}
+
+Il modello di produzione è stato scelto tra i quattro candidati presentati nella Sezione~\ref{sec:llm}
+(Tabella~\ref{tab:llm_comparison}), tutti in versione quantizzata a 4 bit (AWQ) per rientrare nei 16~GB della GPU
+dedicata e serviti da vLLM~\cite{kwon2023vllm}. Per confrontarli, ciascuno ha risposto alle stesse domande di test
+attraverso l'intera pipeline, con lo stesso recupero; le risposte sono state poi valutate da un unico modello
+giudice, così che le differenze riflettano la qualità delle risposte e non la severità del giudice. La
+Tabella~\ref{tab:scelta-modello} riassume le tre metriche più legate alla generazione e la latenza; la metodologia
+e i risultati completi sono discussi nel Capitolo~\ref{cap:validazione}.
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{@{} l c c c c c @{}}
+    \toprule
+    & \textbf{Correttezza} & \textbf{Fedeltà al} & \textbf{Pertinenza} & \multicolumn{2}{c}{\textbf{Tempo di generazione}} \\
+    \textbf{Modello} & \textbf{della risposta} & \textbf{contesto} & \textbf{della risposta} & \textbf{medio} & \textbf{95° perc.} \\
+    \midrule
+    Qwen2.5-14B-Instruct & \textbf{0,737} & 0,797 & \textbf{0,656} & 12,8~s & 34,8~s \\
+    Mistral-Nemo-12B     & 0,665 & \textbf{0,825} & 0,636 & 9,9~s & 28,1~s \\
+    Qwen2.5-7B-Instruct  & 0,672 & 0,712 & 0,648 & \textbf{5,0~s} & \textbf{14,5~s} \\
+    Llama-3.1-8B-Instruct & 0,648 & 0,729 & 0,573 & 10,9~s & 33,3~s \\
+    \bottomrule
+  \end{tabular}
+  \caption{Confronto tra i modelli candidati alla generazione, sulle 152 domande del benchmark di test, con giudice
+  unico (Qwen2.5-14B-Instruct). La correttezza misura l'accordo con la risposta attesa, la fedeltà quanto le
+  affermazioni della risposta sono supportate dai frammenti recuperati, la pertinenza quanto la risposta affronta la
+  domanda posta.}
+  \label{tab:scelta-modello}
+\end{table}
+
+Qwen2.5-14B-Instruct è il modello con la correttezza più alta, con un margine netto sugli altri tre: confrontando le
+risposte domanda per domanda, è migliore in 61 casi e peggiore in 36 rispetto a Mistral-Nemo, migliore in 75 e
+peggiore in 33 rispetto alla versione da 7 miliardi della stessa famiglia, migliore in 72 e peggiore in 25 rispetto a
+Llama. Mistral-Nemo è leggermente più fedele al contesto, ma la sua maggiore cautela non si traduce in risposte più
+corrette. Il prezzo della scelta è la latenza: con 12,8 secondi in media, Qwen2.5-14B è il più lento dei quattro. È
+un costo che il sistema mitiga mostrando la risposta man mano che viene generata (Sezione~\ref{sec:streaming}), e
+che è stato ritenuto accettabile a fronte del vincolo di precisione fattuale; Qwen2.5-7B, due volte e mezzo più
+veloce, resta l'alternativa naturale se la latenza dovesse diventare prioritaria, al prezzo di circa sette punti di
+correttezza. Poiché il giudice coincide con uno dei candidati, una sua preferenza per le risposte che
+gli somigliano non può essere esclusa; il Capitolo~\ref{cap:validazione} ne discute l'effetto.
+
+Il modello genera a temperatura zero, cioè scegliendo sempre la parola più probabile: in un compito in cui la
+risposta deve riportare fedelmente un contenuto dato, la variabilità introdotta dal campionamento non porta alcun
+beneficio, e la generazione deterministica rende riproducibili sia le risposte sia le valutazioni.
+
+\subsection{Struttura del prompt}\label{sec:prompt}
+
+Il modello riceve una conversazione composta da tre parti (Figura~\ref{fig:prompt}): un messaggio di sistema con le
+istruzioni, fisso per ogni domanda; i turni precedenti della conversazione, fino agli ultimi cinque; e il messaggio
+dello studente, che il sistema costruisce unendo i frammenti recuperati, il corso dello studente, se noto, e la
+domanda.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+      part/.style={draw, thick, rounded corners=3pt, align=left, text width=13.2cm, font=\scriptsize, inner sep=5pt},
+      tag/.style={font=\scriptsize\bfseries, anchor=south west, inner sep=1pt},
+      note/.style={font=\scriptsize\itshape, text=black!65, anchor=west, align=left, text width=3.0cm},
+    ]
+    \node[part, fill=gray!10] (sys) at (0,0) {%
+      Sei un assistente virtuale per Università di Bologna\dots{} Rispondi sempre in italiano. [\dots]
+      Per le domande pertinenti, usa esclusivamente le informazioni presenti nel CONTESTO fornito. Se il contesto
+      non contiene la risposta, dillo esplicitamente invece di inventare\dots{} Riporta date, importi e numeri
+      esattamente come appaiono nel contesto\dots{} [\dots] Per ogni affermazione cita il numero del blocco da cui
+      l'hai presa\dots{} Non scrivere URL, link o nomi di file\dots};
+    \node[tag] at (sys.north west) {Messaggio di sistema (istruzioni)};
+
+    \node[part, fill=yellow!8, below=7mm of sys] (hist) {%
+      \textbf{Studente:} \dots\quad \textbf{Assistente:} \dots\qquad (ultimi cinque turni, senza i numeri di
+      citazione)};
+    \node[tag] at (hist.north west) {Cronologia della conversazione};
+
+    \node[part, fill=blue!6, below=7mm of hist] (user) {%
+      \textbf{CONTESTO:}\\[2pt]
+      \textbf{[1]} (corso: Infermieristica) Frequenza delle lezioni\\
+      La frequenza ai corsi è obbligatoria per il 66\% delle ore di lezione. La verifica della frequenza viene
+      effettuata con varie modalità definite dall'Ateneo\dots\\[1pt]
+      ---\\[1pt]
+      \textbf{[2]} (generale di ateneo) Lezioni: frequenza e orari\\
+      Le modalità in cui si svolgono le lezioni in un Corso di Laurea\dots{} Ogni corso può prevedere la frequenza
+      obbligatoria delle lezioni o meno\dots\\[1pt]
+      --- \quad \dots{} \quad (fino a cinque blocchi, dal più pertinente)\\[4pt]
+      \textbf{CORSO DELLO STUDENTE:} Infermieristica\\[4pt]
+      \textbf{DOMANDA (STUDENTE):}\\
+      quante lezioni devo seguire per forza?};
+    \node[tag] at (user.north west) {Messaggio dello studente, costruito dal sistema};
+  \end{tikzpicture}
+  \caption{Struttura del prompt inviato al modello, con un esempio reale: la domanda ``quante lezioni devo seguire
+  per forza?'' posta da uno studente di Infermieristica. Ogni frammento è un blocco numerato, preceduto
+  dall'indicazione del corso o dell'ateneo e dal titolo della pagina e della sezione da cui proviene.}
+  \label{fig:prompt}
+\end{figure}
+
+\paragraph{I frammenti.} Ogni frammento diventa un blocco numerato, intestato con il titolo della pagina e della
+sezione da cui proviene e con il suo ambito, il corso di laurea o l'indicazione ``generale di ateneo''. Il numero
+serve alle citazioni (Sezione~\ref{sec:citazioni}); l'ambito permette al modello di distinguere informazioni che,
+sulle pagine di corsi diversi, hanno lo stesso titolo ma contenuto diverso. I blocchi sono disposti dal più
+pertinente al meno pertinente e la domanda è posta in fondo, dopo di essi: in questo modo il frammento più
+pertinente e la domanda occupano le due posizioni del contesto che, come discusso nella
+Sezione~\ref{sec:rag} (Figura~\ref{fig:u-curve}), il modello sfrutta meglio. Con al più cinque blocchi il contesto
+resta comunque breve, e l'effetto di un'informazione persa nel mezzo è contenuto.
+
+\paragraph{La domanda.} Il modello non risponde al testo digitato dallo studente, ma alla sua versione condensata
+(Sezione~\ref{sec:analisi-domanda}), la stessa usata per il recupero: in questo modo non deve ricostruire da solo a
+cosa si riferisca un ``e per l'altra sessione?'' rispetto a frammenti recuperati per la domanda esplicita. Quando la
+domanda è stata scomposta in più parti, il modello le riceve anche separate e numerate, con l'istruzione di
+rispondere a ciascuna: la sola versione condensata può infatti confonderle. Una domanda sulle scadenze delle tasse
+``per una laurea magistrale, e per quelle a ciclo unico?'' era stata condensata in ``\dots per una laurea magistrale
+e a ciclo unico'', che il modello leggeva come ``laurea magistrale a ciclo unico'', rispondendo con quella sola
+scadenza pur avendo nel contesto entrambe; le due parti, presentate separatamente, restano distinte.
+
+\paragraph{Le istruzioni.} Il messaggio di sistema traduce in regole il vincolo di precisione fattuale e i problemi
+osservati durante lo sviluppo. Le principali sono:
+\begin{itemize}
+  \item \textbf{usare solo il contesto}: le informazioni vanno tratte esclusivamente dai blocchi forniti e, se la
+  risposta non c'è, il modello deve dirlo invece di ricorrere alla propria conoscenza generale, che per scadenze e
+  importi di un ateneo specifico è inaffidabile per costruzione (Sezione~\ref{sec:problema});
+  \item \textbf{riportare i numeri alla lettera}: date, importi e soglie vanno trascritti esattamente come
+  compaiono, senza arrotondamenti o parafrasi;
+  \item \textbf{non riusare le risposte precedenti}: un'informazione data in un turno precedente vale per la domanda
+  attuale solo se è presente anche nel contesto di questo turno, perché in una conversazione che cambia argomento o
+  corso il modello tendeva a riproporre dati riferiti a un caso diverso;
+  \item \textbf{elencare tutte le casistiche}: se il contesto riporta risposte diverse per situazioni diverse ---
+  sessioni di laurea, rate, anni di corso --- e la domanda non specifica la propria, il modello deve elencarle tutte,
+  ciascuna con la situazione a cui si riferisce, invece di sceglierne una arbitrariamente;
+  \item \textbf{rispettare il corso dello studente}: se il corso è indicato, vanno usati solo i blocchi di quel corso
+  e quelli di ateneo; se l'informazione esiste solo per un altro corso, il modello può riportarla, ma dichiarando a
+  quale corso si riferisce. Senza questa indicazione, a una domanda sulla prova finale di Ingegneria e scienze
+  informatiche il modello aveva risposto con le scadenze di Psicologia, presenti nel contesto con un titolo
+  identico;
+  \item \textbf{rivolgersi direttamente allo studente}: la risposta non deve nominare ``il contesto'' o ``i blocchi'',
+  che sono dettagli del funzionamento interno, e se un'informazione manca deve dire semplicemente che non è
+  disponibile nei documenti consultati;
+  \item \textbf{citare per numero}: ogni affermazione va accompagnata dal numero del blocco da cui proviene, senza
+  scrivere indirizzi o nomi di file.
+\end{itemize}
+
+\subsection{Citazioni ed elenco delle fonti}\label{sec:citazioni}
+
+Una risposta verificabile deve dire da dove proviene. La soluzione più immediata, chiedere al modello di riportare
+l'indirizzo della pagina da cui trae ogni informazione, si è rivelata inaffidabile: il modello riscriveva gli
+indirizzi a memoria, producendo collegamenti plausibili ma inesistenti (\emph{iscrizioni-taxe-altre-procedure},
+\emph{prova-final}). Il sistema divide quindi il compito in due (Figura~\ref{fig:citazioni}): il modello cita
+soltanto i numeri dei blocchi, l'unica informazione che non può sbagliare scrivendola, e il sistema traduce quei
+numeri nei titoli e negli indirizzi reali delle pagine, che conosce perché è stato lui stesso a numerare i blocchi.
+I numeri vengono poi rimossi dal testo mostrato: più frammenti della stessa pagina producevano risposte come
+``\dots{} 29 ottobre 2026 [1], [2], [3].'', ripetitive per chi legge e prive di significato senza il prompt.
+L'elenco delle fonti riporta ogni pagina una sola volta, anche quando ne sono stati citati più frammenti, e solo
+le pagine effettivamente citate; se il modello non cita nulla, vengono elencate tutte quelle da cui la risposta è
+stata costruita.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+      box/.style={draw, thick, rounded corners=3pt, align=left, font=\scriptsize, inner sep=5pt},
+      arr/.style={-{Stealth[length=2mm]}, thick, black!70},
+      lab/.style={font=\scriptsize\itshape, text=black!65, align=center},
+    ]
+    \node[box, fill=gray!10, text width=5.4cm] (raw) at (0,0) {%
+      \textbf{Risposta del modello}\\[2pt]
+      Per il Corso di Studi in Infermieristica, la frequenza alle lezioni è obbligatoria per il 66\% delle ore di
+      lezione \textcolor{red!70!black}{\textbf{[1]}}.};
+    \node[box, fill=blue!6, text width=5.4cm, right=22mm of raw] (shown) {%
+      \textbf{Risposta mostrata allo studente}\\[2pt]
+      Per il Corso di Studi in Infermieristica, la frequenza alle lezioni è obbligatoria per il 66\% delle ore di
+      lezione.\\[4pt]
+      \textbf{Fonti:}\\
+      -- \underline{Frequenza delle lezioni}};
+    \draw[arr] (raw) -- node[lab, above] {rimozione\\delle citazioni} (shown);
+    \node[box, fill=green!6, text width=5.4cm, below=9mm of raw] (map) {%
+      \textbf{Corrispondenza nota al sistema}\\[2pt]
+      \textbf{[1]} $\rightarrow$ \emph{Frequenza delle lezioni}\\
+      \hspace*{1.2em}{\tiny corsi.unibo.it/laurea/Infermieristica/frequenza-delle-lezioni}};
+    \draw[arr] (raw.south) -- (map.north);
+    \draw[arr] (map.east) -| node[lab, pos=0.25, below] {titolo e indirizzo reali} (shown.south);
+  \end{tikzpicture}
+  \caption{Dalla citazione all'elenco delle fonti, sull'esempio della Figura~\ref{fig:prompt}. Il modello cita il
+  numero del blocco; il sistema lo traduce nel titolo e nell'indirizzo reali della pagina e lo rimuove dal testo
+  mostrato.}
+  \label{fig:citazioni}
+\end{figure}
+
+\paragraph{Risposta progressiva.}\label{sec:streaming} La risposta viene mostrata allo studente parola per parola,
+man mano che il modello la genera, anziché solo al termine della generazione: le prime parole compaiono dopo pochi
+istanti anche quando la risposta completa richiede diversi secondi, e la latenza percepita si riduce di
+conseguenza. La generazione progressiva complica però la rimozione delle citazioni, perché una citazione come
+``[12]'' può arrivare spezzata in più parti --- ``['', ``1'', ``2]'' --- e mostrare le parti già arrivate le
+renderebbe visibili per un istante. Il sistema trattiene quindi ogni porzione di testo che potrebbe ancora diventare
+una citazione e la mostra solo quando è certo che non lo sia; l'elenco delle fonti viene aggiunto al termine,
+quando la risposta è completa e le citazioni sono note. Nella cronologia della conversazione la risposta viene
+conservata senza i numeri di citazione, che nei turni successivi non corrisponderebbero più agli stessi blocchi.
+
+\subsection{Gestione dei casi particolari}\label{sec:casi-particolari}
+
+Non tutti i messaggi richiedono, o permettono, una risposta generata dai documenti. La
+Figura~\ref{fig:casi-particolari} riassume come il sistema li distingue.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+      dec/.style={draw, thick, rounded corners=2pt, fill=yellow!10, align=center, font=\scriptsize,
+                  text width=2.6cm, minimum height=0.9cm},
+      act/.style={draw, thick, rounded corners=3pt, fill=blue!6, align=center, font=\scriptsize,
+                  text width=3.0cm, minimum height=0.9cm},
+      fix/.style={act, fill=gray!10},
+      arr/.style={-{Stealth[length=2mm]}, thick, black!70},
+      yes/.style={font=\scriptsize\itshape, text=black!60},
+    ]
+    \node[act] (msg) at (0,0) {Messaggio dello studente};
+    \node[dec] (small) at (0,-1.6) {Solo un saluto o un ringraziamento?};
+    \node[fix] (smallr) at (4.6,-1.6) {Risposta fissa, nessuna ricerca};
+    \node[act] (ret) at (0,-3.2) {Recupero dei frammenti (Sezione~\ref{sec:retrieval})};
+    \node[dec] (found) at (0,-4.8) {Frammenti pertinenti?};
+    \node[act] (gen) at (4.6,-4.8) {Risposta generata dai frammenti, con le fonti};
+    \node[dec] (topic) at (0,-6.4) {Domanda estranea all'università?};
+    \node[fix] (topicr) at (4.6,-6.4) {Messaggio fisso: l'assistente risponde solo su temi universitari};
+    \node[act] (course) at (0,-8.4) {Richiesta del corso o, se già tentata, messaggio fisso di informazione
+      non trovata};
+
+    \draw[arr] (msg) -- (small);
+    \draw[arr] (small) -- node[yes, above] {sì} (smallr);
+    \draw[arr] (small) -- node[yes, right] {no} (ret);
+    \draw[arr] (ret) -- (found);
+    \draw[arr] (found) -- node[yes, above] {sì} (gen);
+    \draw[arr] (found) -- node[yes, right] {no} (topic);
+    \draw[arr] (topic) -- node[yes, above] {sì} (topicr);
+    \draw[arr] (topic) -- node[yes, right] {no} (course);
+  \end{tikzpicture}
+  \caption{Come il sistema tratta un messaggio. Il modello genera una risposta dai documenti solo quando il recupero
+  ha trovato frammenti pertinenti; negli altri casi risponde con un messaggio fisso o chiede allo studente il corso.}
+  \label{fig:casi-particolari}
+\end{figure}
+
+\paragraph{Saluti e ringraziamenti.} Un messaggio composto solo da formule di saluto, ringraziamento o conferma
+(``ciao'', ``grazie mille'', ``ok perfetto'') riceve una risposta fissa, senza attivare il recupero. Trattato come una
+domanda, un semplice ``buongiorno'' veniva cercato tra i documenti, finiva per recuperare una pagina qualunque,
+citata come fonte di una risposta senza senso, e restava nella cronologia, dove la condensazione dei messaggi
+successivi lo scambiava per la domanda a cui fare riferimento. Il riconoscimento è volutamente prudente: basta una
+sola parola di contenuto (``ciao, quando scade la rata?'') perché il messaggio venga trattato come una domanda.
+
+\paragraph{Nessun frammento pertinente.} Quando il recupero non trova frammenti sopra soglia, nemmeno dopo i
+tentativi descritti nella Sezione~\ref{sec:retrieval}, il modello non viene interpellato: la risposta è un messaggio
+fisso, che dichiara di non aver trovato l'informazione e suggerisce di rivolgersi al sito o all'ufficio competente.
+La scelta di non lasciare la decisione al modello è dettata dall'esperienza: senza contesto, istruito a dire che
+l'informazione manca, il modello preferiva comunque formulare una risposta plausibile, arrivando a inventare la
+citazione di una fonte inesistente. Prima di arrivare a questo messaggio il sistema chiede allo studente il corso
+di laurea, quando la risposta potrebbe trovarsi tra le pagine di un corso (Sezione~\ref{sec:corso-priorita}).
+
+\paragraph{Domande estranee all'università.} Una domanda come ``mi consigli un ristorante di pesce a Cesena?'' non
+trova frammenti pertinenti come una domanda legittima a cui manca la risposta, ma va trattata diversamente:
+chiedere allo studente il proprio corso di laurea non avrebbe senso. Quando il recupero non trova nulla, il modello
+viene quindi interrogato con una domanda separata e molto vincolata, che gli chiede di classificare il messaggio
+come pertinente o estraneo all'università con una sola parola; nel dubbio la domanda è considerata pertinente,
+perché trattare come estranea una domanda legittima sarebbe un errore più grave del contrario. La classificazione
+avviene solo in questo caso, e non a ogni messaggio, per non aggiungere una chiamata al modello alle domande a cui
+il sistema sa rispondere.
+
+\paragraph{Informazione parzialmente presente.} Il caso più delicato è quello in cui il recupero trova frammenti
+pertinenti all'argomento, ma nessuno contiene l'informazione richiesta: una domanda sugli orari di apertura della
+biblioteca del campus recupera pagine sulle biblioteche e sui servizi, nessuna delle quali riporta gli orari. Qui la
+decisione spetta al modello, che in base alle istruzioni deve dichiarare che l'informazione non è disponibile.
+Nelle prove il modello adottato si comporta in questo modo, rispondendo ad esempio che gli orari ``non sono
+presenti'' e suggerendo di contattare la biblioteca; talvolta però, contro le istruzioni, si riferisce al
+``contesto fornito'', esponendo allo studente un dettaglio del funzionamento interno. La frequenza con cui questo e
+altri errori di generazione si verificano è analizzata nel Capitolo~\ref{cap:validazione}.

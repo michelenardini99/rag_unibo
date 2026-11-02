@@ -1,0 +1,250 @@
+\relax 
+\providecommand \babel@aux [2]{\global \let \babel@toc \@gobbletwo }
+\@nameuse{bbl@beforestart}
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\babel@aux{italian}{}
+\@writefile{toc}{\contentsline {chapter}{\numberline {1}Introduzione}{2}{chapter.1}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\citation{zhao2023survey}
+\@writefile{toc}{\contentsline {chapter}{\numberline {2}Stato dell'arte}{4}{chapter.2}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\newlabel{cap:stato_arte}{{2}{4}{Stato dell'arte}{chapter.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2.1}Limiti dei modelli linguistici in un dominio specifico}{4}{section.2.1}\protected@file@percent }
+\newlabel{sec:problema}{{2.1}{4}{Limiti dei modelli linguistici in un dominio specifico}{section.2.1}{}}
+\citation{huang2023survey}
+\citation{kasneci2023chatgpt}
+\citation{ovadia2024finetuning}
+\citation{vaswani2017attention}
+\@writefile{toc}{\contentsline {section}{\numberline {2.2}Large Language Model (LLM)}{6}{section.2.2}\protected@file@percent }
+\newlabel{sec:llm}{{2.2}{6}{Large Language Model (LLM)}{section.2.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2.1}Che cos'è un LLM}{6}{subsection.2.2.1}\protected@file@percent }
+\citation{petrov2023unfairness}
+\@writefile{lof}{\contentsline {figure}{\numberline {2.1}{\ignorespaces Tokenizzazione di una domanda in linguaggio naturale. Il tokenizer segmenta il testo in token. A ciascun token è associato un identificativo intero $i_k$ nel vocabolario del modello. La segmentazione mostrata è a scopo illustrativo: quella effettiva dipende dal tokenizer del modello considerato.}}{7}{figure.2.1}\protected@file@percent }
+\newlabel{fig:tokenizzazione}{{2.1}{7}{Tokenizzazione di una domanda in linguaggio naturale. Il tokenizer segmenta il testo in token. A ciascun token è associato un identificativo intero $i_k$ nel vocabolario del modello. La segmentazione mostrata è a scopo illustrativo: quella effettiva dipende dal tokenizer del modello considerato}{figure.2.1}{}}
+\citation{zhao2023survey}
+\newlabel{eq:autoregressivo}{{2.1}{8}{Che cos'è un LLM}{equation.2.1}{}}
+\citation{ouyang2022instructgpt}
+\citation{kaplan2020scaling}
+\@writefile{lof}{\contentsline {figure}{\numberline {2.2}{\ignorespaces Le fasi che portano dai dati grezzi a un LLM allineato e utilizzabile tramite prompting: pre-training, instruction-tuning e, infine, l'allineamento tramite \emph  {reward modeling} (RM, in basso: un modello di ricompensa addestrato su confronti prodotti da annotatori umani) e \emph  {reinforcement learning from human feedback} (RLHF, al centro: un ciclo iterativo che aggiorna l'LLM in base al segnale del modello di ricompensa).}}{10}{figure.2.2}\protected@file@percent }
+\newlabel{fig:llm-training}{{2.2}{10}{Le fasi che portano dai dati grezzi a un LLM allineato e utilizzabile tramite prompting: pre-training, instruction-tuning e, infine, l'allineamento tramite \emph {reward modeling} (RM, in basso: un modello di ricompensa addestrato su confronti prodotti da annotatori umani) e \emph {reinforcement learning from human feedback} (RLHF, al centro: un ciclo iterativo che aggiorna l'LLM in base al segnale del modello di ricompensa)}{figure.2.2}{}}
+\citation{kaplan2020scaling}
+\citation{kaplan2020scaling}
+\citation{brown2020gpt3}
+\@writefile{lof}{\contentsline {figure}{\numberline {2.3}{\ignorespaces Le prestazioni del modello linguistico migliorano in modo continuo man mano che aumentiamo la dimensione del modello, la dimensione del dataset e la quantità di calcolo usata per l'addestramento. Per ottenere prestazioni ottimali, tutti e tre i fattori devono essere aumentati insieme. Fonte: Kaplan et al. \cite  {kaplan2020scaling}}}{11}{figure.2.3}\protected@file@percent }
+\newlabel{fig:scaling}{{2.3}{11}{Le prestazioni del modello linguistico migliorano in modo continuo man mano che aumentiamo la dimensione del modello, la dimensione del dataset e la quantità di calcolo usata per l'addestramento. Per ottenere prestazioni ottimali, tutti e tre i fattori devono essere aumentati insieme. Fonte: Kaplan et al. \cite {kaplan2020scaling}}{figure.2.3}{}}
+\citation{lin2024awq}
+\citation{qwen2024technical}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2.2}LLM valutati}{12}{subsection.2.2.2}\protected@file@percent }
+\citation{mistralai2024nemo}
+\citation{grattafiori2024llama3}
+\citation{lewis2020retrieval}
+\citation{gao2023ragsurvey}
+\@writefile{lot}{\contentsline {table}{\numberline {2.1}{\ignorespaces Caratteristiche dei quattro modelli generativi valutati.}}{14}{table.2.1}\protected@file@percent }
+\newlabel{tab:llm_comparison}{{2.1}{14}{Caratteristiche dei quattro modelli generativi valutati}{table.2.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2.3}RAG (Retrieval-Augmented Generation)}{14}{section.2.3}\protected@file@percent }
+\newlabel{sec:rag}{{2.3}{14}{RAG (Retrieval-Augmented Generation)}{section.2.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2.4}{\ignorespaces Schema generale di una pipeline RAG (1). Nella fase di \emph  {data ingestion} (2), i documenti e gli altri file della collezione (2.a) vengono pre-elaborati (2.b) e indicizzati in un archivio per il recupero (3.a). Al momento della domanda, il prompt dell'utente viene eventualmente pre-elaborato (1.a) e passato al \emph  {retriever} (3), che recupera i documenti più pertinenti (3.b), li riordina facoltativamente tramite un \emph  {re-ranker} (3.c) e costruisce la richiesta da inviare al modello (3.d). Il \emph  {generator} (4) produce la risposta tramite un LLM (4.a), che può essere post-elaborata (1.b) prima di essere restituita all'utente. I riquadri tratteggiati indicano componenti opzionali.}}{15}{figure.2.4}\protected@file@percent }
+\newlabel{fig:rag-pipeline}{{2.4}{15}{Schema generale di una pipeline RAG (1). Nella fase di \emph {data ingestion} (2), i documenti e gli altri file della collezione (2.a) vengono pre-elaborati (2.b) e indicizzati in un archivio per il recupero (3.a). Al momento della domanda, il prompt dell'utente viene eventualmente pre-elaborato (1.a) e passato al \emph {retriever} (3), che recupera i documenti più pertinenti (3.b), li riordina facoltativamente tramite un \emph {re-ranker} (3.c) e costruisce la richiesta da inviare al modello (3.d). Il \emph {generator} (4) produce la risposta tramite un LLM (4.a), che può essere post-elaborata (1.b) prima di essere restituita all'utente. I riquadri tratteggiati indicano componenti opzionali}{figure.2.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3.1}Embedding e ricerca per similarità}{15}{subsection.2.3.1}\protected@file@percent }
+\newlabel{subsec:embedding}{{2.3.1}{15}{Embedding e ricerca per similarità}{subsection.2.3.1}{}}
+\newlabel{eq:coseno}{{2.2}{15}{Embedding e ricerca per similarità}{equation.2.2}{}}
+\citation{devlin2019bert}
+\citation{reimers2019sbert}
+\citation{karpukhin2020dpr}
+\citation{malkov2018hnsw}
+\citation{robertson2009bm25}
+\citation{cormack2009rrf}
+\citation{nogueira2019bert}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3.2}Ricerca ibrida e fusione dei risultati}{18}{subsection.2.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3.3}Reranking}{18}{subsection.2.3.3}\protected@file@percent }
+\citation{khattab2020colbert}
+\citation{gao2022hyde}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3.4}Trasformazione della query}{19}{subsection.2.3.4}\protected@file@percent }
+\citation{ammann2025decomposition}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3.5}Chunking e fusione gerarchica}{20}{subsection.2.3.5}\protected@file@percent }
+\citation{liu2023lostmiddle}
+\citation{liu2023lostmiddle}
+\citation{liu2023lostmiddle}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3.6}Posizione del contesto nel prompt}{21}{subsection.2.3.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2.5}{\ignorespaces La modifica della posizione delle informazioni rilevanti (in questo caso, la posizione del passaggio che risponde a una domanda in input) all'interno del contesto di input del modello linguistico produce una curva delle prestazioni a forma di U: i modelli sono più abili nell'utilizzare le informazioni rilevanti che compaiono all'inizio o alla fine del proprio contesto di input, e le prestazioni diminuiscono in modo significativo quando i modelli devono accedere e utilizzare informazioni situate nella parte centrale del proprio contesto di input. Fonte: Liu et al. \cite  {liu2023lostmiddle} }}{22}{figure.2.5}\protected@file@percent }
+\newlabel{fig:u-curve}{{2.5}{22}{La modifica della posizione delle informazioni rilevanti (in questo caso, la posizione del passaggio che risponde a una domanda in input) all'interno del contesto di input del modello linguistico produce una curva delle prestazioni a forma di U: i modelli sono più abili nell'utilizzare le informazioni rilevanti che compaiono all'inizio o alla fine del proprio contesto di input, e le prestazioni diminuiscono in modo significativo quando i modelli devono accedere e utilizzare informazioni situate nella parte centrale del proprio contesto di input. Fonte: Liu et al. \cite {liu2023lostmiddle}}{figure.2.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2.4}Sistemi che utilizzano LLM e RAG per rispondere in maniera automatica}{22}{section.2.4}\protected@file@percent }
+\newlabel{sec:sistemi-simili}{{2.4}{22}{Sistemi che utilizzano LLM e RAG per rispondere in maniera automatica}{section.2.4}{}}
+\citation{peyton2025review}
+\citation{siragusa2024unipagpt}
+\citation{trienes2025marcel}
+\citation{vlahek2024chatbot}
+\citation{barnett2024sevenfailures}
+\citation{bourdin2025easirag}
+\@writefile{toc}{\contentsline {chapter}{\numberline {3}Architettura e sviluppo del sistema}{25}{chapter.3}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\newlabel{cap:architettura}{{3}{25}{Architettura e sviluppo del sistema}{chapter.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.1}Panoramica dell'architettura}{26}{section.3.1}\protected@file@percent }
+\newlabel{sec:panoramica}{{3.1}{26}{Panoramica dell'architettura}{section.3.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.1}{\ignorespaces Componenti del sistema e dati che si scambiano, seguendo una domanda di esempio. A sinistra l'indicizzazione trasforma pagine web e documenti in frammenti e vettori, salvati nel database vettoriale e nel docstore; a destra la domanda dello studente attraversa interfaccia, recupero e generazione, fino alla risposta con la fonte citata. In basso la valutazione sottopone alla stessa pipeline le domande di test e ne misura la qualità. L'Embedding opera anche al momento della domanda, per rappresentarla nello stesso spazio vettoriale dei frammenti. In viola le chiamate al modello linguistico, servito da vLLM: le inviano il Retrieving (analisi della domanda, HyDE) e la Generation; vLLM elabora insieme le richieste che arrivano contemporaneamente, anche da domande di studenti diversi. Per descrivere le immagini, in fase di indicizzazione l'Ingestion usa una seconda istanza di vLLM con un modello multimodale, attiva solo durante la conversione.}}{27}{figure.3.1}\protected@file@percent }
+\newlabel{fig:componenti}{{3.1}{27}{Componenti del sistema e dati che si scambiano, seguendo una domanda di esempio. A sinistra l'indicizzazione trasforma pagine web e documenti in frammenti e vettori, salvati nel database vettoriale e nel docstore; a destra la domanda dello studente attraversa interfaccia, recupero e generazione, fino alla risposta con la fonte citata. In basso la valutazione sottopone alla stessa pipeline le domande di test e ne misura la qualità. L'Embedding opera anche al momento della domanda, per rappresentarla nello stesso spazio vettoriale dei frammenti. In viola le chiamate al modello linguistico, servito da vLLM: le inviano il Retrieving (analisi della domanda, HyDE) e la Generation; vLLM elabora insieme le richieste che arrivano contemporaneamente, anche da domande di studenti diversi. Per descrivere le immagini, in fase di indicizzazione l'Ingestion usa una seconda istanza di vLLM con un modello multimodale, attiva solo durante la conversione}{figure.3.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Ingestion.}{28}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Chunking.}{28}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Embedding.}{28}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Retrieving.}{28}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Generation.}{28}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{UI.}{28}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Evaluation.}{28}{section*.9}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3.1}{\ignorespaces Componenti del sistema, tecnologie adottate e momento in cui operano.}}{29}{table.3.1}\protected@file@percent }
+\newlabel{tab:componenti}{{3.1}{29}{Componenti del sistema, tecnologie adottate e momento in cui operano}{table.3.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.2}Ingestione e preparazione dei dati}{29}{section.3.2}\protected@file@percent }
+\newlabel{sec:ingestione}{{3.2}{29}{Ingestione e preparazione dei dati}{section.3.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.2}{\ignorespaces Preparazione dei dati: per ogni passo, il risultato che passa al successivo. Le pagine web attraversano tutti i passi; gli altri documenti entrano direttamente nella conversione.}}{29}{figure.3.2}\protected@file@percent }
+\newlabel{fig:pipeline-ingestione}{{3.2}{29}{Preparazione dei dati: per ogni passo, il risultato che passa al successivo. Le pagine web attraversano tutti i passi; gli altri documenti entrano direttamente nella conversione}{figure.3.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2.1}Fonti dei dati}{30}{subsection.3.2.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3.2}{\ignorespaces Tipi di fonte che il sistema può indicizzare. Le pagine dei corsi e i documenti collocati nella cartella di un corso ricevono l'ambito \emph  {corso}; le altre fonti l'ambito \emph  {ateneo}.}}{30}{table.3.2}\protected@file@percent }
+\newlabel{tab:fonti}{{3.2}{30}{Tipi di fonte che il sistema può indicizzare. Le pagine dei corsi e i documenti collocati nella cartella di un corso ricevono l'ambito \emph {corso}; le altre fonti l'ambito \emph {ateneo}}{table.3.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2.2}Acquisizione dei documenti}{31}{subsection.3.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2.3}Pulizia delle pagine web}{31}{subsection.3.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Contenuto di contorno.}{31}{section*.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Contenuto nascosto.}{32}{section*.11}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3.3}{\ignorespaces Voci della pagina \emph  {Iscriversi al Corso} di Infermieristica. Il contenuto delle voci chiuse è presente nella pagina ma marcato come nascosto: senza la pulizia sarebbe stato scartato, e con esso la data della prova di ammissione; dopo la pulizia il contenuto di ogni voce è conservato insieme al suo titolo.}}{32}{figure.3.3}\protected@file@percent }
+\newlabel{fig:voci}{{3.3}{32}{Voci della pagina \emph {Iscriversi al Corso} di Infermieristica. Il contenuto delle voci chiuse è presente nella pagina ma marcato come nascosto: senza la pulizia sarebbe stato scartato, e con esso la data della prova di ammissione; dopo la pulizia il contenuto di ogni voce è conservato insieme al suo titolo}{figure.3.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Struttura affidata alla presentazione.}{32}{section*.12}\protected@file@percent }
+\citation{docling2024}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.4}{\ignorespaces Due effetti di una struttura affidata alla presentazione, ricostruiti in forma schematica su pagine del corpus del prototipo: (a) la voce \emph  {Avere l'esenzione e pagare meno tasse} della pagina delle tasse di ateneo; (b) una tabella del piano didattico di Infermieristica (estratto: tre insegnamenti e la colonna dei crediti). A sinistra i frammenti senza la correzione, a destra quelli effettivamente indicizzati.}}{33}{figure.3.4}\protected@file@percent }
+\newlabel{fig:struttura-presentazione}{{3.4}{33}{Due effetti di una struttura affidata alla presentazione, ricostruiti in forma schematica su pagine del corpus del prototipo: (a) la voce \emph {Avere l'esenzione e pagare meno tasse} della pagina delle tasse di ateneo; (b) una tabella del piano didattico di Infermieristica (estratto: tre insegnamenti e la colonna dei crediti). A sinistra i frammenti senza la correzione, a destra quelli effettivamente indicizzati}{figure.3.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2.4}Conversione in un formato strutturato}{34}{subsection.3.2.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3.5}{\ignorespaces Conversione di un PDF con Docling, ridisegnata dai dati prodotti dalla conversione di un documento del corpus del prototipo. L'analisi del layout riconosce gli elementi della pagina, qui la pagina 9 di un articolo scientifico, e ne ricostruisce la gerarchia e l'ordine di lettura; il piè di pagina viene escluso dal testo.}}{35}{figure.3.5}\protected@file@percent }
+\newlabel{fig:docling-pdf}{{3.5}{35}{Conversione di un PDF con Docling, ridisegnata dai dati prodotti dalla conversione di un documento del corpus del prototipo. L'analisi del layout riconosce gli elementi della pagina, qui la pagina 9 di un articolo scientifico, e ne ricostruisce la gerarchia e l'ordine di lettura; il piè di pagina viene escluso dal testo}{figure.3.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Descrizione delle immagini.}{35}{section*.13}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3.6}{\ignorespaces Una figura tratta dalle slide di un insegnamento, la rete dei legami matrimoniali ed economici tra le famiglie dell'élite fiorentina (a sinistra), e un estratto della descrizione generata durante la conversione (a destra), che entra nel frammento indicizzato al posto dell'immagine. Grazie alla descrizione, una domanda come ``quale famiglia occupa la posizione centrale della rete?'' trova la risposta anche se il nome non compare nel testo della slide.}}{37}{figure.3.6}\protected@file@percent }
+\newlabel{fig:descrizione-immagine}{{3.6}{37}{Una figura tratta dalle slide di un insegnamento, la rete dei legami matrimoniali ed economici tra le famiglie dell'élite fiorentina (a sinistra), e un estratto della descrizione generata durante la conversione (a destra), che entra nel frammento indicizzato al posto dell'immagine. Grazie alla descrizione, una domanda come ``quale famiglia occupa la posizione centrale della rete?'' trova la risposta anche se il nome non compare nel testo della slide}{figure.3.6}{}}
+\@writefile{toc}{\contentsline {paragraph}{La taglia del modello multimodale.}{37}{section*.14}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3.3}{\ignorespaces Descrizioni della rete delle famiglie fiorentine (Figura~\ref {fig:descrizione-immagine}) prodotte da due modelli multimodali di taglia diversa.}}{38}{table.3.3}\protected@file@percent }
+\newlabel{tab:taglia-vlm}{{3.3}{38}{Descrizioni della rete delle famiglie fiorentine (Figura~\ref {fig:descrizione-immagine}) prodotte da due modelli multimodali di taglia diversa}{table.3.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Normalizzazione.}{38}{section*.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2.5}Suddivisione in frammenti}{39}{subsection.3.2.5}\protected@file@percent }
+\newlabel{sec:chunking}{{3.2.5}{39}{Suddivisione in frammenti}{subsection.3.2.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.7}{\ignorespaces Riscrittura di una tabella delle scadenze della prova finale di Ingegneria e scienze informatiche: date per esteso, nella forma in cui compaiono nelle domande degli studenti. Il testo ``Dopo'' è quello effettivamente indicizzato.}}{40}{figure.3.7}\protected@file@percent }
+\newlabel{fig:tabella-leggibile}{{3.7}{40}{Riscrittura di una tabella delle scadenze della prova finale di Ingegneria e scienze informatiche: date per esteso, nella forma in cui compaiono nelle domande degli studenti. Il testo ``Dopo'' è quello effettivamente indicizzato}{figure.3.7}{}}
+\@writefile{toc}{\contentsline {paragraph}{Sezioni e fusione gerarchica.}{41}{section*.16}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3.8}{\ignorespaces Frammenti e sezioni. Solo i frammenti vengono indicizzati e confrontati con la domanda; le sezioni permettono di restituire al modello un contesto più ampio quando più frammenti della stessa sezione risultano pertinenti.}}{41}{figure.3.8}\protected@file@percent }
+\newlabel{fig:frammenti-sezioni}{{3.8}{41}{Frammenti e sezioni. Solo i frammenti vengono indicizzati e confrontati con la domanda; le sezioni permettono di restituire al modello un contesto più ampio quando più frammenti della stessa sezione risultano pertinenti}{figure.3.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2.6}Metadati}{41}{subsection.3.2.6}\protected@file@percent }
+\newlabel{sec:metadati}{{3.2.6}{41}{Metadati}{subsection.3.2.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3.4}{\ignorespaces Metadati associati a ogni frammento, con i valori reali di un frammento del materiale didattico del corso di Tecniche di Consulenza nella Scuola, sul metodo del \emph  {Change Laboratory}: a differenza di una pagina web crawlata, un materiale didattico caricato come file non ha un URL di provenienza, ma valorizza il campo insegnamento.}}{42}{table.3.4}\protected@file@percent }
+\newlabel{tab:metadati}{{3.4}{42}{Metadati associati a ogni frammento, con i valori reali di un frammento del materiale didattico del corso di Tecniche di Consulenza nella Scuola, sul metodo del \emph {Change Laboratory}: a differenza di una pagina web crawlata, un materiale didattico caricato come file non ha un URL di provenienza, ma valorizza il campo insegnamento}{table.3.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{Aggiornamento incrementale.}{42}{section*.17}\protected@file@percent }
+\citation{chen2024bgem3}
+\@writefile{toc}{\contentsline {section}{\numberline {3.3}Embedding}{43}{section.3.3}\protected@file@percent }
+\newlabel{sec:embedding}{{3.3}{43}{Embedding}{section.3.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.1}Il modello: BGE-M3}{43}{subsection.3.3.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3.5}{\ignorespaces Peso, nella rappresentazione sparsa del frammento \emph  {Change Laboratory} della Tabella~\ref {tab:metadati}, di quattro parole che portano significato contro quello di un articolo e di una preposizione: la rappresentazione sparsa assegna peso nullo alle seconde, pur comparendo entrambe nel testo.}}{44}{table.3.5}\protected@file@percent }
+\newlabel{tab:sparse-esempio}{{3.5}{44}{Peso, nella rappresentazione sparsa del frammento \emph {Change Laboratory} della Tabella~\ref {tab:metadati}, di quattro parole che portano significato contro quello di un articolo e di una preposizione: la rappresentazione sparsa assegna peso nullo alle seconde, pur comparendo entrambe nel testo}{table.3.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.2}Cosa viene trasformato in vettore}{44}{subsection.3.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.3}Il database vettoriale: Qdrant}{45}{subsection.3.3.3}\protected@file@percent }
+\newlabel{lst:qdrant-point}{{3.1}{45}{Punto Qdrant del frammento \emph {Change Laboratory} (identificativo abbreviato nei valori numerici, per brevità)}{lstlisting.3.1}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {3.1}Punto Qdrant del frammento \emph  {Change Laboratory} (identificativo abbreviato nei valori numerici, per brevità).}{45}{lstlisting.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.4}L'indice a grafo: HNSW}{46}{subsection.3.3.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3.9}{\ignorespaces Ricerca del vicino più prossimo nel grafo HNSW (schematico): dal punto di ingresso nel livello più rado (Livello 2), la ricerca scende un livello alla volta muovendosi verso il nodo più vicino alla domanda a ogni passo, fino a raggiungere il livello più fitto (Livello 0, tutti i punti) ed esplorarne l'intorno. Le linee tratteggiate verticali collegano lo stesso punto presente su più livelli.}}{47}{figure.3.9}\protected@file@percent }
+\newlabel{fig:hnsw}{{3.9}{47}{Ricerca del vicino più prossimo nel grafo HNSW (schematico): dal punto di ingresso nel livello più rado (Livello 2), la ricerca scende un livello alla volta muovendosi verso il nodo più vicino alla domanda a ogni passo, fino a raggiungere il livello più fitto (Livello 0, tutti i punti) ed esplorarne l'intorno. Le linee tratteggiate verticali collegano lo stesso punto presente su più livelli}{figure.3.9}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.4}Componente di retrieval}{47}{section.3.4}\protected@file@percent }
+\newlabel{sec:retrieval}{{3.4}{47}{Componente di retrieval}{section.3.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.10}{\ignorespaces I quattro stadi del recupero, ciascuno descritto in questa sezione. Un quinto meccanismo, HyDE (Sezione~\ref {sec:hyde-retrieval}), interviene solo quando la ricerca ibrida non restituisce nulla.}}{47}{figure.3.10}\protected@file@percent }
+\newlabel{fig:imbuto-retrieval}{{3.10}{47}{I quattro stadi del recupero, ciascuno descritto in questa sezione. Un quinto meccanismo, HyDE (Sezione~\ref {sec:hyde-retrieval}), interviene solo quando la ricerca ibrida non restituisce nulla}{figure.3.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.1}Analisi della domanda}{48}{subsection.3.4.1}\protected@file@percent }
+\newlabel{sec:analisi-domanda}{{3.4.1}{48}{Analisi della domanda}{subsection.3.4.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.2}Ricerca ibrida}{48}{subsection.3.4.2}\protected@file@percent }
+\newlabel{sec:ricerca-ibrida}{{3.4.2}{48}{Ricerca ibrida}{subsection.3.4.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.3}Riordinamento e corso di laurea}{49}{subsection.3.4.3}\protected@file@percent }
+\newlabel{sec:corso-priorita}{{3.4.3}{49}{Riordinamento e corso di laurea}{subsection.3.4.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.4}Fusione gerarchica e soglia di accettazione}{50}{subsection.3.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.5}Recupero di riserva con HyDE}{51}{subsection.3.4.5}\protected@file@percent }
+\newlabel{sec:hyde-retrieval}{{3.4.5}{51}{Recupero di riserva con HyDE}{subsection.3.4.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.11}{\ignorespaces Esempio reale del recupero di riserva con HyDE: la domanda originale, cercata da sola contro il frammento corretto, ottiene dal cross-encoder un punteggio troppo basso per superare la soglia; la stessa domanda, completata con il paragrafo ipotetico generato dal modello, lo supera ampiamente. Punteggi calcolati eseguendo dal vivo il reranker e il modello di HyDE in produzione contro un frammento reale dell'indice.}}{52}{figure.3.11}\protected@file@percent }
+\newlabel{fig:hyde-esempio}{{3.11}{52}{Esempio reale del recupero di riserva con HyDE: la domanda originale, cercata da sola contro il frammento corretto, ottiene dal cross-encoder un punteggio troppo basso per superare la soglia; la stessa domanda, completata con il paragrafo ipotetico generato dal modello, lo supera ampiamente. Punteggi calcolati eseguendo dal vivo il reranker e il modello di HyDE in produzione contro un frammento reale dell'indice}{figure.3.11}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.5}Componente di generazione (LLM)}{52}{section.3.5}\protected@file@percent }
+\newlabel{sec:generazione}{{3.5}{52}{Componente di generazione (LLM)}{section.3.5}{}}
+\citation{kwon2023vllm}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5.1}Scelta del modello}{53}{subsection.3.5.1}\protected@file@percent }
+\newlabel{sec:scelta-modello}{{3.5.1}{53}{Scelta del modello}{subsection.3.5.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3.6}{\ignorespaces Confronto tra i modelli candidati alla generazione, sulle 152 domande del benchmark di test, con giudice unico (Qwen2.5-14B-Instruct). La correttezza misura l'accordo con la risposta attesa, la fedeltà quanto le affermazioni della risposta sono supportate dai frammenti recuperati, la pertinenza quanto la risposta affronta la domanda posta.}}{53}{table.3.6}\protected@file@percent }
+\newlabel{tab:scelta-modello}{{3.6}{53}{Confronto tra i modelli candidati alla generazione, sulle 152 domande del benchmark di test, con giudice unico (Qwen2.5-14B-Instruct). La correttezza misura l'accordo con la risposta attesa, la fedeltà quanto le affermazioni della risposta sono supportate dai frammenti recuperati, la pertinenza quanto la risposta affronta la domanda posta}{table.3.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5.2}Struttura del prompt}{54}{subsection.3.5.2}\protected@file@percent }
+\newlabel{sec:prompt}{{3.5.2}{54}{Struttura del prompt}{subsection.3.5.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.12}{\ignorespaces Struttura del prompt inviato al modello, con un esempio reale: la domanda ``quante lezioni devo seguire per forza?'' posta da uno studente di Infermieristica. Ogni frammento è un blocco numerato, preceduto dall'indicazione del corso o dell'ateneo e dal titolo della pagina e della sezione da cui proviene.}}{55}{figure.3.12}\protected@file@percent }
+\newlabel{fig:prompt}{{3.12}{55}{Struttura del prompt inviato al modello, con un esempio reale: la domanda ``quante lezioni devo seguire per forza?'' posta da uno studente di Infermieristica. Ogni frammento è un blocco numerato, preceduto dall'indicazione del corso o dell'ateneo e dal titolo della pagina e della sezione da cui proviene}{figure.3.12}{}}
+\@writefile{toc}{\contentsline {paragraph}{I frammenti.}{55}{section*.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{La domanda.}{55}{section*.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Le istruzioni.}{56}{section*.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5.3}Citazioni ed elenco delle fonti}{57}{subsection.3.5.3}\protected@file@percent }
+\newlabel{sec:citazioni}{{3.5.3}{57}{Citazioni ed elenco delle fonti}{subsection.3.5.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.13}{\ignorespaces Dalla citazione all'elenco delle fonti, sull'esempio della Figura~\ref {fig:prompt}. Il modello cita il numero del blocco; il sistema lo traduce nel titolo e nell'indirizzo reali della pagina e lo rimuove dal testo mostrato.}}{57}{figure.3.13}\protected@file@percent }
+\newlabel{fig:citazioni}{{3.13}{57}{Dalla citazione all'elenco delle fonti, sull'esempio della Figura~\ref {fig:prompt}. Il modello cita il numero del blocco; il sistema lo traduce nel titolo e nell'indirizzo reali della pagina e lo rimuove dal testo mostrato}{figure.3.13}{}}
+\newlabel{sec:streaming}{{3.5.3}{58}{Risposta progressiva}{section*.21}{}}
+\@writefile{toc}{\contentsline {paragraph}{Risposta progressiva.}{58}{section*.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5.4}Gestione dei casi particolari}{58}{subsection.3.5.4}\protected@file@percent }
+\newlabel{sec:casi-particolari}{{3.5.4}{58}{Gestione dei casi particolari}{subsection.3.5.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.14}{\ignorespaces Come il sistema tratta un messaggio. Il modello genera una risposta dai documenti solo quando il recupero ha trovato frammenti pertinenti; negli altri casi risponde con un messaggio fisso o chiede allo studente il corso.}}{58}{figure.3.14}\protected@file@percent }
+\newlabel{fig:casi-particolari}{{3.14}{58}{Come il sistema tratta un messaggio. Il modello genera una risposta dai documenti solo quando il recupero ha trovato frammenti pertinenti; negli altri casi risponde con un messaggio fisso o chiede allo studente il corso}{figure.3.14}{}}
+\@writefile{toc}{\contentsline {paragraph}{Saluti e ringraziamenti.}{59}{section*.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Nessun frammento pertinente.}{59}{section*.23}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Domande estranee all'università.}{59}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Informazione parzialmente presente.}{59}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3.6}Architettura software e infrastruttura}{60}{section.3.6}\protected@file@percent }
+\newlabel{sec:infrastruttura}{{3.6}{60}{Architettura software e infrastruttura}{section.3.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.7}Scelte progettuali e trade-off}{60}{section.3.7}\protected@file@percent }
+\newlabel{sec:tradeoff}{{3.7}{60}{Scelte progettuali e trade-off}{section.3.7}{}}
+\@writefile{toc}{\contentsline {chapter}{\numberline {4}Validazione del sistema}{61}{chapter.4}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\newlabel{cap:validazione}{{4}{61}{Validazione del sistema}{chapter.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4.1}Benchmark di test}{61}{section.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.2}Indicatori di accuratezza}{61}{section.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.3}Esperimenti effettuati}{61}{section.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.4}Risultati}{61}{section.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4.1}Risultati}{61}{subsection.4.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4.2}Esempi di casi errati}{61}{subsection.4.4.2}\protected@file@percent }
+\bibstyle{ieeetr}
+\bibdata{bibliografia}
+\@writefile{toc}{\contentsline {chapter}{\numberline {5}Conclusioni e sviluppi futuri}{62}{chapter.5}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\newlabel{cap:conclusioni}{{5}{62}{Conclusioni e sviluppi futuri}{chapter.5}{}}
+\bibcite{zhao2023survey}{1}
+\bibcite{huang2023survey}{2}
+\bibcite{kasneci2023chatgpt}{3}
+\bibcite{ovadia2024finetuning}{4}
+\bibcite{vaswani2017attention}{5}
+\bibcite{petrov2023unfairness}{6}
+\bibcite{ouyang2022instructgpt}{7}
+\bibcite{kaplan2020scaling}{8}
+\bibcite{brown2020gpt3}{9}
+\bibcite{lin2024awq}{10}
+\bibcite{qwen2024technical}{11}
+\bibcite{mistralai2024nemo}{12}
+\bibcite{grattafiori2024llama3}{13}
+\bibcite{lewis2020retrieval}{14}
+\bibcite{gao2023ragsurvey}{15}
+\bibcite{devlin2019bert}{16}
+\bibcite{reimers2019sbert}{17}
+\bibcite{karpukhin2020dpr}{18}
+\bibcite{malkov2018hnsw}{19}
+\bibcite{robertson2009bm25}{20}
+\bibcite{cormack2009rrf}{21}
+\bibcite{nogueira2019bert}{22}
+\bibcite{khattab2020colbert}{23}
+\bibcite{gao2022hyde}{24}
+\bibcite{ammann2025decomposition}{25}
+\bibcite{liu2023lostmiddle}{26}
+\bibcite{peyton2025review}{27}
+\bibcite{siragusa2024unipagpt}{28}
+\bibcite{trienes2025marcel}{29}
+\bibcite{vlahek2024chatbot}{30}
+\bibcite{barnett2024sevenfailures}{31}
+\bibcite{bourdin2025easirag}{32}
+\bibcite{docling2024}{33}
+\bibcite{chen2024bgem3}{34}
+\bibcite{kwon2023vllm}{35}
+\gdef \@abspage@last{69}

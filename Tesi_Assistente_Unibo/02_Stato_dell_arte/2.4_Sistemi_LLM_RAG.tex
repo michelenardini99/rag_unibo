@@ -1,0 +1,63 @@
+\section{Sistemi che utilizzano LLM e RAG per rispondere in maniera automatica} \label{sec:sistemi-simili}
+
+I chatbot per l'assistenza universitaria non nascono con i LLM: le prime generazioni di questi sistemi, risalenti a
+ben prima della diffusione dei Transformer, si basavano su alberi di decisione scritti a mano o su classificatori
+statistici, abbinati a un insieme limitato e predefinito di risposte. Erano sistemi capaci di gestire bene le
+domande più frequenti, previste in fase di progettazione, ma fragili di fronte a qualunque formulazione che si
+discostasse dal copione atteso. L'arrivo di LLM in grado di comprendere una domanda espressa liberamente, combinati
+con il paradigma RAG per ancorare la risposta a documenti reali invece che a un insieme fisso di risposte
+prestabilite, segna il passaggio a una nuova generazione di sistemi: capaci, in linea di principio, di rispondere a
+qualunque domanda per cui esista un documento pertinente nella base indicizzata, senza dover prevedere a priori ogni
+possibile formulazione.
+
+L'applicazione di LLM e RAG all'assistenza universitaria non è, a questo punto, un'idea isolata. Peyton et al.
+\cite{peyton2025review}, in una rassegna recente dedicata ai chatbot universitari per il supporto agli studenti,
+confrontano otto implementazioni distinte e osservano come il settore non abbia ancora sfruttato appieno il
+potenziale di questi sistemi rispetto ad altri ambiti applicativi, in parte per la difficoltà di reperire e curare
+dataset di dominio chiuso, specifici di un singolo ateneo, su cui valutarli in modo affidabile. È un'osservazione
+che motiva direttamente la scelta di questo lavoro di costruire un dataset diagnostico dedicato
+(Capitolo~\ref{cap:validazione}), invece di affidarsi a benchmark generici.
+
+Tre sistemi recenti sono particolarmente vicini, per dominio e impostazione, a quello sviluppato in questo lavoro.
+Unipa-GPT \cite{siragusa2024unipagpt}, sviluppato per l'Università di Palermo, è un assistente conversazionale in
+italiano rivolto a potenziali studenti che devono scegliere un corso di laurea triennale o magistrale. Gli autori
+confrontano esplicitamente un approccio RAG, che recupera il contesto da un corpus raccolto dal sito web
+dell'ateneo, con un approccio di fine-tuning dello stesso modello di base: un punto di riferimento diretto, su un
+dominio analogo a quello di questo progetto, per la stessa alternativa architetturale discussa nella
+Sezione~\ref{sec:rag}. Marcel \cite{trienes2025marcel}, sviluppato per l'Università di Marburg, si concentra invece
+sulle domande più frequenti dei futuri studenti relative all'ammissione, e affianca alla ricerca sui documenti un
+retriever dedicato alle FAQ: in questo modo il personale amministrativo può orientare esplicitamente le risposte
+alle domande ricorrenti, invece di affidarsi interamente all'indicizzazione automatica dei documenti originali.
+Vlahek \cite{vlahek2024chatbot}, infine, descrive un prototipo di chatbot RAG per il supporto agli studenti
+universitari realizzato con uno strumento \emph{low-code} (Flowise AI), invece che con una pipeline sviluppata su
+misura come nei due casi precedenti. Il lavoro conferma che la combinazione di LLM e RAG per questo tipo di compito
+è ormai accessibile anche senza un'implementazione interamente personalizzata, benché a scapito del controllo
+puntuale su ciascuno stadio della pipeline (chunking, ricerca ibrida, reranking) discusso nella
+Sezione~\ref{sec:rag}, centrale nelle scelte di questo lavoro.
+
+Il quadro non è però limitato all'ambito universitario: sistemi LLM più RAG vengono ormai distribuiti anche in
+contesti industriali, e la letteratura che ne documenta la realizzazione è complementare a quella dei sistemi
+accademici, perché si concentra sui problemi di ingegnerizzazione che emergono una volta messo in uso un sistema
+reale, più che sulla sola qualità delle risposte misurata su un benchmark. Barnett et al.
+\cite{barnett2024sevenfailures} riportano l'esperienza di tre implementazioni RAG distinte, in ambito di ricerca,
+educativo e biomedico, e ne ricavano sette punti di fallimento ricorrenti. Tra questi il \emph{missing content}, in
+cui il documento necessario a rispondere non è presente nella base indicizzata, e il \emph{missed top-ranked
+document}, in cui il documento pertinente esiste nell'indice ma non emerge tra i candidati restituiti dal recupero.
+Gli autori osservano inoltre che la robustezza di un sistema RAG si costruisce iterativamente con l'uso reale e non
+può essere interamente garantita in fase di progettazione. Bourdin et al. \cite{bourdin2025easirag} documentano un
+caso concreto di questo tipo in un contesto manifatturiero: un laboratorio di test ambientali che ha realizzato un
+assistente RAG per rispondere alle domande degli operatori a partire dalle procedure operative interne.
+
+Letti insieme, i sistemi universitari descritti condividono con questo lavoro l'impostazione di fondo --- LLM più
+RAG, applicato alle domande degli studenti di un singolo ateneo --- ma nessuno descrive come gestire una domanda la
+cui risposta dipende dal corso di laurea dello studente, quando questa informazione non è esplicita nel testo della
+domanda. Unipa-GPT e Vlahek operano su un unico corpus (rispettivamente l'intero ateneo di Palermo e un singolo
+corso), dove il problema non si pone nella stessa forma; Marcel, pur limitato alle sole domande di ammissione, non
+discute casi di ambiguità tra profili di studenti diversi.
+
+È in questo spazio che si colloca il presente lavoro. Il sistema sviluppato indicizza insieme le pagine di più corsi
+di laurea, le pagine generali di ateneo e i materiali didattici: la stessa domanda --- una scadenza, un requisito,
+un referente --- può quindi avere risposte diverse a seconda del corso. Per questo il sistema riconosce quando una
+domanda è ambigua rispetto al corso, chiede allo studente di indicarlo, e usa poi il corso noto per privilegiare i
+documenti pertinenti, senza escludere quelli degli altri corsi o di ateneo. La soluzione adottata è descritta nel
+Capitolo~\ref{cap:architettura} e valutata nel Capitolo~\ref{cap:validazione}.

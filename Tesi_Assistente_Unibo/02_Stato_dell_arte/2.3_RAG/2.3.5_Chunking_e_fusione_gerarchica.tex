@@ -1,0 +1,19 @@
+\subsection{Chunking e fusione gerarchica}
+
+Un ultimo problema, trasversale a tutti gli stadi precedenti, è quello del \emph{chunking}: un documento specie se lungo, come un regolamento o una dispensa, non può essere indicizzato come unico blocco, sia per limiti di
+lunghezza degli input dei modelli di embedding sia perché un frammento troppo esteso diluisce il segnale specifico
+cercato dalla domanda in mezzo a informazione non pertinente. La scelta della dimensione dei frammenti è però essa
+stessa un compromesso: frammenti troppo corti rischiano di perdere il contesto necessario a renderli comprensibili
+in isolamento, frammenti troppo lunghi tornano a soffrire del problema opposto.
+
+La strategia più semplice consiste nel suddividere il testo in blocchi di dimensione fissa, eventualmente con una
+sovrapposizione tra blocchi consecutivi per non spezzare un'informazione a cavallo del confine. Questo approccio tuttavia ignora la
+struttura logica del documento: un paragrafo coerente può essere tagliato a metà solo perché il conteggio dei token ha raggiunto la soglia impostata. Un'alternativa più sensibile al contenuto è il \emph{chunking strutturale}, che rispetta i confini naturali del documento (sezioni, paragrafi, righe di una tabella) invece di tagliare a una lunghezza fissa, cedendo una parte dell'uniformità dei frammenti risultanti in cambio di un testo internamente più coerente. Nessuna delle due strategie, da sola, risolve però il problema opposto: un frammento strutturalmente coerente ma troppo corto (un singolo titolo di sezione, una riga isolata di una tabella) resta comunque privo del contesto che lo renderebbe comprensibile se recuperato in isolamento.
+
+Una soluzione a questo problema è la \emph{fusione gerarchica} dei frammenti. In fase di
+indicizzazione ogni documento viene diviso in frammenti piccoli, che sono quelli effettivamente
+indicizzati e confrontati con la domanda, ma si conserva anche il legame di ciascun frammento con
+la sezione del documento a cui appartiene. Al momento del recupero, se tra i frammenti selezionati
+ne compaiono abbastanza appartenenti alla stessa sezione, questi vengono sostituiti dalla sezione
+intera: il recupero conserva così la precisione dei frammenti piccoli, mentre il modello riceve un
+contesto ampio e coerente.

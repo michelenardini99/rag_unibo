@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     generation_model: str = "generation-llm"
     generation_model_vision: bool = True
 
+    # Picture descriptions during conversion come from a vision model on its own
+    # vLLM server (`docker compose --profile indexing up -d vllm-vision`), so the
+    # answering model needn't read images and stays up while documents convert.
+    picture_description: bool = True
+    vision_base_url: str = "http://localhost:8002/v1"
+    vision_model: str = "vision-llm"
+
     vllm_max_model_len: int = 8192
 
     embeddings_device_id: int

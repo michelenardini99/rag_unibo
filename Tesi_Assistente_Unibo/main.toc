@@ -1,0 +1,73 @@
+\babel@toc {italian}{}\relax 
+\contentsline {chapter}{\numberline {1}Introduzione}{2}{chapter.1}%
+\contentsline {chapter}{\numberline {2}Stato dell'arte}{4}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Limiti dei modelli linguistici in un dominio specifico}{4}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Large Language Model (LLM)}{6}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}Che cos'è un LLM}{6}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}LLM valutati}{12}{subsection.2.2.2}%
+\contentsline {section}{\numberline {2.3}RAG (Retrieval-Augmented Generation)}{14}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}Embedding e ricerca per similarità}{15}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.3.2}Ricerca ibrida e fusione dei risultati}{18}{subsection.2.3.2}%
+\contentsline {subsection}{\numberline {2.3.3}Reranking}{18}{subsection.2.3.3}%
+\contentsline {subsection}{\numberline {2.3.4}Trasformazione della query}{19}{subsection.2.3.4}%
+\contentsline {subsection}{\numberline {2.3.5}Chunking e fusione gerarchica}{20}{subsection.2.3.5}%
+\contentsline {subsection}{\numberline {2.3.6}Posizione del contesto nel prompt}{21}{subsection.2.3.6}%
+\contentsline {section}{\numberline {2.4}Sistemi che utilizzano LLM e RAG per rispondere in maniera automatica}{22}{section.2.4}%
+\contentsline {chapter}{\numberline {3}Architettura e sviluppo del sistema}{25}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Panoramica dell'architettura}{26}{section.3.1}%
+\contentsline {paragraph}{Ingestion.}{28}{section*.3}%
+\contentsline {paragraph}{Chunking.}{28}{section*.4}%
+\contentsline {paragraph}{Embedding.}{28}{section*.5}%
+\contentsline {paragraph}{Retrieving.}{28}{section*.6}%
+\contentsline {paragraph}{Generation.}{28}{section*.7}%
+\contentsline {paragraph}{UI.}{28}{section*.8}%
+\contentsline {paragraph}{Evaluation.}{28}{section*.9}%
+\contentsline {section}{\numberline {3.2}Ingestione e preparazione dei dati}{29}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Fonti dei dati}{30}{subsection.3.2.1}%
+\contentsline {subsection}{\numberline {3.2.2}Acquisizione dei documenti}{31}{subsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.2.3}Pulizia delle pagine web}{31}{subsection.3.2.3}%
+\contentsline {paragraph}{Contenuto di contorno.}{31}{section*.10}%
+\contentsline {paragraph}{Contenuto nascosto.}{32}{section*.11}%
+\contentsline {paragraph}{Struttura affidata alla presentazione.}{32}{section*.12}%
+\contentsline {subsection}{\numberline {3.2.4}Conversione in un formato strutturato}{34}{subsection.3.2.4}%
+\contentsline {paragraph}{Descrizione delle immagini.}{35}{section*.13}%
+\contentsline {paragraph}{La taglia del modello multimodale.}{37}{section*.14}%
+\contentsline {paragraph}{Normalizzazione.}{38}{section*.15}%
+\contentsline {subsection}{\numberline {3.2.5}Suddivisione in frammenti}{39}{subsection.3.2.5}%
+\contentsline {paragraph}{Sezioni e fusione gerarchica.}{41}{section*.16}%
+\contentsline {subsection}{\numberline {3.2.6}Metadati}{41}{subsection.3.2.6}%
+\contentsline {paragraph}{Aggiornamento incrementale.}{42}{section*.17}%
+\contentsline {section}{\numberline {3.3}Embedding}{43}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Il modello: BGE-M3}{43}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Cosa viene trasformato in vettore}{44}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Il database vettoriale: Qdrant}{45}{subsection.3.3.3}%
+\contentsline {subsection}{\numberline {3.3.4}L'indice a grafo: HNSW}{46}{subsection.3.3.4}%
+\contentsline {section}{\numberline {3.4}Componente di retrieval}{47}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Analisi della domanda}{48}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}Ricerca ibrida}{48}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}Riordinamento e corso di laurea}{49}{subsection.3.4.3}%
+\contentsline {subsection}{\numberline {3.4.4}Fusione gerarchica e soglia di accettazione}{50}{subsection.3.4.4}%
+\contentsline {subsection}{\numberline {3.4.5}Recupero di riserva con HyDE}{51}{subsection.3.4.5}%
+\contentsline {section}{\numberline {3.5}Componente di generazione (LLM)}{52}{section.3.5}%
+\contentsline {subsection}{\numberline {3.5.1}Scelta del modello}{53}{subsection.3.5.1}%
+\contentsline {subsection}{\numberline {3.5.2}Struttura del prompt}{54}{subsection.3.5.2}%
+\contentsline {paragraph}{I frammenti.}{55}{section*.18}%
+\contentsline {paragraph}{La domanda.}{55}{section*.19}%
+\contentsline {paragraph}{Le istruzioni.}{56}{section*.20}%
+\contentsline {subsection}{\numberline {3.5.3}Citazioni ed elenco delle fonti}{57}{subsection.3.5.3}%
+\contentsline {paragraph}{Risposta progressiva.}{58}{section*.21}%
+\contentsline {subsection}{\numberline {3.5.4}Gestione dei casi particolari}{58}{subsection.3.5.4}%
+\contentsline {paragraph}{Saluti e ringraziamenti.}{59}{section*.22}%
+\contentsline {paragraph}{Nessun frammento pertinente.}{59}{section*.23}%
+\contentsline {paragraph}{Domande estranee all'università.}{59}{section*.24}%
+\contentsline {paragraph}{Informazione parzialmente presente.}{59}{section*.25}%
+\contentsline {section}{\numberline {3.6}Architettura software e infrastruttura}{60}{section.3.6}%
+\contentsline {section}{\numberline {3.7}Scelte progettuali e trade-off}{60}{section.3.7}%
+\contentsline {chapter}{\numberline {4}Validazione del sistema}{61}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Benchmark di test}{61}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Indicatori di accuratezza}{61}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Esperimenti effettuati}{61}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Risultati}{61}{section.4.4}%
+\contentsline {subsection}{\numberline {4.4.1}Risultati}{61}{subsection.4.4.1}%
+\contentsline {subsection}{\numberline {4.4.2}Esempi di casi errati}{61}{subsection.4.4.2}%
+\contentsline {chapter}{\numberline {5}Conclusioni e sviluppi futuri}{62}{chapter.5}%

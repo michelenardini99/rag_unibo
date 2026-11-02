@@ -55,15 +55,17 @@ HUGGING_FACE_HUB_TOKEN=
 
 Note:
 - `VLLM_DEVICE_ID` ed `EMBEDDINGS_DEVICE_ID` devono indicare GPU diverse se disponibili più di una.
-- Se il modello servito da vLLM non supporta input visivi, imposta `GENERATION_MODEL_VISION=false`: il sistema salterà la descrizione automatica delle immagini nei documenti invece di fallire in fase di conversione.
+- `GENERATION_MODEL_VISION` indica se il modello delle risposte legge anche le immagini: se `true`, le immagini dei frammenti recuperati vengono allegate al prompt. Con un modello solo testuale (come Qwen2.5-14B-Instruct) va lasciato a `false`. La descrizione delle immagini in conversione è indipendente e usa il modello di `VISION_MODEL_ID` (vedi la sezione 4).
 
 ## 3. Avvio dei servizi infrastrutturali
 
 ```bash
-docker compose up -d
+docker compose up -d qdrant vllm
 ```
 
 Avvia Qdrant (`localhost:6333`) e il server di generazione vLLM (`localhost:8000`). Attendi che entrambi siano pronti (`docker compose logs -f vllm` per seguire il download/caricamento del modello al primo avvio).
+
+Tutte le porte sono pubblicate solo su `127.0.0.1`: vLLM e Qdrant non hanno autenticazione e non sono raggiungibili da altre macchine. Le immagini sono fissate per versione e digest in `docker-compose.yml`.
 
 ## 4. Caricamento dei documenti
 
@@ -75,11 +77,15 @@ In alternativa, per acquisire pagine da un sito web (una o più pagine radice, s
 python -m ingestion.web_crawler <url-radice>[,<url-radice>...] [cartella-output] [numero-massimo-pagine]
 ```
 
-Poi converti i documenti grezzi in formato strutturato:
+Poi converti i documenti grezzi in formato strutturato. Le immagini contenute nei documenti vengono descritte a parole da un modello multimodale, servito da un vLLM dedicato che va avviato solo per la conversione (`VISION_DEVICE_ID` in `.env` indica una GPU con memoria libera, diversa da quella del vLLM delle risposte):
 
 ```bash
+docker compose --profile indexing up -d vllm-vision    # attendi che il modello sia caricato
 python -m ingestion.converter --source datasets/raw --destination datasets/converted
+docker compose stop vllm-vision
 ```
+
+Il vLLM delle risposte resta acceso, quindi l'assistente continua a funzionare durante la conversione. Se il server delle descrizioni non risponde, la conversione si ferma subito con l'indicazione di come avviarlo; per convertire senza descrivere le immagini, imposta `PICTURE_DESCRIPTION=false`.
 
 E indicizzali nel database vettoriale:
 
@@ -91,12 +97,20 @@ Rieseguire questo comando dopo aver aggiunto o modificato documenti aggiorna l'i
 
 ## 5. Avvio dell'assistente
 
+In container, insieme agli altri servizi (la prima volta costruisce l'immagine, con le versioni esatte di `requirements.lock.txt`):
+
+```bash
+docker compose up -d --build app
+```
+
+Il container parte solo quando vLLM e Qdrant sono pronti, usa l'indice in `datasets/chunked` e i modelli in `.cache/huggingface`, e si riavvia da solo in caso di errore. L'interfaccia è su `http://localhost:8001`; da un'altra macchina si raggiunge con un tunnel SSH (`ssh -L 8001:localhost:8001 <server>`) o con l'inoltro delle porte di VS Code. Per renderla raggiungibile direttamente (`APP_BIND=0.0.0.0` in `.env`) serve prima un reverse proxy con autenticazione: l'interfaccia non ne ha una propria.
+
+Durante lo sviluppo si può invece avviare l'applicazione sull'host, con il ricaricamento automatico del codice:
+
 ```bash
 cd src
 chainlit run app.py -w --port 8001
 ```
-
-Chainlit usa di default la porta 8000, già occupata da vLLM: `--port 8001` (o un'altra porta libera) evita il conflitto. L'interfaccia conversazionale sarà raggiungibile su `http://localhost:8001`.
 
 ## 6. Valutazione (opzionale)
 
@@ -105,7 +119,7 @@ Per misurare la qualità del recupero documenti e del confronto tra modelli su u
 ```bash
 cd src
 python -m eval.evaluate_retrieval
-python -m eval.evaluate_model_comparison
+bash eval/run_model_comparison.sh
 ```
 
-I risultati vengono salvati in `datasets/eval/`. La valutazione end-to end delle risposte (fedeltà al contesto, correttezza) si esegue invece dal notebook `notebook/evaluation.ipynb`.
+Il confronto tra modelli carica in vLLM un modello alla volta per generare le risposte, poi un unico modello giudice (Qwen2.5-14B) per valutarle tutte; dura diverse ore, meglio lanciarlo dentro `tmux`. I risultati vengono salvati in `datasets/eval/`. La valutazione end-to end delle risposte (fedeltà al contesto, correttezza) si esegue invece dal notebook `notebook/evaluation.ipynb`.

@@ -1,0 +1,33 @@
+\chapter{Architettura e sviluppo del sistema}\label{cap:architettura}
+
+Il Capitolo~\ref{cap:stato_arte} ha presentato il paradigma RAG e le tecniche che la letteratura propone per
+ciascuno dei suoi stadi. Questo capitolo descrive come quelle tecniche sono state selezionate, adattate e combinate
+nel sistema sviluppato, con un livello di dettaglio sufficiente a comprenderne il funzionamento senza dover
+ricorrere al codice sorgente.
+
+Le scelte descritte nel seguito discendono in larga parte da quattro vincoli di progetto. Il primo è la
+\textbf{riservatezza}: l'intero sistema, dai modelli linguistici al database vettoriale, viene eseguito in locale,
+senza alcuna chiamata a servizi cloud di terze parti. Il secondo è l'\textbf{hardware disponibile}: il sistema è stato
+sviluppato e valutato sulle risorse messe a disposizione per il progetto, due GPU da 16~GB ciascuna, una dedicata
+al modello linguistico e l'altra ai modelli di embedding e di reranking. Questa configurazione esclude i modelli
+linguistici di dimensioni maggiori e ha guidato il dimensionamento di ogni componente; non è però un requisito del
+sistema, che con risorse diverse potrebbe adottare modelli più grandi senza modifiche alla sua architettura. Il terzo è la \textbf{precisione fattuale}: in un dominio
+fatto di scadenze, importi e requisiti, una risposta fluida ma con una data sbagliata è peggiore di una risposta che
+ammette di non conoscere l'informazione, e questo principio orienta tanto il recupero quanto la generazione. Il
+quarto, infine, è la \textbf{natura del dominio}: il sistema indicizza insieme le pagine di più corsi di laurea,
+le pagine generali di ateneo e i materiali didattici, documenti eterogenei per formato e struttura, e la risposta a
+una stessa domanda può cambiare a seconda del corso dello studente.
+
+\input{03_Architettura_e_sviluppo_del_sistema/3.1_Panoramica_dell_architettura}
+
+\input{03_Architettura_e_sviluppo_del_sistema/3.2_Ingestione_e_preparazione_dei_dati}
+
+\input{03_Architettura_e_sviluppo_del_sistema/3.3_Embedding}
+
+\input{03_Architettura_e_sviluppo_del_sistema/3.4_Componente_di_retrieval}
+
+\input{03_Architettura_e_sviluppo_del_sistema/3.5_Componente_di_generazione}
+
+\input{03_Architettura_e_sviluppo_del_sistema/3.6_Architettura_software_e_infrastruttura}
+
+\input{03_Architettura_e_sviluppo_del_sistema/3.7_Scelte_progettuali_e_trade-off}
