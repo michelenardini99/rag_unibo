@@ -1,0 +1,49 @@
+# Test unitari e stile a ogni push e pull request. Girano su CPU, senza modelli né servizi
+# (vLLM, Qdrant): le chiamate al modello linguistico sono simulate (vedi tests/conftest.py).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Nessun download da Hugging Face: un test che ne avesse bisogno fallisce subito.
+      HF_HUB_OFFLINE: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.lock.txt
+
+      # Le stesse versioni di requirements.lock.txt, ma con PyTorch per CPU: la build CUDA e
+      # le librerie nvidia-* pesano diversi GB e sul runner non servono.
+      - name: Installa le dipendenze
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu
+          grep -vE '^(torch|torchvision|triton|nvidia-)' requirements.lock.txt > requirements.ci.txt
+          pip install -r requirements.ci.txt
+
+      - name: Stile (ruff)
+        run: |
+          ruff check tests
+          ruff format --check tests
+
+      - name: Test (pytest)
+        run: pytest
