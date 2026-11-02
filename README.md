@@ -123,6 +123,8 @@ ruff check tests  # stile del codice dei test
 
 pytest e ruff sono già compresi in `requirements.lock.txt`; con un ambiente installato da `requirements.txt` vanno aggiunti con `pip install -e ".[dev]"`.
 
+Gli stessi controlli girano su GitHub Actions a ogni push su `main` e a ogni pull request (`.github/workflows/ci.yml`), su CPU e senza accesso a Hugging Face.
+
 ## 6. Valutazione (opzionale)
 
 Per misurare la qualità del recupero documenti e del confronto tra modelli su un set di domande di test:
